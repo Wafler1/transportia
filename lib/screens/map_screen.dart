@@ -32,7 +32,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _didAutoCenter = false;
   bool _expanded = false;
   static const double _collapsedMapFraction = 0.25; // ~16.8%
-  static const double _bottomBarHeight = 64.0;
+  static const double _bottomBarHeight = 100.0;
 
   @override
   void initState() {
