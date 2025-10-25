@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,20 +61,23 @@ class _MapScreenState extends State<MapScreen> {
   MaplibreMapController? _controller;
   bool _hasLocationPermission = false;
 
+  // Start camera (overrides Prague if last known location is available)
+  CameraPosition _startCam = _initCam;
+
   // Live camera tracking
   CameraPosition _lastCam = _initCam;
 
   StreamSubscription<Position>? _posSub;
   LatLng? _lastUserLatLng;
   bool _is3DMode = false;
+  bool _didAutoCenter = false; // ensure we auto-center only once per session
 
-  final List<Symbol> _symbols = [];
-  Line? _traceLine;
+  // Trace and coordinate tap features removed
 
   @override
   void initState() {
     super.initState();
-    _ensureLocationReady(); // asks once at launch
+    _ensureLocationReady();
   }
 
   @override
@@ -86,9 +88,7 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _ensureLocationReady() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled && mounted) {
-      await _askToEnableLocationServices();
-    }
+    // Do not show any custom dialogs here; just proceed.
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
@@ -99,16 +99,77 @@ class _MapScreenState extends State<MapScreen> {
     final granted = permission == LocationPermission.always ||
         permission == LocationPermission.whileInUse;
 
+    if (!mounted) return;
     setState(() {
       _hasLocationPermission = granted;
     });
 
     if (granted) {
-      _startPositionStream();
+      // Preload last location from our storage first; fallback to device's last-known
+      unawaited(_applyPersistedLastLocation());
+      unawaited(_applyLastKnownAsStartCamera());
+      if (serviceEnabled) _startPositionStream();
     } else {
       await _posSub?.cancel();
       _posSub = null;
       _lastUserLatLng = null;
+    }
+  }
+
+  static const _kLastLatKey = 'last_gps_lat';
+  static const _kLastLngKey = 'last_gps_lng';
+
+  Future<void> _applyPersistedLastLocation() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lat = prefs.getDouble(_kLastLatKey);
+      final lng = prefs.getDouble(_kLastLngKey);
+      if (lat == null || lng == null) return;
+      final cam = CameraPosition(
+        target: LatLng(lat, lng),
+        zoom: _initCam.zoom,
+        tilt: 0.0,
+        bearing: 0.0,
+      );
+      if (!mounted) return;
+      setState(() {
+        _startCam = cam;
+      });
+      if (_controller != null && !_didAutoCenter) {
+        _lastCam = _startCam;
+        await _controller!.moveCamera(
+          CameraUpdate.newCameraPosition(_startCam),
+        );
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  Future<void> _applyLastKnownAsStartCamera() async {
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        final cam = CameraPosition(
+          target: LatLng(last.latitude, last.longitude),
+          zoom: _initCam.zoom,
+          tilt: 0.0,
+          bearing: 0.0,
+        );
+        if (!mounted) return;
+        setState(() {
+          _startCam = cam;
+        });
+        // If map is already created, jump to this start camera
+        if (_controller != null && !_didAutoCenter) {
+          _lastCam = _startCam;
+          await _controller!.moveCamera(
+            CameraUpdate.newCameraPosition(_startCam),
+          );
+        }
+      }
+    } catch (_) {
+      // Ignore errors; keep Prague as fallback
     }
   }
 
@@ -120,36 +181,31 @@ class _MapScreenState extends State<MapScreen> {
         distanceFilter: 10,
       ),
     ).listen((p) {
+      final firstFix = _lastUserLatLng == null;
       _lastUserLatLng = LatLng(p.latitude, p.longitude);
+      // Persist last known for next app launch
+      unawaited(_saveLastLocation(_lastUserLatLng!));
+      if (firstFix && !_didAutoCenter) {
+        // Auto-center exactly once when we acquire first GPS fix
+        _didAutoCenter = true;
+        unawaited(_centerOnUser2D());
+      }
     }, onError: (e) {
       // swallow permission/other errors
     });
   }
 
-  Future<void> _askToEnableLocationServices() async {
-    if (!mounted) return;
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Enable location services'),
-        content: const Text(
-            'Location is turned off. Enable it to show your position on the map.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await Geolocator.openLocationSettings();
-            },
-            child: const Text('Open settings'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _saveLastLocation(LatLng pos) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_kLastLatKey, pos.latitude);
+      await prefs.setDouble(_kLastLngKey, pos.longitude);
+    } catch (_) {
+      // ignore
+    }
   }
+
+  // Removed custom dialogs; app remains usable without location services.
 
   Future<bool> _ensurePermissionOnDemand() async {
     LocationPermission permission = await Geolocator.checkPermission();
@@ -161,26 +217,6 @@ class _MapScreenState extends State<MapScreen> {
     final granted = permission == LocationPermission.always ||
         permission == LocationPermission.whileInUse;
 
-    if (!granted && mounted) {
-      await showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Location permission needed'),
-          content: const Text('Grant location permission in settings to use this feature.'),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await Geolocator.openAppSettings();
-              },
-              child: const Text('Open app settings'),
-            ),
-          ],
-        ),
-      );
-    }
-
     setState(() {
       _hasLocationPermission = granted;
     });
@@ -190,26 +226,27 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _onMapCreated(MaplibreMapController controller) async {
     _controller = controller;
-    controller.onSymbolTapped.add(_onSymbolTapped);
+    // If we have a better start camera (last known), move there immediately
+    if (_startCam.target != _initCam.target && !_didAutoCenter) {
+      _lastCam = _startCam;
+      await _controller?.moveCamera(CameraUpdate.newCameraPosition(_startCam));
+      if (mounted) setState(() {});
+    }
   }
 
   Future<void> _centerOnUser2D() async {
+    // If user triggers this manually, also prevent future auto-pan
+    _didAutoCenter = true;
     final ok = await _ensurePermissionOnDemand();
-    if (!ok) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permission not granted.')),
-        );
-      }
-      return;
-    }
+    if (!ok) return;
 
-    LatLng target = _lastUserLatLng ?? _initCam.target;
+    LatLng target = _lastUserLatLng ?? _startCam.target;
     if (_lastUserLatLng == null) {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
       );
       target = LatLng(pos.latitude, pos.longitude);
+      unawaited(_saveLastLocation(target));
     }
 
     _is3DMode = false;
@@ -250,53 +287,6 @@ class _MapScreenState extends State<MapScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _addPin(LatLng at, String label) async {
-    if (_controller == null) return;
-    final symbol = await _controller!.addSymbol(
-      SymbolOptions(
-        geometry: at,
-        iconImage: "marker-15",
-        iconSize: 1.4,
-        textField: label,
-        textOffset: const Offset(0, 1.2),
-        textHaloColor: "#0b0f14",
-        textHaloWidth: 1.0,
-      ),
-    );
-    _symbols.add(symbol);
-  }
-
-  Future<void> _drawOrUpdateTrace(List<LatLng> points) async {
-    if (_controller == null || points.length < 2) return;
-    if (_traceLine == null) {
-      _traceLine = await _controller!.addLine(
-        LineOptions(
-          geometry: points,
-          lineWidth: 4.0,
-          lineOpacity: 0.9,
-          lineColor: "#4F8DF7",
-        ),
-      );
-    } else {
-      await _controller!.updateLine(_traceLine!, LineOptions(geometry: points));
-    }
-  }
-
-  void _onMapClick(Point<double> p, LatLng latLng) async {
-    await _addPin(latLng, _formatLatLng(latLng));
-    _showCoords(latLng);
-  }
-
-  void _onMapLongClick(Point<double> p, LatLng latLng) async {
-    await _addPin(latLng, "Dropped");
-    _showCoords(latLng);
-  }
-
-  void _onSymbolTapped(Symbol sym) {
-    final pos = sym.options.geometry;
-    if (pos != null) _showCoords(pos);
-  }
-
   void _onCameraMove(CameraPosition pos) {
     _lastCam = pos;
   }
@@ -305,39 +295,7 @@ class _MapScreenState extends State<MapScreen> {
     // If needed, you can react here; we just ensure _lastCam stays fresh.
   }
 
-  void _showCoords(LatLng latLng) {
-    final txt = "Lat: ${latLng.latitude.toStringAsFixed(6)}\n"
-        "Lng: ${latLng.longitude.toStringAsFixed(6)}";
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF121820),
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Row(children: [
-            const Icon(Icons.place_outlined),
-            const SizedBox(width: 8),
-            const Text("Selected coordinates",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            const Spacer(),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.close),
-            )
-          ]),
-          const SizedBox(height: 8),
-          SelectableText(txt, style: const TextStyle(fontSize: 14)),
-        ]),
-      ),
-    );
-  }
-
-  String _formatLatLng(LatLng l) =>
-      "${l.latitude.toStringAsFixed(6)}, ${l.longitude.toStringAsFixed(6)}";
+  // Removed coordinate bottom sheet and tap handlers
 
   @override
   Widget build(BuildContext context) {
@@ -351,22 +309,23 @@ class _MapScreenState extends State<MapScreen> {
 
             // Show user dot if permitted; we control camera manually
             myLocationEnabled: _hasLocationPermission,
-            myLocationRenderMode: MyLocationRenderMode.compass,
+            myLocationRenderMode: _hasLocationPermission
+                ? MyLocationRenderMode.compass
+                : MyLocationRenderMode.normal,
             myLocationTrackingMode: MyLocationTrackingMode.none,
 
             // Button-only perspective (avoid gesture confusion):
-            rotateGesturesEnabled: true,
+            rotateGesturesEnabled: false,
             tiltGesturesEnabled: false,
 
-            initialCameraPosition: _initCam,
+            initialCameraPosition: _startCam,
             compassEnabled: false,
 
             // Keep _lastCam in sync so toggles use the live center
             onCameraMove: _onCameraMove,
             onCameraIdle: _onCameraIdle,
 
-            onMapClick: _onMapClick,
-            onMapLongClick: _onMapLongClick,
+            // onMapClick/onMapLongClick removed
           ),
 
           // Floating “glass” controls, top-right
@@ -394,20 +353,10 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      floatingActionButton: _GlassPillButton(
-        icon: LucideIcons.route,
-        label: "Extend trace",
-        onTap: () async {
-          if (_symbols.isNotEmpty) {
-            final last = _symbols.last.options.geometry!;
-            final current = _traceLine?.options.geometry ?? [];
-            await _drawOrUpdateTrace([...current, last]);
-          }
-        },
-      ),
+      // No floating action button (trace removed)
     );
   }
 }
@@ -445,35 +394,4 @@ class _GlassIconButton extends StatelessWidget {
   }
 }
 
-class _GlassPillButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _GlassPillButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-        child: Material(
-          color: Colors.black.withOpacity(0.35),
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(icon, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(label,
-                    style: const TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
-              ]),
-            ),
-          ),
-        ),
-    );
-  }
-}
+// _GlassPillButton removed (trace feature eliminated)

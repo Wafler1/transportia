@@ -19,6 +19,7 @@ dependencies:
   maplibre_gl: ^0.24.1
   geolocator: ^14.0.2
   lucide_icons_flutter: ^3.1.5
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
