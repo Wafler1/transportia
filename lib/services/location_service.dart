@@ -1,22 +1,22 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class LocationService {
   static const _kLastLatKey = 'last_gps_lat';
   static const _kLastLngKey = 'last_gps_lng';
 
   static Future<bool> hasPermission() async {
-    final p = await Geolocator.checkPermission();
-    return p == LocationPermission.always || p == LocationPermission.whileInUse;
+    final status = await Permission.locationWhenInUse.status;
+    return status.isGranted;
   }
 
   static Future<bool> ensurePermission() async {
-    var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied || p == LocationPermission.deniedForever) {
-      p = await Geolocator.requestPermission();
-    }
-    return p == LocationPermission.always || p == LocationPermission.whileInUse;
+    final status = await Permission.locationWhenInUse.status;
+    if (status.isGranted) return true;
+    final result = await Permission.locationWhenInUse.request();
+    return result.isGranted;
   }
 
   static Stream<Position> positionStream({
@@ -54,4 +54,3 @@ class LocationService {
     return LatLng(lat, lng);
   }
 }
-
