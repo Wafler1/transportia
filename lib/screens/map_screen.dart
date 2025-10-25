@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -30,6 +30,9 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _lastUserLatLng;
   bool _is3DMode = false;
   bool _didAutoCenter = false;
+  bool _expanded = false;
+  static const double _collapsedMapFraction = 0.25; // ~16.8%
+  static const double _bottomBarHeight = 64.0;
 
   @override
   void initState() {
@@ -100,8 +103,8 @@ class _MapScreenState extends State<MapScreen> {
       unawaited(LocationService.saveLastLatLng(_lastUserLatLng!));
       if (firstFix && !_didAutoCenter) {
         _didAutoCenter = true;
-        unawaited(_centerOnUser2D());
       }
+      unawaited(_centerToUserKeepZoom());
     }, onError: (_) {});
   }
 
@@ -173,52 +176,106 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          MapLibreMap(
-            onMapCreated: _onMapCreated,
-            styleString: _styleUrl,
-            myLocationEnabled: _hasLocationPermission,
-            myLocationRenderMode: _hasLocationPermission
-                ? MyLocationRenderMode.compass
-                : MyLocationRenderMode.normal,
-            myLocationTrackingMode: MyLocationTrackingMode.none,
-            rotateGesturesEnabled: false,
-            tiltGesturesEnabled: false,
-            initialCameraPosition: _startCam,
-            compassEnabled: false,
-            onCameraMove: _onCameraMove,
-            onCameraIdle: _onCameraIdle,
-          ),
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GlassIconButton(
-                      icon: _is3DMode ? LucideIcons.undoDot : LucideIcons.box,
-                      tooltip: _is3DMode ? "Back to 2D" : "3D view",
-                      onTap: _toggle3D,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalH = constraints.maxHeight;
+        final collapsedMapH = totalH * _collapsedMapFraction;
+        final mapH = _expanded ? (totalH - _bottomBarHeight) : collapsedMapH;
+        final lowerH = _expanded ? _bottomBarHeight : (totalH - collapsedMapH);
+
+        return Column(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: mapH,
+              width: double.infinity,
+              color: const Color(0xFFFFFFFF),
+              child: Stack(
+                children: [
+                  MapLibreMap(
+                    onMapCreated: _onMapCreated,
+                    styleString: _styleUrl,
+                    myLocationEnabled: _hasLocationPermission,
+                    myLocationRenderMode: _hasLocationPermission
+                        ? MyLocationRenderMode.compass
+                        : MyLocationRenderMode.normal,
+                    myLocationTrackingMode: MyLocationTrackingMode.none,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    initialCameraPosition: _startCam,
+                    compassEnabled: false,
+                    onCameraMove: _onCameraMove,
+                    onCameraIdle: _onCameraIdle,
+                  ),
+                  if (!_expanded)
+                    Positioned.fill(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          setState(() => _expanded = true);
+                        },
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    GlassIconButton(
-                      icon: LucideIcons.locate,
-                      tooltip: "My location",
-                      onTap: _centerOnUser2D,
+                  if (_expanded)
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GlassIconButton(
+                                icon: _is3DMode ? LucideIcons.undoDot : LucideIcons.box,
+                                onTap: _toggle3D,
+                              ),
+                              const SizedBox(height: 10),
+                              GlassIconButton(
+                                icon: LucideIcons.locate,
+                                onTap: _centerOnUser2D,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          ),
-        ],
-      ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: lowerH,
+              width: double.infinity,
+              color: const Color(0xFFFFFFFF),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  if (_expanded) {
+                    setState(() => _expanded = false);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _centerToUserKeepZoom();
+                    });
+                  }
+                },
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
-}
 
+  Future<void> _centerToUserKeepZoom() async {
+    if (_controller == null || _lastUserLatLng == null) return;
+    final cam = _lastCam;
+    _lastCam = CameraPosition(
+      target: _lastUserLatLng!,
+      zoom: cam.zoom,
+      tilt: _is3DMode ? 60.0 : 0.0,
+      bearing: cam.bearing,
+    );
+    await _controller!.moveCamera(CameraUpdate.newCameraPosition(_lastCam));
+  }
+}

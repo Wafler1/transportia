@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'screens/map_screen.dart';
 
 class EntariaApp extends StatelessWidget {
@@ -6,18 +6,13 @@ class EntariaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return WidgetsApp(
       title: 'Entaria',
-      debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorSchemeSeed: const Color(0xFF4F8DF7),
-        scaffoldBackgroundColor: const Color(0xFF0b0f14),
+      color: const Color(0xFF0b0f14),
+      builder: (context, _) => const Directionality(
+        textDirection: TextDirection.ltr,
+        child: MapScreen(),
       ),
-      home: const MapScreen(),
     );
   }
 }
-
