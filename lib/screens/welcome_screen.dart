@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:vibration/vibration.dart';
 import 'map_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -10,7 +11,6 @@ class WelcomeScreen extends StatelessWidget {
 
   Future<void> _onSkip(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kWelcomeSeenKey, true);
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const MapScreen(),
@@ -117,11 +117,32 @@ class _PressableHighlightState extends State<_PressableHighlight> {
     }
   }
 
+  Future<void> _vibrateSubtle() async {
+    try {
+      final hasVibrator = await Vibration.hasVibrator();
+      if (!hasVibrator) return;
+      final custom = await Vibration.hasCustomVibrationsSupport();
+      if (custom) {
+        // Very short, low amplitude pulse (Android API 26+ respects amplitude).
+        await Vibration.vibrate(duration: 64, amplitude: 64);
+      } else {
+        // Fallback single short pulse.
+        await Vibration.vibrate(duration: 64);
+      }
+    } catch (_) {
+      // Ignore vibration errors (e.g., unsupported platform).
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: widget.onPressed,
+      onTap: () {
+        // Trigger a subtle vibration and then invoke callback.
+        _vibrateSubtle();
+        widget.onPressed();
+      },
       onTapDown: (_) => _setPressed(true),
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
