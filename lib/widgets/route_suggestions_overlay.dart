@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/route_field_kind.dart';
 import '../services/transitous_geocode_service.dart';
@@ -84,11 +84,18 @@ class RouteSuggestionsOverlay extends StatelessWidget {
 
     final card = SizedBox(
       width: width,
-      child: Material(
-        color: AppColors.white,
-        elevation: 12,
-        borderRadius: BorderRadius.circular(16),
-        shadowColor: const Color(0x33000000),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1A000000),
+              blurRadius: 20,
+              offset: Offset(0, 10),
+            ),
+          ],
+        ),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(

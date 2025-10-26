@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -11,6 +12,8 @@ import '../animations/curves.dart';
 import '../models/route_field_kind.dart';
 import '../services/location_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../theme/app_colors.dart';
+import '../utils/haptics.dart';
 import '../widgets/glass_icon_button.dart';
 import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
@@ -72,6 +75,12 @@ class _MapScreenState extends State<MapScreen>
   bool _suppressFromListener = false;
   bool _suppressToListener = false;
   final LayerLink _routeFieldLink = LayerLink();
+  bool _focusEvaluationScheduled = false;
+  Symbol? _fromSymbol;
+  Symbol? _toSymbol;
+  int _markerRefreshToken = 0;
+  bool _didAddMarkerImages = false;
+  LatLng? _longPressLatLng;
 
   @override
   void initState() {
@@ -102,11 +111,16 @@ class _MapScreenState extends State<MapScreen>
             (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
         if (collapsed != _isSheetCollapsed) {
           setState(() => _isSheetCollapsed = collapsed);
+          if (collapsed) _dismissLongPressOverlay();
         }
         if (_isSheetCollapsed) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _centerToUserKeepZoom(),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_selectionLatLngs().isNotEmpty) {
+              unawaited(_fitSelectionBounds());
+            } else {
+              _centerToUserKeepZoom();
+            }
+          });
         }
         _hapticSnap();
         _snapTarget = null;
@@ -131,6 +145,7 @@ class _MapScreenState extends State<MapScreen>
     _stopDragRumble();
     _activateListener?.call();
     _activateListener = null;
+    unawaited(_removeRouteSymbols());
     super.dispose();
     _snapCtrl.dispose();
   }
@@ -251,6 +266,7 @@ class _MapScreenState extends State<MapScreen>
       await _controller?.moveCamera(CameraUpdate.newCameraPosition(_startCam));
       if (mounted) setState(() {});
     }
+    unawaited(_refreshRouteMarkers());
   }
 
   Future<void> _centerOnUser2D() async {
@@ -358,6 +374,8 @@ class _MapScreenState extends State<MapScreen>
 
           final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
           final showOverlay = _activeSuggestionField != null;
+          final showLongPressOverlay =
+              _longPressLatLng != null && _isSheetCollapsed;
           return Stack(
             children: [
               // Map behind (isolated repaint)
@@ -371,28 +389,50 @@ class _MapScreenState extends State<MapScreen>
                         ? MyLocationRenderMode.compass
                         : MyLocationRenderMode.normal,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
-                    rotateGesturesEnabled: true,
+                    rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                     initialCameraPosition: _startCam,
                     compassEnabled: false,
                     onCameraMove: _onCameraMove,
                     onCameraIdle: _onCameraIdle,
+                    onMapClick: _onMapTap,
+                    onMapLongClick: _onMapLongClick,
                   ),
                 ),
               ),
 
-              // If expanded, tapping map collapses the sheet (doesn't interfere when collapsed)
-              if (!_isSheetCollapsed)
-                Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: () {
-                      _unfocusInputs();
-                      _stopDragRumble();
-                      _animateTo(collapsedTop, collapsedTop);
-                    },
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: !showLongPressOverlay,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: !showLongPressOverlay
+                        ? const SizedBox.shrink()
+                        : GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: _dismissLongPressOverlay,
+                            child: Container(
+                              alignment: Alignment.topCenter,
+                              padding: const EdgeInsets.only(
+                                top: 80,
+                                left: 16,
+                                right: 16,
+                              ),
+                              child: _MapLongPressOverlay(
+                                latLng: _longPressLatLng!,
+                                onSelectFrom: () =>
+                                    _onLongPressChoice(RouteFieldKind.from),
+                                onSelectTo: () =>
+                                    _onLongPressChoice(RouteFieldKind.to),
+                                onDismiss: _dismissLongPressOverlay,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
+              ),
 
               // Map controls (only when sheet is collapsed)
               if (_isSheetCollapsed)
@@ -508,7 +548,9 @@ class _MapScreenState extends State<MapScreen>
                           child: !showOverlay
                               ? const SizedBox.shrink()
                               : RouteSuggestionsOverlay(
-                                  key: ValueKey(_activeSuggestionField),
+                                  key: const ValueKey(
+                                    'route-suggestions-overlay',
+                                  ),
                                   width: overlayWidth,
                                   activeField: _activeSuggestionField,
                                   fromController: _fromCtrl,
@@ -607,14 +649,18 @@ class _MapScreenState extends State<MapScreen>
     TransitousLocationSuggestion? value, {
     bool notify = false,
   }) {
+    final current = kind == RouteFieldKind.from ? _fromSelection : _toSelection;
+    if (identical(current, value)) {
+      if (notify && mounted) setState(() {});
+      return;
+    }
     if (kind == RouteFieldKind.from) {
-      if (_fromSelection == value) return;
       _fromSelection = value;
     } else {
-      if (_toSelection == value) return;
       _toSelection = value;
     }
     if (notify && mounted) setState(() {});
+    unawaited(_refreshRouteMarkers());
   }
 
   TransitousLocationSuggestion? _selectionFor(RouteFieldKind kind) {
@@ -685,14 +731,7 @@ class _MapScreenState extends State<MapScreen>
     TransitousLocationSuggestion suggestion,
   ) {
     _setControllerText(field, suggestion.name);
-    setState(() {
-      if (field == RouteFieldKind.from) {
-        _fromSelection = suggestion;
-      } else {
-        _toSelection = suggestion;
-      }
-    });
-    _clearSuggestions();
+    _setSelection(field, suggestion, notify: true);
     _unfocusInputs();
   }
 
@@ -718,6 +757,7 @@ class _MapScreenState extends State<MapScreen>
       _fromSelection = _toSelection;
       _toSelection = tmp;
     });
+    unawaited(_refreshRouteMarkers());
   }
 
   bool _handleSwapRequested() {
@@ -742,7 +782,223 @@ class _MapScreenState extends State<MapScreen>
     } else if (_activeSuggestionField == RouteFieldKind.to) {
       _requestSuggestions(RouteFieldKind.to, _toCtrl.text);
     }
+    _maybeFitSelectionsOnCollapsed();
     return true;
+  }
+
+  List<LatLng> _selectionLatLngs() {
+    final points = <LatLng>[];
+    final from = _effectiveFromLatLngForBounds();
+    if (from != null) points.add(from);
+    final to = _toSelection?.latLng;
+    if (to != null) points.add(to);
+    return points;
+  }
+
+  LatLng? _effectiveFromLatLngForBounds() {
+    final selected = _fromSelection?.latLng;
+    if (selected != null) return selected;
+    if (!_hasLocationPermission) return null;
+    if (_lastUserLatLng == null) return null;
+    if (_fromCtrl.text.trim().isNotEmpty) return null;
+    return _lastUserLatLng;
+  }
+
+  void _maybeFitSelectionsOnCollapsed() {
+    if (!_isSheetCollapsed) return;
+    unawaited(_fitSelectionBounds());
+  }
+
+  Future<void> _fitSelectionBounds() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final points = _selectionLatLngs();
+    if (points.isEmpty) return;
+    if (points.length == 1) {
+      await controller.animateCamera(CameraUpdate.newLatLng(points.first));
+      return;
+    }
+    double minLat = points.first.latitude;
+    double maxLat = points.first.latitude;
+    double minLng = points.first.longitude;
+    double maxLng = points.first.longitude;
+    for (final p in points.skip(1)) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
+    );
+    final double bottomPadding = _isSheetCollapsed
+        ? (_bottomBarHeight + 64.0)
+        : 48.0;
+    await controller.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        bounds,
+        left: 48,
+        top: 48,
+        right: 48,
+        bottom: bottomPadding,
+      ),
+    );
+  }
+
+  Future<void> _removeRouteSymbols() async {
+    final controller = _controller;
+    if (controller == null) return;
+    final symbols = [_fromSymbol, _toSymbol];
+    _fromSymbol = null;
+    _toSymbol = null;
+    for (final symbol in symbols) {
+      if (symbol == null) continue;
+      try {
+        await controller.removeSymbol(symbol);
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _refreshRouteMarkers() async {
+    final controller = _controller;
+    if (controller == null) return;
+    await _ensureMarkerImages();
+    final token = ++_markerRefreshToken;
+
+    Future<void> removeSymbol(Symbol? symbol) async {
+      if (symbol == null) return;
+      try {
+        await controller.removeSymbol(symbol);
+      } catch (_) {}
+    }
+
+    final prevFrom = _fromSymbol;
+    final prevTo = _toSymbol;
+    _fromSymbol = null;
+    _toSymbol = null;
+    await removeSymbol(prevFrom);
+    await removeSymbol(prevTo);
+
+    Future<Symbol?> addSymbol(
+      TransitousLocationSuggestion? selection,
+      String imageId,
+    ) async {
+      if (selection == null) return null;
+      try {
+        return await controller.addSymbol(
+          SymbolOptions(
+            geometry: selection.latLng,
+            iconImage: imageId,
+            iconSize: 1.0,
+            iconAnchor: 'bottom',
+          ),
+        );
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final newFrom = await addSymbol(_fromSelection, _kFromMarkerId);
+    final newTo = await addSymbol(_toSelection, _kToMarkerId);
+
+    if (_markerRefreshToken != token) {
+      await removeSymbol(newFrom);
+      await removeSymbol(newTo);
+      return;
+    }
+
+    _fromSymbol = newFrom;
+    _toSymbol = newTo;
+    _maybeFitSelectionsOnCollapsed();
+  }
+
+  static const String _kFromMarkerId = 'route-marker-from';
+  static const String _kToMarkerId = 'route-marker-to';
+
+  Future<void> _ensureMarkerImages() async {
+    if (_didAddMarkerImages) return;
+    final controller = _controller;
+    if (controller == null) return;
+    Future<void> addMarker(String id, Color color, IconData icon) async {
+      final image = await _buildMarkerImage(color, icon);
+      await controller.addImage(id, image);
+    }
+
+    try {
+      await addMarker(
+        _kFromMarkerId,
+        const Color(0xFF0B8F96),
+        LucideIcons.navigation2,
+      );
+      await addMarker(_kToMarkerId, const Color(0xFFD04E37), LucideIcons.flag);
+      _didAddMarkerImages = true;
+    } catch (_) {
+      _didAddMarkerImages = false;
+    }
+  }
+
+  Future<Uint8List> _buildMarkerImage(Color color, IconData icon) async {
+    const double size = 96;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final center = Offset(size / 2, size / 2);
+    final bubblePaint = Paint()..color = color;
+    final shadowPaint = Paint()
+      ..color = const Color(0x33000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    canvas.drawCircle(center, size / 2 - 6, shadowPaint);
+    canvas.drawCircle(center, size / 2 - 8, bubblePaint);
+    final inner = Paint()..color = const Color(0xFFFFFFFF);
+    canvas.drawCircle(center, size / 2 - 32, inner);
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 44,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: color,
+        ),
+      ),
+    )..layout();
+    textPainter.paint(
+      canvas,
+      center - Offset(textPainter.width / 2, textPainter.height / 2),
+    );
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  void _onMapLongClick(math.Point<double> point, LatLng coordinate) {
+    if (!_isSheetCollapsed) return;
+    setState(() => _longPressLatLng = coordinate);
+  }
+
+  void _dismissLongPressOverlay() {
+    if (_longPressLatLng == null) return;
+    setState(() => _longPressLatLng = null);
+  }
+
+  void _onLongPressChoice(RouteFieldKind kind) {
+    Haptics.lightTick();
+    _dismissLongPressOverlay();
+  }
+
+  void _onMapTap(math.Point<double> point, LatLng coordinate) {
+    if (_isSheetCollapsed) return;
+    _dismissLongPressOverlay();
+    _unfocusInputs();
+    _stopDragRumble();
+    final colTop = _lastComputedCollapsedTop;
+    final expTop = _lastComputedExpandedTop;
+    if (colTop != null && expTop != null) {
+      _animateTo(colTop, colTop);
+    }
   }
 
   void _hapticSnap() {
@@ -757,21 +1013,28 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _onAnyFieldFocus() {
+    if (_focusEvaluationScheduled) return;
+    _focusEvaluationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusEvaluationScheduled = false;
+      _applyFocusState();
+    });
+  }
+
+  void _applyFocusState() {
     if (!mounted) return;
-    if (_fromFocus.hasFocus) {
-      if (_activeSuggestionField != RouteFieldKind.from) {
-        setState(() => _activeSuggestionField = RouteFieldKind.from);
-      }
-      _requestSuggestions(RouteFieldKind.from, _fromCtrl.text);
-    } else if (_toFocus.hasFocus) {
-      if (_activeSuggestionField != RouteFieldKind.to) {
-        setState(() => _activeSuggestionField = RouteFieldKind.to);
-      }
-      _requestSuggestions(RouteFieldKind.to, _toCtrl.text);
-    } else {
+    final hasFrom = _fromFocus.hasFocus;
+    final hasTo = _toFocus.hasFocus;
+    if (!hasFrom && !hasTo) {
       _clearSuggestions();
+      return;
     }
-    if ((_fromFocus.hasFocus || _toFocus.hasFocus) && _isSheetCollapsed) {
+    final field = hasFrom ? RouteFieldKind.from : RouteFieldKind.to;
+    if (_activeSuggestionField != field) {
+      setState(() => _activeSuggestionField = field);
+    }
+    _requestSuggestions(field, _controllerFor(field).text);
+    if (_isSheetCollapsed) {
       final expTop = _lastComputedExpandedTop;
       final colTop = _lastComputedCollapsedTop;
       if (expTop != null && colTop != null) {
@@ -786,6 +1049,157 @@ class _MapScreenState extends State<MapScreen>
   void _unfocusInputs() {
     FocusScope.of(context).unfocus();
     _clearSuggestions();
+  }
+}
+
+class _MapLongPressOverlay extends StatelessWidget {
+  const _MapLongPressOverlay({
+    required this.latLng,
+    required this.onSelectFrom,
+    required this.onSelectTo,
+    required this.onDismiss,
+  });
+
+  final LatLng latLng;
+  final VoidCallback onSelectFrom;
+  final VoidCallback onSelectTo;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 220),
+      offset: const Offset(0, 0),
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 220),
+        opacity: 1,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x1A000000),
+                blurRadius: 20,
+                offset: Offset(0, 12),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: const [
+                  Icon(LucideIcons.mapPin, size: 18, color: AppColors.black),
+                  SizedBox(width: 8),
+                  Text(
+                    'Use this spot?',
+                    style: TextStyle(
+                      color: AppColors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}',
+                style: const TextStyle(color: Color(0x99000000), fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _LongPressOptionButton(
+                      label: 'Set as origin',
+                      icon: LucideIcons.navigation,
+                      onTap: onSelectFrom,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _LongPressOptionButton(
+                      label: 'Set as destination',
+                      icon: LucideIcons.flag,
+                      onTap: onSelectTo,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onDismiss,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(LucideIcons.x, size: 16, color: Color(0x99000000)),
+                    SizedBox(width: 6),
+                    Text(
+                      'Dismiss',
+                      style: TextStyle(
+                        color: Color(0x99000000),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LongPressOptionButton extends StatelessWidget {
+  const _LongPressOptionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0x0F000000),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0x11000000)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: AppColors.black),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
