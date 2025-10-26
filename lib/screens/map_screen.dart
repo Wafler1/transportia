@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -10,7 +11,16 @@ import '../widgets/route_field_box.dart';
 import '../widgets/glass_icon_button.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  const MapScreen({
+    super.key,
+    this.deferInit = false,
+    this.activateOnShow,
+  });
+
+  // If true, skip location permission/init until activated.
+  final bool deferInit;
+  // Optional external trigger to activate deferred init when revealed.
+  final ValueListenable<bool>? activateOnShow;
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
@@ -48,11 +58,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   bool _hasVibrator = false;
   bool _hasCustomVibration = false;
   Timer? _dragVibeTimer;
+  bool _didInitLocation = false;
+  VoidCallback? _activateListener;
 
   @override
   void initState() {
     super.initState();
-    _ensureLocationReady();
+    if (!widget.deferInit) {
+      _ensureLocationReady();
+      _didInitLocation = true;
+    } else {
+      _maybeAttachActivateListener();
+    }
     _snapCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
     _snapCtrl.addListener(() {
       final anim = _snapAnim;
@@ -90,8 +107,42 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     _fromFocus.dispose();
     _toFocus.dispose();
     _stopDragRumble();
+    _activateListener?.call();
+    _activateListener = null;
     super.dispose();
     _snapCtrl.dispose();
+  }
+
+  void _maybeAttachActivateListener() {
+    final listenable = widget.activateOnShow;
+    _activateListener?.call(); // no-op placeholder if set previously
+    if (listenable != null) {
+      void listener() {
+        if (listenable.value) _activateIfNeeded();
+      }
+      listenable.addListener(listener);
+      _activateListener = () => listenable.removeListener(listener);
+      // If already true, activate immediately.
+      if (listenable.value) _activateIfNeeded();
+    }
+  }
+
+  void _activateIfNeeded() {
+    if (_didInitLocation) return;
+    _didInitLocation = true;
+    _ensureLocationReady();
+  }
+
+  @override
+  void didUpdateWidget(covariant MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activateOnShow != widget.activateOnShow) {
+      _activateListener?.call();
+      _activateListener = null;
+      if (widget.deferInit) {
+        _maybeAttachActivateListener();
+      }
+    }
   }
 
   Future<void> _ensureLocationReady() async {
@@ -280,6 +331,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
                   onTap: () {
+                    _unfocusInputs();
                     _stopDragRumble();
                     _animateTo(collapsedTop, collapsedTop);
                   },
@@ -325,11 +377,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   isCollapsed: _isSheetCollapsed,
                   collapseProgress: progress,
                   onHandleTap: () {
+                    _unfocusInputs();
                     final target = _isSheetCollapsed ? expandedTop : collapsedTop;
                     _animateTo(target, collapsedTop);
                     _stopDragRumble();
                   },
                   onDragStart: () {
+                    _unfocusInputs();
                     _snapCtrl.stop();
                     _startDragRumble();
                   },
@@ -354,6 +408,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   fromFocusNode: _fromFocus,
                   toFocusNode: _toFocus,
                   showMyLocationDefault: _hasLocationPermission,
+                  onUnfocus: _unfocusInputs,
                 ),
               ),
             ),
@@ -404,9 +459,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   void _startDragRumble() {
     _dragVibeTimer?.cancel();
     if (!_hasCustomVibration) return; // keep it subtle: only if custom supported
-    _dragVibeTimer = Timer.periodic(const Duration(milliseconds: 180), (_) {
+    _dragVibeTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
       try {
-        Vibration.vibrate(duration: 8, amplitude: 20);
+        Vibration.vibrate(duration: 8, amplitude: 25);
       } catch (_) {}
     });
   }
@@ -420,9 +475,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     if (!_hasVibrator) return;
     try {
       if (_hasCustomVibration) {
-        Vibration.vibrate(duration: 25, amplitude: 140);
+        Vibration.vibrate(duration: 10, amplitude: 90);
       } else {
-        Vibration.vibrate(duration: 25);
+        Vibration.vibrate(duration: 10);
       }
     } catch (_) {}
   }
@@ -451,6 +506,85 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     }
     return true;
   }
+
+  void _unfocusInputs() {
+    FocusScope.of(context).unfocus();
+  }
+}
+
+class _PillButton extends StatefulWidget {
+  const _PillButton({required this.onTap, required this.child});
+  final VoidCallback onTap;
+  final Widget child;
+  @override
+  State<_PillButton> createState() => _PillButtonState();
+}
+
+class _PillButtonState extends State<_PillButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 90),
+        scale: _pressed ? 0.97 : 1.0,
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: _pressed ? const Color(0x14000000) : const Color(0x0F000000),
+            border: Border.all(color: const Color(0x11000000)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryButton extends StatefulWidget {
+  const _PrimaryButton({required this.onTap, required this.child});
+  final VoidCallback onTap;
+  final Widget child;
+  @override
+  State<_PrimaryButton> createState() => _PrimaryButtonState();
+}
+
+class _PrimaryButtonState extends State<_PrimaryButton> {
+  bool _pressed = false;
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 80),
+        scale: _pressed ? 0.985 : 1.0,
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: _pressed
+                ? const Color.fromARGB(255, 0, 105, 124)
+                : const Color.fromARGB(255, 0, 113, 133),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }
 
 class SmallBackOutCurve extends Curve {
@@ -478,6 +612,7 @@ class _BottomCard extends StatelessWidget {
     required this.fromFocusNode,
     required this.toFocusNode,
     required this.showMyLocationDefault,
+    required this.onUnfocus,
   });
 
   final bool isCollapsed;
@@ -491,6 +626,7 @@ class _BottomCard extends StatelessWidget {
   final FocusNode fromFocusNode;
   final FocusNode toFocusNode;
   final bool showMyLocationDefault;
+  final VoidCallback onUnfocus;
 
   @override
   Widget build(BuildContext context) {
@@ -506,9 +642,14 @@ class _BottomCard extends StatelessWidget {
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Column(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: onUnfocus,
+        child: Listener(
+          onPointerDown: (_) => onUnfocus(),
+          child: SafeArea(
+          top: false,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Drag handle area
@@ -541,22 +682,26 @@ class _BottomCard extends StatelessWidget {
               final fadeStart = 0.5;
               final t = ((collapseProgress - fadeStart) / (1 - fadeStart)).clamp(0.0, 1.0);
               final opacity = 1.0 - Curves.easeOut.transform(t);
-              return ClipRect(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  heightFactor: opacity, // shrink height as it fades
-                  child: Opacity(
-                    opacity: opacity,
-                    child: const Padding(
-                      padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Where to?',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF000000),
+              return GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: onUnfocus,
+                child: ClipRect(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    heightFactor: opacity, // shrink height as it fades
+                    child: Opacity(
+                      opacity: opacity,
+                      child: const Padding(
+                        padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Where to?',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF000000),
+                            ),
                           ),
                         ),
                       ),
@@ -578,6 +723,83 @@ class _BottomCard extends StatelessWidget {
                 accentColor: const Color.fromARGB(255, 0, 113, 133),
               ),
             ),
+
+            // Time and Search actions (expanded only)
+            if (!isCollapsed)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Builder(
+                  builder: (context) {
+                    const double start = 0.5; // begin sliding near mid-drag
+                    final double raw = (collapseProgress - start) / (1 - start);
+                    final double t = raw.clamp(0.0, 1.0);
+                    final double dy = 16.0 * t; // slight slide 0..16 px
+                    return GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: onUnfocus,
+                      child: Transform.translate(
+                        offset: Offset(0, dy),
+                        child: Row(
+                          children: [
+                            // Time selector (placeholder UI)
+                            _PillButton(
+                              onTap: () { onUnfocus(); },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(LucideIcons.clock, size: 16, color: Color(0xFF000000)),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Now',
+                                    style: TextStyle(
+                                      color: Color(0xFF000000),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            // Search button (primary)
+                            _PrimaryButton(
+                              onTap: () {
+                                onUnfocus();
+                                final needsFrom = !showMyLocationDefault;
+                                final fromEmpty = fromCtrl.text.trim().isEmpty;
+                                final toEmpty = toCtrl.text.trim().isEmpty;
+                                final invalid = (needsFrom && fromEmpty) || toEmpty;
+                                if (invalid) {
+                                  final msg = showMyLocationDefault
+                                      ? 'Please enter a destination'
+                                      : 'Please enter both locations';
+                                  showValidationToast(context, msg);
+                                  return;
+                                }
+                                try { Vibration.vibrate(duration: 18, amplitude: 200); } catch (_) {}
+                                // TODO: Implement actual search action
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Text(
+                                    'Search',
+                                    style: TextStyle(
+                                      color: Color(0xFFFFFFFF),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
 
             // Suggestions only when expanded
             if (!isCollapsed) ...[
@@ -603,13 +825,16 @@ class _BottomCard extends StatelessWidget {
                       _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Café', subtitle: 'Old Town, 1.2 km'),
                       _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Station', subtitle: 'Central Station'),
                     ],
+                    onItemTap: onUnfocus,
                   ),
                 ),
               ),
             ],
           ],
+          ),
         ),
       ),
+    ),
     );
   }
 }
@@ -622,8 +847,9 @@ class _Suggestion {
 }
 
 class _SuggestionsList extends StatelessWidget {
-  const _SuggestionsList({required this.items});
+  const _SuggestionsList({required this.items, required this.onItemTap});
   final List<_Suggestion> items;
+  final VoidCallback onItemTap;
 
   @override
   Widget build(BuildContext context) {
@@ -632,21 +858,22 @@ class _SuggestionsList extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final it = items[index];
-        return _SuggestionTile(item: it);
+        return _SuggestionTile(item: it, onTap: onItemTap);
       },
     );
   }
 }
 
 class _SuggestionTile extends StatelessWidget {
-  const _SuggestionTile({required this.item});
+  const _SuggestionTile({required this.item, required this.onTap});
   final _Suggestion item;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () {},
+      onTap: onTap,
       child: Row(
         children: [
           Container(

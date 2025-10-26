@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:oktoast/oktoast.dart';
 import 'screens/map_screen.dart';
 import 'screens/welcome_screen.dart';
 
@@ -9,7 +10,8 @@ class EntariaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WidgetsApp(
+    return OKToast(
+      child: WidgetsApp(
       title: 'Entaria',
       color: const Color(0xFF0b0f14),
       debugShowCheckedModeBanner: false,
@@ -33,7 +35,7 @@ class EntariaApp extends StatelessWidget {
         fontSize: 14,
       ),
       home: const _RootGate(),
-    );
+    ));
   }
 }
 
