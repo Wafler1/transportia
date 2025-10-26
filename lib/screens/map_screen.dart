@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import '../services/location_service.dart';
+import '../widgets/route_field_box.dart';
 import '../widgets/glass_icon_button.dart';
 
 class MapScreen extends StatefulWidget {
@@ -33,6 +34,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _expanded = false;
   static const double _collapsedMapFraction = 0.25; // ~16.8%
   static const double _bottomBarHeight = 100.0;
+  final _fromCtrl = TextEditingController();
+  final _toCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -43,6 +46,8 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _posSub?.cancel();
+    _fromCtrl.dispose();
+    _toCtrl.dispose();
     super.dispose();
   }
 
@@ -248,18 +253,57 @@ class _MapScreenState extends State<MapScreen> {
               height: lowerH,
               width: double.infinity,
               color: const Color(0xFFFFFFFF),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  if (_expanded) {
-                    setState(() => _expanded = false);
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _centerToUserKeepZoom();
-                    });
-                  }
-                },
-                child: const SizedBox.expand(),
-              ),
+              child: _expanded
+                  ? _ExpandedBottomBar(
+                      onBackgroundTap: () {
+                        setState(() => _expanded = false);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _centerToUserKeepZoom();
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                        child: RouteFieldBox(
+                          fromController: _fromCtrl,
+                          toController: _toCtrl,
+                        ),
+                      ),
+                    )
+                  : SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            RouteFieldBox(
+                              fromController: _fromCtrl,
+                              toController: _toCtrl,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Suggestions',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF000000),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: _SuggestionsList(
+                                items: const [
+                                  _Suggestion(icon: LucideIcons.house, title: 'Home', subtitle: 'Save your home'),
+                                  _Suggestion(icon: LucideIcons.building, title: 'Work', subtitle: 'Save your workplace'),
+                                  _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Café', subtitle: 'Old Town, 1.2 km'),
+                                  _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Station', subtitle: 'Central Station'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ),
           ],
         );
@@ -277,5 +321,119 @@ class _MapScreenState extends State<MapScreen> {
       bearing: cam.bearing,
     );
     await _controller!.moveCamera(CameraUpdate.newCameraPosition(_lastCam));
+  }
+}
+
+class _ExpandedBottomBar extends StatelessWidget {
+  const _ExpandedBottomBar({
+    required this.onBackgroundTap,
+    required this.child,
+  });
+
+  final VoidCallback onBackgroundTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Background tap collapses the map
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onBackgroundTap,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        // Field box on top; this is the only visible element over the expanded map
+        Align(
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: child,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Suggestion {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  const _Suggestion({required this.icon, required this.title, required this.subtitle});
+}
+
+class _SuggestionsList extends StatelessWidget {
+  const _SuggestionsList({required this.items});
+  final List<_Suggestion> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      itemCount: items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final it = items[index];
+        return _SuggestionTile(item: it);
+      },
+    );
+  }
+}
+
+class _SuggestionTile extends StatelessWidget {
+  const _SuggestionTile({required this.item});
+  final _Suggestion item;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0x0F000000),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0x11000000)),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              item.icon,
+              size: 18,
+              color: const Color(0xFF000000),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  style: const TextStyle(
+                    color: Color(0xFF000000),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.subtitle,
+                  style: const TextStyle(
+                    color: Color(0x99000000),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

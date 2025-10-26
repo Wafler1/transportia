@@ -11,6 +11,7 @@ class WelcomeScreen extends StatelessWidget {
 
   Future<void> _onSkip(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kWelcomeSeenKey, true);
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const MapScreen(),
@@ -37,8 +38,8 @@ class WelcomeScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.max,
                 children: [
                   Flexible(
-                    child: Image.network(
-                      "https://i.postimg.cc/Qtxc8xgv/welcome-image.png",
+                    child: Image.asset(
+                      "assets/images/welcome-image.png",
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -78,7 +79,7 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 8),
                         Icon(
-                          LucideIcons.arrowRight,
+                          LucideIcons.chevronRight,
                           size: 20,
                           color: Color.fromARGB(255, 0, 113, 133),
                         ),
@@ -124,10 +125,10 @@ class _PressableHighlightState extends State<_PressableHighlight> {
       final custom = await Vibration.hasCustomVibrationsSupport();
       if (custom) {
         // Very short, low amplitude pulse (Android API 26+ respects amplitude).
-        await Vibration.vibrate(duration: 64, amplitude: 64);
+        await Vibration.vibrate(pattern: [0, 100, 25, 100],
+                                intensities: [0, 100, 0, 250]);
       } else {
-        // Fallback single short pulse.
-        await Vibration.vibrate(duration: 64);
+        await Vibration.vibrate(duration: 100);
       }
     } catch (_) {
       // Ignore vibration errors (e.g., unsupported platform).

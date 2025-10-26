@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/map_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -12,6 +13,14 @@ class EntariaApp extends StatelessWidget {
       title: 'Entaria',
       color: const Color(0xFF0b0f14),
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        DefaultWidgetsLocalizations.delegate,
+        DefaultCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', 'US'),
+        Locale('en'),
+      ],
       pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
         return PageRouteBuilder<T>(
           settings: settings,
