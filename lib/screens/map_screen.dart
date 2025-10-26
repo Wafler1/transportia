@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:vibration/vibration.dart';
+import 'dart:math' as math;
 import '../services/location_service.dart';
 import '../widgets/route_field_box.dart';
 import '../widgets/glass_icon_button.dart';
@@ -35,7 +35,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   bool _didAutoCenter = false;
   // Tracks if the draggable sheet is collapsed (map dominant)
   bool _isSheetCollapsed = false;
-  bool _isDraggingSheet = false;
   double? _sheetTop; // dynamic top position of the sheet
   static const double _collapsedMapFraction = 0.25; // visible map when expanded
   static const double _bottomBarHeight = 116.0; // collapsed bar height
@@ -90,6 +89,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     _toCtrl.dispose();
     _fromFocus.dispose();
     _toFocus.dispose();
+    _stopDragRumble();
     super.dispose();
     _snapCtrl.dispose();
   }
@@ -224,18 +224,21 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final totalH = constraints.maxHeight;
+    return WillPopScope(
+      onWillPop: _handleWillPop,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final totalH = constraints.maxHeight;
         // Sheet anchors
-        final double expandedTop = (totalH * _collapsedMapFraction).clamp(0.0, totalH - _bottomBarHeight);
-        final double collapsedTop = (totalH - _bottomBarHeight).clamp(0.0, totalH);
+        final double collapsedTop = math.max(0.0, totalH - _bottomBarHeight);
+        final double expandedCandidate = totalH * _collapsedMapFraction;
+        final double expandedTop = (expandedCandidate.clamp(0.0, collapsedTop));
         _lastComputedCollapsedTop = collapsedTop;
         _lastComputedExpandedTop = expandedTop;
 
         // Initialize and keep within bounds (e.g., on rotation)
         _sheetTop ??= expandedTop;
-        _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop)) as double;
+        _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop));
         final bool collapsed = ((_sheetTop! - collapsedTop).abs() < 1.0);
         if (collapsed != _isSheetCollapsed) {
           _isSheetCollapsed = collapsed;
@@ -243,7 +246,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
         final animDuration = Duration.zero; // we animate snaps via controller (smoother)
 
-        final progress = ((_sheetTop! - expandedTop) / (collapsedTop - expandedTop)).clamp(0.0, 1.0);
+        final denom = (collapsedTop - expandedTop);
+        final progress = denom <= 0.0
+            ? 1.0
+            : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
 
         return Stack(
           children: [
@@ -267,6 +273,18 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                 ),
               ),
             ),
+
+            // If expanded, tapping map collapses the sheet (doesn't interfere when collapsed)
+            if (!_isSheetCollapsed)
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () {
+                    _stopDragRumble();
+                    _animateTo(collapsedTop, collapsedTop);
+                  },
+                ),
+              ),
 
             // Map controls (only when sheet is collapsed)
             if (_isSheetCollapsed)
@@ -313,7 +331,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                   },
                   onDragStart: () {
                     _snapCtrl.stop();
-                    setState(() => _isDraggingSheet = true);
                     _startDragRumble();
                   },
                   onDragUpdate: (dy) {
@@ -343,6 +360,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
           ],
         );
       },
+    ),
     );
   }
 
@@ -361,7 +379,6 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   double? _lastComputedCollapsedTop;
   double? _lastComputedExpandedTop;
   void _animateTo(double target, double collapsedTop) {
-    setState(() => _isDraggingSheet = false);
     final begin = _sheetTop ?? target;
     _snapAnim = Tween<double>(begin: begin, end: target)
         .animate(CurvedAnimation(parent: _snapCtrl, curve: SmallBackOutCurve(0.6)));
@@ -374,8 +391,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   Future<void> _initHapticCaps() async {
     try {
-      _hasVibrator = await Vibration.hasVibrator() ?? false;
-      _hasCustomVibration = await Vibration.hasCustomVibrationsSupport() ?? false;
+      _hasVibrator = await Vibration.hasVibrator();
+      _hasCustomVibration = await Vibration.hasCustomVibrationsSupport();
     } catch (_) {
       _hasVibrator = false;
       _hasCustomVibration = false;
@@ -420,6 +437,19 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         _stopDragRumble();
       }
     }
+  }
+
+  Future<bool> _handleWillPop() async {
+    if (_isSheetCollapsed) {
+      final expTop = _lastComputedExpandedTop;
+      final colTop = _lastComputedCollapsedTop;
+      if (expTop != null && colTop != null) {
+        _animateTo(expTop, colTop);
+        _stopDragRumble();
+        return false;
+      }
+    }
+    return true;
   }
 }
 
@@ -536,7 +566,7 @@ class _BottomCard extends StatelessWidget {
               );
             }),
 
-            // Field box
+            // Field box (fixed padding; handle remains constant size)
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: RouteFieldBox(

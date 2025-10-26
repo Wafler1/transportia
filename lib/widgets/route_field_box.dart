@@ -1,5 +1,5 @@
+import 'dart:ui';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class RouteFieldBox extends StatefulWidget {
@@ -130,41 +130,60 @@ class _InlineField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showMyLocOverlay = isFromField && showMyLocationDefault && controller.text.isEmpty && !(focusNode?.hasFocus ?? false);
-    return Stack(
-      alignment: textAlign == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft,
-      children: [
-        CupertinoTextField(
-          controller: controller,
-          focusNode: focusNode,
-          placeholder: showMyLocOverlay ? '' : hintText,
-          placeholderStyle: const TextStyle(color: Color(0x66000000), fontSize: 16),
-          style: const TextStyle(color: Color(0xFF000000), fontSize: 16),
-          cursorColor: const Color(0xFF007185),
-          textAlign: textAlign,
-          decoration: null, // Let outer container draw the box
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          maxLines: 1,
-          textInputAction: TextInputAction.next,
-          keyboardType: TextInputType.text,
-        ),
-        if (showMyLocOverlay)
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => focusNode?.requestFocus(),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.mousePointer2, size: 18, color: accentColor),
-                const SizedBox(width: 6),
-                Text(
-                  'My Location',
-                  style: TextStyle(color: accentColor, fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ],
+    final wantsOverlay = isFromField && showMyLocationDefault && controller.text.isEmpty && !(focusNode?.hasFocus ?? false);
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      tween: Tween<double>(begin: 0.0, end: wantsOverlay ? 1.0 : 0.0),
+      builder: (context, overlayT, _) {
+        return Stack(
+          alignment: textAlign == TextAlign.right ? Alignment.centerRight : Alignment.centerLeft,
+          children: [
+            CupertinoTextField(
+              controller: controller,
+              focusNode: focusNode,
+              placeholder: overlayT > 0.01 ? '' : hintText,
+              placeholderStyle: const TextStyle(color: Color(0x66000000), fontSize: 16),
+              style: const TextStyle(color: Color(0xFF000000), fontSize: 16),
+              cursorColor: const Color(0xFF007185),
+              textAlign: textAlign,
+              decoration: null, // Let outer container draw the box
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              maxLines: 1,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.text,
             ),
-          ),
-      ],
+            // Overlay always present but animated opacity/blur/offset for smooth transitions
+            IgnorePointer(
+              ignoring: overlayT < 0.01,
+              child: Opacity(
+                opacity: overlayT,
+                child: Transform.translate(
+                  offset: Offset(0, (1 - overlayT) * 4),
+                  child: ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: (1 - overlayT) * 2.0, sigmaY: (1 - overlayT) * 2.0),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => focusNode?.requestFocus(),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(LucideIcons.mousePointer2, size: 18, color: accentColor),
+                          const SizedBox(width: 6),
+                          Text(
+                            'My Location',
+                            style: TextStyle(color: accentColor, fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
