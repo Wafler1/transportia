@@ -11,8 +11,6 @@ class WelcomeScreen extends StatelessWidget {
   Future<void> _onSkip(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kWelcomeSeenKey, true);
-    // Replace so user can't go back to welcome.
-    // ignore: use_build_context_synchronously
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => const MapScreen(),
@@ -66,9 +64,8 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 28),
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _onSkip(context),
+                  _PressableHighlight(
+                    onPressed: () => _onSkip(context),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -93,6 +90,52 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PressableHighlight extends StatefulWidget {
+  const _PressableHighlight({
+    required this.onPressed,
+    required this.child,
+  });
+
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  State<_PressableHighlight> createState() => _PressableHighlightState();
+}
+
+class _PressableHighlightState extends State<_PressableHighlight> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) {
+      setState(() => _pressed = value);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onPressed,
+      onTapDown: (_) => _setPressed(true),
+      onTapUp: (_) => _setPressed(false),
+      onTapCancel: () => _setPressed(false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        decoration: BoxDecoration(
+          color: _pressed
+              // Semi-transparent tint of the accent color
+              ? const Color.fromARGB(38, 0, 113, 133) // ~15% opacity
+              : const Color(0x00000000),
+          borderRadius: BorderRadius.circular(32),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: widget.child,
       ),
     );
   }
