@@ -5,17 +5,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:vibration/vibration.dart';
+import '../animations/curves.dart';
 import 'dart:math' as math;
 import '../services/location_service.dart';
-import '../widgets/route_field_box.dart';
+import '../widgets/route_bottom_card.dart';
 import '../widgets/glass_icon_button.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({
-    super.key,
-    this.deferInit = false,
-    this.activateOnShow,
-  });
+  const MapScreen({super.key, this.deferInit = false, this.activateOnShow});
 
   // If true, skip location permission/init until activated.
   final bool deferInit;
@@ -25,7 +22,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMixin {
+class _MapScreenState extends State<MapScreen>
+    with SingleTickerProviderStateMixin {
   static const _styleUrl = "https://tiles.openfreemap.org/styles/liberty";
   static const double _min3DZoom = 16.0;
   static const CameraPosition _initCam = CameraPosition(
@@ -70,7 +68,10 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     } else {
       _maybeAttachActivateListener();
     }
-    _snapCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 220));
+    _snapCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
     _snapCtrl.addListener(() {
       final anim = _snapAnim;
       if (anim == null) return;
@@ -83,12 +84,15 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       if (status == AnimationStatus.completed && _snapTarget != null) {
         final target = _snapTarget!;
         // Resolve collapsed state only once snap animation finishes
-        final collapsed = (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
+        final collapsed =
+            (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
         if (collapsed != _isSheetCollapsed) {
           setState(() => _isSheetCollapsed = collapsed);
         }
         if (_isSheetCollapsed) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _centerToUserKeepZoom());
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _centerToUserKeepZoom(),
+          );
         }
         _hapticSnap();
         _snapTarget = null;
@@ -120,6 +124,7 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
       void listener() {
         if (listenable.value) _activateIfNeeded();
       }
+
       listenable.addListener(listener);
       _activateListener = () => listenable.removeListener(listener);
       // If already true, activate immediately.
@@ -165,7 +170,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   Future<void> _applyPersistedLastLocation() async {
     final last = await LocationService.loadLastLatLng();
     if (last == null) return;
-    final cam = CameraPosition(target: last, zoom: _initCam.zoom, tilt: 0.0, bearing: 0.0);
+    final cam = CameraPosition(
+      target: last,
+      zoom: _initCam.zoom,
+      tilt: 0.0,
+      bearing: 0.0,
+    );
     if (!mounted) return;
     setState(() => _startCam = cam);
     if (_controller != null && !_didAutoCenter) {
@@ -193,18 +203,19 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   void _startPositionStream() {
     _posSub?.cancel();
-    _posSub = LocationService.positionStream(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10,
-    ).listen((p) {
-      final firstFix = _lastUserLatLng == null;
-      _lastUserLatLng = LatLng(p.latitude, p.longitude);
-      unawaited(LocationService.saveLastLatLng(_lastUserLatLng!));
-      if (firstFix && !_didAutoCenter) {
-        _didAutoCenter = true;
-      }
-      unawaited(_centerToUserKeepZoom());
-    }, onError: (_) {});
+    _posSub =
+        LocationService.positionStream(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ).listen((p) {
+          final firstFix = _lastUserLatLng == null;
+          _lastUserLatLng = LatLng(p.latitude, p.longitude);
+          unawaited(LocationService.saveLastLatLng(_lastUserLatLng!));
+          if (firstFix && !_didAutoCenter) {
+            _didAutoCenter = true;
+          }
+          unawaited(_centerToUserKeepZoom());
+        }, onError: (_) {});
   }
 
   Future<bool> _ensurePermissionOnDemand() async {
@@ -230,12 +241,19 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     if (!ok) return;
     LatLng target = _lastUserLatLng ?? _startCam.target;
     if (_lastUserLatLng == null) {
-      final pos = await LocationService.currentPosition(accuracy: LocationAccuracy.best);
+      final pos = await LocationService.currentPosition(
+        accuracy: LocationAccuracy.best,
+      );
       target = LatLng(pos.latitude, pos.longitude);
       unawaited(LocationService.saveLastLatLng(target));
     }
     _is3DMode = false;
-    _lastCam = CameraPosition(target: target, zoom: 16.0, tilt: 0.0, bearing: 0.0);
+    _lastCam = CameraPosition(
+      target: target,
+      zoom: 16.0,
+      tilt: 0.0,
+      bearing: 0.0,
+    );
     await _controller?.animateCamera(CameraUpdate.newCameraPosition(_lastCam));
     if (mounted) setState(() {});
   }
@@ -251,7 +269,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         bearing: cam.bearing,
         tilt: 60.0,
       );
-      await _controller?.animateCamera(CameraUpdate.newCameraPosition(_lastCam));
+      await _controller?.animateCamera(
+        CameraUpdate.newCameraPosition(_lastCam),
+      );
       _is3DMode = true;
     } else {
       final double outZoom = cam.zoom > 14.0 ? 14.0 : cam.zoom;
@@ -261,7 +281,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
         bearing: 0.0,
         tilt: 0.0,
       );
-      await _controller?.animateCamera(CameraUpdate.newCameraPosition(_lastCam));
+      await _controller?.animateCamera(
+        CameraUpdate.newCameraPosition(_lastCam),
+      );
       _is3DMode = false;
     }
     if (mounted) setState(() {});
@@ -275,147 +297,170 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _handleWillPop,
+    return PopScope(
+      canPop: !_isSheetCollapsed,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          final expTop = _lastComputedExpandedTop;
+          final colTop = _lastComputedCollapsedTop;
+          if (expTop != null && colTop != null) {
+            _animateTo(expTop, colTop);
+            _stopDragRumble();
+          }
+        }
+      },
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalH = constraints.maxHeight;
-        // Sheet anchors
-        final double collapsedTop = math.max(0.0, totalH - _bottomBarHeight);
-        final double expandedCandidate = totalH * _collapsedMapFraction;
-        final double expandedTop = (expandedCandidate.clamp(0.0, collapsedTop));
-        _lastComputedCollapsedTop = collapsedTop;
-        _lastComputedExpandedTop = expandedTop;
+          // Sheet anchors
+          final double collapsedTop = math.max(0.0, totalH - _bottomBarHeight);
+          final double expandedCandidate = totalH * _collapsedMapFraction;
+          final double expandedTop = (expandedCandidate.clamp(
+            0.0,
+            collapsedTop,
+          ));
+          _lastComputedCollapsedTop = collapsedTop;
+          _lastComputedExpandedTop = expandedTop;
 
-        // Initialize and keep within bounds (e.g., on rotation)
-        _sheetTop ??= expandedTop;
-        _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop));
-        final bool collapsed = ((_sheetTop! - collapsedTop).abs() < 1.0);
-        if (collapsed != _isSheetCollapsed) {
-          _isSheetCollapsed = collapsed;
-        }
+          // Initialize and keep within bounds (e.g., on rotation)
+          _sheetTop ??= expandedTop;
+          _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop));
+          final bool collapsed = ((_sheetTop! - collapsedTop).abs() < 1.0);
+          if (collapsed != _isSheetCollapsed) {
+            _isSheetCollapsed = collapsed;
+          }
 
-        final animDuration = Duration.zero; // we animate snaps via controller (smoother)
+          final animDuration =
+              Duration.zero; // we animate snaps via controller (smoother)
 
-        final denom = (collapsedTop - expandedTop);
-        final progress = denom <= 0.0
-            ? 1.0
-            : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
+          final denom = (collapsedTop - expandedTop);
+          final progress = denom <= 0.0
+              ? 1.0
+              : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
 
-        return Stack(
-          children: [
-            // Map behind (isolated repaint)
-            Positioned.fill(
-              child: RepaintBoundary(
-                child: MapLibreMap(
-                  onMapCreated: _onMapCreated,
-                  styleString: _styleUrl,
-                  myLocationEnabled: _hasLocationPermission,
-                  myLocationRenderMode: _hasLocationPermission
-                      ? MyLocationRenderMode.compass
-                      : MyLocationRenderMode.normal,
-                  myLocationTrackingMode: MyLocationTrackingMode.none,
-                  rotateGesturesEnabled: true,
-                  tiltGesturesEnabled: false,
-                  initialCameraPosition: _startCam,
-                  compassEnabled: false,
-                  onCameraMove: _onCameraMove,
-                  onCameraIdle: _onCameraIdle,
-                ),
-              ),
-            ),
-
-            // If expanded, tapping map collapses the sheet (doesn't interfere when collapsed)
-            if (!_isSheetCollapsed)
+          return Stack(
+            children: [
+              // Map behind (isolated repaint)
               Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: () {
-                    _unfocusInputs();
-                    _stopDragRumble();
-                    _animateTo(collapsedTop, collapsedTop);
-                  },
-                ),
-              ),
-
-            // Map controls (only when sheet is collapsed)
-            if (_isSheetCollapsed)
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GlassIconButton(
-                          icon: _is3DMode ? LucideIcons.undoDot : LucideIcons.box,
-                          onTap: _toggle3D,
-                        ),
-                        const SizedBox(height: 10),
-                        GlassIconButton(
-                          icon: LucideIcons.locate,
-                          onTap: _centerOnUser2D,
-                        ),
-                      ],
-                    ),
+                child: RepaintBoundary(
+                  child: MapLibreMap(
+                    onMapCreated: _onMapCreated,
+                    styleString: _styleUrl,
+                    myLocationEnabled: _hasLocationPermission,
+                    myLocationRenderMode: _hasLocationPermission
+                        ? MyLocationRenderMode.compass
+                        : MyLocationRenderMode.normal,
+                    myLocationTrackingMode: MyLocationTrackingMode.none,
+                    rotateGesturesEnabled: true,
+                    tiltGesturesEnabled: false,
+                    initialCameraPosition: _startCam,
+                    compassEnabled: false,
+                    onCameraMove: _onCameraMove,
+                    onCameraIdle: _onCameraIdle,
                   ),
                 ),
               ),
 
-            // Draggable white card anchored to bottom
-            // The bottom card; position changes on drag. Snaps animate via controller above.
-            AnimatedPositioned(
-              duration: animDuration,
-              curve: Curves.linear,
-              left: 0,
-              right: 0,
-              top: _sheetTop!,
-              bottom: 0,
-              child: RepaintBoundary(
-                child: _BottomCard(
-                  isCollapsed: _isSheetCollapsed,
-                  collapseProgress: progress,
-                  onHandleTap: () {
-                    _unfocusInputs();
-                    final target = _isSheetCollapsed ? expandedTop : collapsedTop;
-                    _animateTo(target, collapsedTop);
-                    _stopDragRumble();
-                  },
-                  onDragStart: () {
-                    _unfocusInputs();
-                    _snapCtrl.stop();
-                    _startDragRumble();
-                  },
-                  onDragUpdate: (dy) {
-                    final newTop = (_sheetTop! + dy).clamp(expandedTop, collapsedTop);
-                    setState(() => _sheetTop = newTop);
-                  },
-                  onDragEnd: (velocityDy) {
-                    final mid = (collapsedTop + expandedTop) / 2;
-                    const vThresh = 700.0; // px/s
-                    double target;
-                    if (velocityDy.abs() > vThresh) {
-                      target = velocityDy > 0 ? collapsedTop : expandedTop;
-                    } else {
-                      target = (_sheetTop! > mid) ? collapsedTop : expandedTop;
-                    }
-                    _animateTo(target, collapsedTop);
-                    _stopDragRumble();
-                  },
-                  fromCtrl: _fromCtrl,
-                  toCtrl: _toCtrl,
-                  fromFocusNode: _fromFocus,
-                  toFocusNode: _toFocus,
-                  showMyLocationDefault: _hasLocationPermission,
-                  onUnfocus: _unfocusInputs,
+              // If expanded, tapping map collapses the sheet (doesn't interfere when collapsed)
+              if (!_isSheetCollapsed)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: () {
+                      _unfocusInputs();
+                      _stopDragRumble();
+                      _animateTo(collapsedTop, collapsedTop);
+                    },
+                  ),
+                ),
+
+              // Map controls (only when sheet is collapsed)
+              if (_isSheetCollapsed)
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GlassIconButton(
+                            icon: _is3DMode
+                                ? LucideIcons.undoDot
+                                : LucideIcons.box,
+                            onTap: _toggle3D,
+                          ),
+                          const SizedBox(height: 10),
+                          GlassIconButton(
+                            icon: LucideIcons.locate,
+                            onTap: _centerOnUser2D,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Draggable white card anchored to bottom
+              // The bottom card; position changes on drag. Snaps animate via controller above.
+              AnimatedPositioned(
+                duration: animDuration,
+                curve: Curves.linear,
+                left: 0,
+                right: 0,
+                top: _sheetTop!,
+                bottom: 0,
+                child: RepaintBoundary(
+                  child: BottomCard(
+                    isCollapsed: _isSheetCollapsed,
+                    collapseProgress: progress,
+                    onHandleTap: () {
+                      _unfocusInputs();
+                      final target = _isSheetCollapsed
+                          ? expandedTop
+                          : collapsedTop;
+                      _animateTo(target, collapsedTop);
+                      _stopDragRumble();
+                    },
+                    onDragStart: () {
+                      _unfocusInputs();
+                      _snapCtrl.stop();
+                      _startDragRumble();
+                    },
+                    onDragUpdate: (dy) {
+                      final newTop = (_sheetTop! + dy).clamp(
+                        expandedTop,
+                        collapsedTop,
+                      );
+                      setState(() => _sheetTop = newTop);
+                    },
+                    onDragEnd: (velocityDy) {
+                      final mid = (collapsedTop + expandedTop) / 2;
+                      const vThresh = 700.0; // px/s
+                      double target;
+                      if (velocityDy.abs() > vThresh) {
+                        target = velocityDy > 0 ? collapsedTop : expandedTop;
+                      } else {
+                        target = (_sheetTop! > mid)
+                            ? collapsedTop
+                            : expandedTop;
+                      }
+                      _animateTo(target, collapsedTop);
+                      _stopDragRumble();
+                    },
+                    fromCtrl: _fromCtrl,
+                    toCtrl: _toCtrl,
+                    fromFocusNode: _fromFocus,
+                    toFocusNode: _toFocus,
+                    showMyLocationDefault: _hasLocationPermission,
+                    onUnfocus: _unfocusInputs,
+                  ),
                 ),
               ),
-            ),
-          ],
-        );
-      },
-    ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -435,8 +480,9 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
   double? _lastComputedExpandedTop;
   void _animateTo(double target, double collapsedTop) {
     final begin = _sheetTop ?? target;
-    _snapAnim = Tween<double>(begin: begin, end: target)
-        .animate(CurvedAnimation(parent: _snapCtrl, curve: SmallBackOutCurve(0.6)));
+    _snapAnim = Tween<double>(begin: begin, end: target).animate(
+      CurvedAnimation(parent: _snapCtrl, curve: SmallBackOutCurve(0.6)),
+    );
     _snapCtrl
       ..stop()
       ..reset()
@@ -458,7 +504,8 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 
   void _startDragRumble() {
     _dragVibeTimer?.cancel();
-    if (!_hasCustomVibration) return; // keep it subtle: only if custom supported
+    if (!_hasCustomVibration)
+      return; // keep it subtle: only if custom supported
     _dragVibeTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
       try {
         Vibration.vibrate(duration: 8, amplitude: 25);
@@ -494,25 +541,14 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
     }
   }
 
-  Future<bool> _handleWillPop() async {
-    if (_isSheetCollapsed) {
-      final expTop = _lastComputedExpandedTop;
-      final colTop = _lastComputedCollapsedTop;
-      if (expTop != null && colTop != null) {
-        _animateTo(expTop, colTop);
-        _stopDragRumble();
-        return false;
-      }
-    }
-    return true;
-  }
+  // Pop is handled via PopScope in build()
 
   void _unfocusInputs() {
     FocusScope.of(context).unfocus();
   }
 }
 
-class _PillButton extends StatefulWidget {
+/* class _PillButton extends StatefulWidget {
   const _PillButton({required this.onTap, required this.child});
   final VoidCallback onTap;
   final Widget child;
@@ -576,7 +612,7 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
           decoration: BoxDecoration(
             color: _pressed
                 ? const Color.fromARGB(255, 0, 105, 124)
-                : const Color.fromARGB(255, 0, 113, 133),
+                : AppColors.accent,
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -584,18 +620,6 @@ class _PrimaryButtonState extends State<_PrimaryButton> {
         ),
       ),
     );
-  }
-}
-
-class SmallBackOutCurve extends Curve {
-  const SmallBackOutCurve(this.s);
-  final double s; // overshoot; 0.4–0.8 is subtle
-  @override
-  double transform(double t) {
-    // Back-out: overshoot then settle
-    final double sVal = s;
-    t = t - 1.0;
-    return t * t * ((sVal + 1) * t + sVal) + 1.0;
   }
 }
 
@@ -720,7 +744,7 @@ class _BottomCard extends StatelessWidget {
                 fromFocusNode: fromFocusNode,
                 toFocusNode: toFocusNode,
                 showMyLocationDefault: showMyLocationDefault,
-                accentColor: const Color.fromARGB(255, 0, 113, 133),
+                accentColor: AppColors.accent,
               ),
             ),
 
@@ -839,84 +863,4 @@ class _BottomCard extends StatelessWidget {
   }
 }
 
-class _Suggestion {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _Suggestion({required this.icon, required this.title, required this.subtitle});
-}
-
-class _SuggestionsList extends StatelessWidget {
-  const _SuggestionsList({required this.items, required this.onItemTap});
-  final List<_Suggestion> items;
-  final VoidCallback onItemTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final it = items[index];
-        return _SuggestionTile(item: it, onTap: onItemTap);
-      },
-    );
-  }
-}
-
-class _SuggestionTile extends StatelessWidget {
-  const _SuggestionTile({required this.item, required this.onTap});
-  final _Suggestion item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0x0F000000),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x11000000)),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              item.icon,
-              size: 18,
-              color: const Color(0xFF000000),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    color: Color(0xFF000000),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: const TextStyle(
-                    color: Color(0x99000000),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+*/

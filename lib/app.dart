@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
@@ -12,30 +11,27 @@ class EntariaApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return OKToast(
       child: WidgetsApp(
-      title: 'Entaria',
-      color: const Color(0xFF0b0f14),
-      debugShowCheckedModeBanner: false,
-      localizationsDelegates: const [
-        DefaultWidgetsLocalizations.delegate,
-        DefaultCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en', 'US'),
-        Locale('en'),
-      ],
-      pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
-        return PageRouteBuilder<T>(
-          settings: settings,
-          pageBuilder: (context, animation, secondaryAnimation) => builder(context),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) => child,
-        );
-      },
-      textStyle: const TextStyle(
-        color: Color(0xFF000000),
-        fontSize: 14,
+        title: 'Entaria',
+        color: const Color(0xFF0b0f14),
+        debugShowCheckedModeBanner: false,
+        localizationsDelegates: const [
+          DefaultWidgetsLocalizations.delegate,
+          DefaultCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('en', 'US'), Locale('en')],
+        pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
+          return PageRouteBuilder<T>(
+            settings: settings,
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                builder(context),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) => child,
+          );
+        },
+        textStyle: const TextStyle(color: Color(0xFF000000), fontSize: 14),
+        home: const _RootGate(),
       ),
-      home: const _RootGate(),
-    ));
+    );
   }
 }
 

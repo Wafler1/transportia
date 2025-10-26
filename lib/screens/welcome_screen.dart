@@ -2,7 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:vibration/vibration.dart';
+import '../widgets/pressable_highlight.dart';
+import '../theme/app_colors.dart';
 import 'map_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -41,10 +42,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       children: [
         // Pre-mount the map behind; defer its location init until revealed.
         RepaintBoundary(
-          child: MapScreen(
-            deferInit: true,
-            activateOnShow: _activateMap,
-          ),
+          child: MapScreen(deferInit: true, activateOnShow: _activateMap),
         ),
 
         // Welcome overlay that fades out, then gets removed.
@@ -69,7 +67,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 duration: const Duration(milliseconds: 690),
                 curve: Curves.easeOutCubic,
                 builder: (context, sigma, child) => ImageFiltered(
-                  imageFilter: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                  imageFilter: ui.ImageFilter.blur(
+                    sigmaX: sigma,
+                    sigmaY: sigma,
+                  ),
                   child: child,
                 ),
                 child: ColoredBox(
@@ -97,7 +98,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 style: TextStyle(
                                   fontSize: 24,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF000000),
+                                  color: AppColors.black,
                                   height: 1.25,
                                 ),
                               ),
@@ -112,7 +113,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ),
                               const SizedBox(height: 28),
-                              _PressableHighlight(
+                              PressableHighlight(
                                 onPressed: _onContinue,
                                 child: const Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -121,14 +122,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       "Let's go",
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: Color.fromARGB(255, 0, 113, 133),
+                                        color: AppColors.accent,
                                       ),
                                     ),
                                     SizedBox(width: 8),
                                     Icon(
                                       LucideIcons.chevronRight,
                                       size: 20,
-                                      color: Color.fromARGB(255, 0, 113, 133),
+                                      color: AppColors.accent,
                                     ),
                                   ],
                                 ),
@@ -148,72 +149,4 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 }
 
-class _PressableHighlight extends StatefulWidget {
-  const _PressableHighlight({
-    required this.onPressed,
-    required this.child,
-  });
-
-  final VoidCallback onPressed;
-  final Widget child;
-
-  @override
-  State<_PressableHighlight> createState() => _PressableHighlightState();
-}
-
-class _PressableHighlightState extends State<_PressableHighlight> {
-  bool _pressed = false;
-
-  void _setPressed(bool value) {
-    if (_pressed != value) {
-      setState(() => _pressed = value);
-    }
-  }
-
-  Future<void> _vibrateSubtle() async {
-    try {
-      final hasVibrator = await Vibration.hasVibrator();
-      if (!hasVibrator) return;
-      await Vibration.vibrate(duration: 20, amplitude: 40);
-      await Future.delayed(const Duration(milliseconds: 40));
-      await Vibration.vibrate(duration: 20, amplitude: 80);
-      await Future.delayed(const Duration(milliseconds: 40));
-      await Vibration.vibrate(duration: 20, amplitude: 120);
-      await Future.delayed(const Duration(milliseconds: 40));
-      await Vibration.vibrate(duration: 20, amplitude: 180);
-      await Future.delayed(const Duration(milliseconds: 40));
-      await Vibration.vibrate(duration: 20, amplitude: 220);
-
-
-    } catch (_) {
-      // Ignore vibration errors (e.g., unsupported platform).
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        // Trigger a subtle vibration and then invoke callback.
-        _vibrateSubtle();
-        widget.onPressed();
-      },
-      onTapDown: (_) => _setPressed(true),
-      onTapUp: (_) => _setPressed(false),
-      onTapCancel: () => _setPressed(false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        decoration: BoxDecoration(
-          color: _pressed
-              // Semi-transparent tint of the accent color
-              ? const Color.fromARGB(38, 0, 113, 133) // ~15% opacity
-              : const Color(0x00000000),
-          borderRadius: BorderRadius.circular(32),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: widget.child,
-      ),
-    );
-  }
-}
+// PressableHighlight moved to lib/widgets/pressable_highlight.dart

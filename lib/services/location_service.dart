@@ -24,7 +24,10 @@ class LocationService {
     int distanceFilter = 10,
   }) {
     return Geolocator.getPositionStream(
-      locationSettings: LocationSettings(accuracy: accuracy, distanceFilter: distanceFilter),
+      locationSettings: LocationSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
+      ),
     );
   }
 
