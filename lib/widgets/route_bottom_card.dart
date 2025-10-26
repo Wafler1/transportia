@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../widgets/route_field_box.dart';
 import '../widgets/validation_toast.dart';
@@ -20,6 +20,8 @@ class BottomCard extends StatelessWidget {
     required this.toFocusNode,
     required this.showMyLocationDefault,
     required this.onUnfocus,
+    required this.onSwapRequested,
+    required this.routeFieldLink,
   });
 
   final bool isCollapsed;
@@ -34,6 +36,8 @@ class BottomCard extends StatelessWidget {
   final FocusNode toFocusNode;
   final bool showMyLocationDefault;
   final VoidCallback onUnfocus;
+  final bool Function() onSwapRequested;
+  final LayerLink routeFieldLink;
 
   @override
   Widget build(BuildContext context) {
@@ -132,6 +136,8 @@ class BottomCard extends StatelessWidget {
                     toFocusNode: toFocusNode,
                     showMyLocationDefault: showMyLocationDefault,
                     accentColor: AppColors.accent,
+                    onSwapRequested: onSwapRequested,
+                    layerLink: routeFieldLink,
                   ),
                 ),
 
@@ -221,52 +227,6 @@ class BottomCard extends StatelessWidget {
                       },
                     ),
                   ),
-
-                // Suggestions only when expanded
-                if (!isCollapsed) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      'Suggestions',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.black,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: _SuggestionsList(
-                        items: const [
-                          _Suggestion(
-                            icon: LucideIcons.house,
-                            title: 'Home',
-                            subtitle: 'Save your home',
-                          ),
-                          _Suggestion(
-                            icon: LucideIcons.building,
-                            title: 'Work',
-                            subtitle: 'Save your workplace',
-                          ),
-                          _Suggestion(
-                            icon: LucideIcons.mapPin,
-                            title: 'Recent: Café',
-                            subtitle: 'Old Town, 1.2 km',
-                          ),
-                          _Suggestion(
-                            icon: LucideIcons.mapPin,
-                            title: 'Recent: Station',
-                            subtitle: 'Central Station',
-                          ),
-                        ],
-                        onItemTap: onUnfocus,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -346,88 +306,6 @@ class _PrimaryButtonState extends State<PrimaryButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: widget.child,
         ),
-      ),
-    );
-  }
-}
-
-class _Suggestion {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  const _Suggestion({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-}
-
-class _SuggestionsList extends StatelessWidget {
-  const _SuggestionsList({required this.items, required this.onItemTap});
-  final List<_Suggestion> items;
-  final VoidCallback onItemTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView.separated(
-      itemCount: items.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final it = items[index];
-        return _SuggestionTile(item: it, onTap: onItemTap);
-      },
-    );
-  }
-}
-
-class _SuggestionTile extends StatelessWidget {
-  const _SuggestionTile({required this.item, required this.onTap});
-  final _Suggestion item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0x0F000000),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x11000000)),
-            ),
-            alignment: Alignment.center,
-            child: Icon(item.icon, size: 18, color: AppColors.black),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.title,
-                  style: const TextStyle(
-                    color: AppColors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  item.subtitle,
-                  style: const TextStyle(
-                    color: Color(0x99000000),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

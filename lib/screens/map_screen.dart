@@ -1,15 +1,19 @@
 import 'dart:async';
-import 'package:flutter/widgets.dart';
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
-import 'dart:math' as math;
+import '../models/route_field_kind.dart';
 import '../services/location_service.dart';
-import '../widgets/route_bottom_card.dart';
+import '../services/transitous_geocode_service.dart';
 import '../widgets/glass_icon_button.dart';
+import '../widgets/route_bottom_card.dart';
+import '../widgets/route_suggestions_overlay.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.deferInit = false, this.activateOnShow});
@@ -58,6 +62,16 @@ class _MapScreenState extends State<MapScreen>
   Timer? _dragVibeTimer;
   bool _didInitLocation = false;
   VoidCallback? _activateListener;
+  TransitousLocationSuggestion? _fromSelection;
+  TransitousLocationSuggestion? _toSelection;
+  RouteFieldKind? _activeSuggestionField;
+  List<TransitousLocationSuggestion> _suggestions =
+      const <TransitousLocationSuggestion>[];
+  bool _isFetchingSuggestions = false;
+  int _suggestionRequestId = 0;
+  bool _suppressFromListener = false;
+  bool _suppressToListener = false;
+  final LayerLink _routeFieldLink = LayerLink();
 
   @override
   void initState() {
@@ -101,11 +115,15 @@ class _MapScreenState extends State<MapScreen>
     _initHapticCaps();
     _fromFocus.addListener(_onAnyFieldFocus);
     _toFocus.addListener(_onAnyFieldFocus);
+    _fromCtrl.addListener(_handleFromTextChanged);
+    _toCtrl.addListener(_handleToTextChanged);
   }
 
   @override
   void dispose() {
     _posSub?.cancel();
+    _fromCtrl.removeListener(_handleFromTextChanged);
+    _toCtrl.removeListener(_handleToTextChanged);
     _fromCtrl.dispose();
     _toCtrl.dispose();
     _fromFocus.dispose();
@@ -338,6 +356,8 @@ class _MapScreenState extends State<MapScreen>
               ? 1.0
               : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
 
+          final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
+          final showOverlay = _activeSuggestionField != null;
           return Stack(
             children: [
               // Map behind (isolated repaint)
@@ -411,49 +431,96 @@ class _MapScreenState extends State<MapScreen>
                 top: _sheetTop!,
                 bottom: 0,
                 child: RepaintBoundary(
-                  child: BottomCard(
-                    isCollapsed: _isSheetCollapsed,
-                    collapseProgress: progress,
-                    onHandleTap: () {
-                      _unfocusInputs();
-                      final target = _isSheetCollapsed
-                          ? expandedTop
-                          : collapsedTop;
-                      _animateTo(target, collapsedTop);
-                      _stopDragRumble();
-                    },
-                    onDragStart: () {
-                      _unfocusInputs();
-                      _snapCtrl.stop();
-                      _startDragRumble();
-                    },
-                    onDragUpdate: (dy) {
-                      final newTop = (_sheetTop! + dy).clamp(
-                        expandedTop,
-                        collapsedTop,
-                      );
-                      setState(() => _sheetTop = newTop);
-                    },
-                    onDragEnd: (velocityDy) {
-                      final mid = (collapsedTop + expandedTop) / 2;
-                      const vThresh = 700.0; // px/s
-                      double target;
-                      if (velocityDy.abs() > vThresh) {
-                        target = velocityDy > 0 ? collapsedTop : expandedTop;
-                      } else {
-                        target = (_sheetTop! > mid)
-                            ? collapsedTop
-                            : expandedTop;
-                      }
-                      _animateTo(target, collapsedTop);
-                      _stopDragRumble();
-                    },
-                    fromCtrl: _fromCtrl,
-                    toCtrl: _toCtrl,
-                    fromFocusNode: _fromFocus,
-                    toFocusNode: _toFocus,
-                    showMyLocationDefault: _hasLocationPermission,
-                    onUnfocus: _unfocusInputs,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      BottomCard(
+                        isCollapsed: _isSheetCollapsed,
+                        collapseProgress: progress,
+                        onHandleTap: () {
+                          _unfocusInputs();
+                          final target = _isSheetCollapsed
+                              ? expandedTop
+                              : collapsedTop;
+                          _animateTo(target, collapsedTop);
+                          _stopDragRumble();
+                        },
+                        onDragStart: () {
+                          _unfocusInputs();
+                          _snapCtrl.stop();
+                          _startDragRumble();
+                        },
+                        onDragUpdate: (dy) {
+                          final newTop = (_sheetTop! + dy).clamp(
+                            expandedTop,
+                            collapsedTop,
+                          );
+                          setState(() => _sheetTop = newTop);
+                        },
+                        onDragEnd: (velocityDy) {
+                          final mid = (collapsedTop + expandedTop) / 2;
+                          const vThresh = 700.0; // px/s
+                          double target;
+                          if (velocityDy.abs() > vThresh) {
+                            target = velocityDy > 0
+                                ? collapsedTop
+                                : expandedTop;
+                          } else {
+                            target = (_sheetTop! > mid)
+                                ? collapsedTop
+                                : expandedTop;
+                          }
+                          _animateTo(target, collapsedTop);
+                          _stopDragRumble();
+                        },
+                        fromCtrl: _fromCtrl,
+                        toCtrl: _toCtrl,
+                        fromFocusNode: _fromFocus,
+                        toFocusNode: _toFocus,
+                        showMyLocationDefault: _hasLocationPermission,
+                        onUnfocus: _unfocusInputs,
+                        onSwapRequested: _handleSwapRequested,
+                        routeFieldLink: _routeFieldLink,
+                      ),
+                      CompositedTransformFollower(
+                        link: _routeFieldLink,
+                        showWhenUnlinked: false,
+                        targetAnchor: Alignment.bottomLeft,
+                        followerAnchor: Alignment.topLeft,
+                        offset: const Offset(0, 8),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            final offsetTween = Tween<Offset>(
+                              begin: const Offset(0, -0.05),
+                              end: Offset.zero,
+                            );
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: animation.drive(offsetTween),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: !showOverlay
+                              ? const SizedBox.shrink()
+                              : RouteSuggestionsOverlay(
+                                  key: ValueKey(_activeSuggestionField),
+                                  width: overlayWidth,
+                                  activeField: _activeSuggestionField,
+                                  fromController: _fromCtrl,
+                                  toController: _toCtrl,
+                                  suggestions: _suggestions,
+                                  isLoading: _isFetchingSuggestions,
+                                  onSuggestionTap: _onSuggestionSelected,
+                                  onDismissRequest: _unfocusInputs,
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -518,6 +585,166 @@ class _MapScreenState extends State<MapScreen>
     _dragVibeTimer = null;
   }
 
+  void _handleFromTextChanged() => _handleTextChanged(RouteFieldKind.from);
+  void _handleToTextChanged() => _handleTextChanged(RouteFieldKind.to);
+
+  void _handleTextChanged(RouteFieldKind kind) {
+    final isSuppressed = kind == RouteFieldKind.from
+        ? _suppressFromListener
+        : _suppressToListener;
+    if (isSuppressed) return;
+    final controller = _controllerFor(kind);
+    final trimmed = controller.text.trim();
+    final selection = _selectionFor(kind);
+    if (selection != null && selection.name != trimmed) {
+      _setSelection(kind, null, notify: true);
+    }
+    _requestSuggestions(kind, trimmed);
+  }
+
+  void _setSelection(
+    RouteFieldKind kind,
+    TransitousLocationSuggestion? value, {
+    bool notify = false,
+  }) {
+    if (kind == RouteFieldKind.from) {
+      if (_fromSelection == value) return;
+      _fromSelection = value;
+    } else {
+      if (_toSelection == value) return;
+      _toSelection = value;
+    }
+    if (notify && mounted) setState(() {});
+  }
+
+  TransitousLocationSuggestion? _selectionFor(RouteFieldKind kind) {
+    return kind == RouteFieldKind.from ? _fromSelection : _toSelection;
+  }
+
+  TextEditingController _controllerFor(RouteFieldKind kind) {
+    return kind == RouteFieldKind.from ? _fromCtrl : _toCtrl;
+  }
+
+  void _requestSuggestions(RouteFieldKind kind, String text) {
+    final query = text.trim();
+    if (query.length < 3) {
+      if (_activeSuggestionField == kind &&
+          (_suggestions.isNotEmpty || _isFetchingSuggestions)) {
+        setState(() {
+          _suggestions = const <TransitousLocationSuggestion>[];
+          _isFetchingSuggestions = false;
+        });
+      }
+      return;
+    }
+    final requestId = ++_suggestionRequestId;
+    setState(() {
+      _activeSuggestionField = kind;
+      _isFetchingSuggestions = true;
+    });
+    final placeBias = _placeBiasLatLng();
+    TransitousGeocodeService.fetchSuggestions(text: query, placeBias: placeBias)
+        .then((results) {
+          if (!mounted || requestId != _suggestionRequestId) return;
+          setState(() {
+            _suggestions = results;
+            _isFetchingSuggestions = false;
+          });
+        })
+        .catchError((_) {
+          if (!mounted || requestId != _suggestionRequestId) return;
+          setState(() {
+            _suggestions = const <TransitousLocationSuggestion>[];
+            _isFetchingSuggestions = false;
+          });
+        });
+  }
+
+  LatLng? _placeBiasLatLng() {
+    if (!_hasLocationPermission) return null;
+    if (_lastUserLatLng != null) return _lastUserLatLng;
+    if (_startCam.target != _initCam.target) return _startCam.target;
+    return null;
+  }
+
+  void _clearSuggestions() {
+    if (_suggestions.isEmpty &&
+        !_isFetchingSuggestions &&
+        _activeSuggestionField == null) {
+      return;
+    }
+    setState(() {
+      _suggestions = const <TransitousLocationSuggestion>[];
+      _isFetchingSuggestions = false;
+      _activeSuggestionField = null;
+    });
+  }
+
+  void _onSuggestionSelected(
+    RouteFieldKind field,
+    TransitousLocationSuggestion suggestion,
+  ) {
+    _setControllerText(field, suggestion.name);
+    setState(() {
+      if (field == RouteFieldKind.from) {
+        _fromSelection = suggestion;
+      } else {
+        _toSelection = suggestion;
+      }
+    });
+    _clearSuggestions();
+    _unfocusInputs();
+  }
+
+  void _setControllerText(RouteFieldKind kind, String value) {
+    if (kind == RouteFieldKind.from) {
+      _suppressFromListener = true;
+      _fromCtrl
+        ..text = value
+        ..selection = TextSelection.collapsed(offset: value.length);
+      _suppressFromListener = false;
+    } else {
+      _suppressToListener = true;
+      _toCtrl
+        ..text = value
+        ..selection = TextSelection.collapsed(offset: value.length);
+      _suppressToListener = false;
+    }
+  }
+
+  void _swapSelectionMetadata() {
+    setState(() {
+      final tmp = _fromSelection;
+      _fromSelection = _toSelection;
+      _toSelection = tmp;
+    });
+  }
+
+  bool _handleSwapRequested() {
+    final fromText = _fromCtrl.text;
+    final toText = _toCtrl.text;
+    if (fromText.isEmpty && toText.isEmpty) {
+      return false;
+    }
+    _suppressFromListener = true;
+    _suppressToListener = true;
+    _fromCtrl
+      ..text = toText
+      ..selection = TextSelection.collapsed(offset: toText.length);
+    _toCtrl
+      ..text = fromText
+      ..selection = TextSelection.collapsed(offset: fromText.length);
+    _suppressFromListener = false;
+    _suppressToListener = false;
+    _swapSelectionMetadata();
+    if (_activeSuggestionField == RouteFieldKind.from) {
+      _requestSuggestions(RouteFieldKind.from, _fromCtrl.text);
+    } else if (_activeSuggestionField == RouteFieldKind.to) {
+      _requestSuggestions(RouteFieldKind.to, _toCtrl.text);
+    }
+    return true;
+  }
+
   void _hapticSnap() {
     if (!_hasVibrator) return;
     try {
@@ -531,6 +758,19 @@ class _MapScreenState extends State<MapScreen>
 
   void _onAnyFieldFocus() {
     if (!mounted) return;
+    if (_fromFocus.hasFocus) {
+      if (_activeSuggestionField != RouteFieldKind.from) {
+        setState(() => _activeSuggestionField = RouteFieldKind.from);
+      }
+      _requestSuggestions(RouteFieldKind.from, _fromCtrl.text);
+    } else if (_toFocus.hasFocus) {
+      if (_activeSuggestionField != RouteFieldKind.to) {
+        setState(() => _activeSuggestionField = RouteFieldKind.to);
+      }
+      _requestSuggestions(RouteFieldKind.to, _toCtrl.text);
+    } else {
+      _clearSuggestions();
+    }
     if ((_fromFocus.hasFocus || _toFocus.hasFocus) && _isSheetCollapsed) {
       final expTop = _lastComputedExpandedTop;
       final colTop = _lastComputedCollapsedTop;
@@ -545,6 +785,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _unfocusInputs() {
     FocusScope.of(context).unfocus();
+    _clearSuggestions();
   }
 }
 

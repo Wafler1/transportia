@@ -16,6 +16,8 @@ class RouteFieldBox extends StatefulWidget {
     this.toFocusNode,
     this.showMyLocationDefault = false,
     this.accentColor = AppColors.accent,
+    required this.onSwapRequested,
+    required this.layerLink,
   });
 
   final TextEditingController fromController;
@@ -24,6 +26,8 @@ class RouteFieldBox extends StatefulWidget {
   final FocusNode? toFocusNode;
   final bool showMyLocationDefault;
   final Color accentColor;
+  final bool Function() onSwapRequested;
+  final LayerLink layerLink;
 
   @override
   State<RouteFieldBox> createState() => _RouteFieldBoxState();
@@ -31,24 +35,6 @@ class RouteFieldBox extends StatefulWidget {
 
 class _RouteFieldBoxState extends State<RouteFieldBox> {
   bool _swapPressed = false;
-
-  void _swapFields() {
-    final fromText = widget.fromController.text;
-    final toText = widget.toController.text;
-
-    if (fromText.isEmpty && toText.isEmpty) {
-      showValidationToast(context, "Supply at least one location to swap");
-      return;
-    }
-
-    // Swap texts as typed (including empties)
-    widget.fromController
-      ..text = toText
-      ..selection = TextSelection.collapsed(offset: toText.length);
-    widget.toController
-      ..text = fromText
-      ..selection = TextSelection.collapsed(offset: fromText.length);
-  }
 
   @override
   void initState() {
@@ -81,108 +67,116 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x1A000000)), // ~10% black
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14000000), // subtle shadow
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          // From
-          Expanded(
-            child: _InlineField(
-              controller: widget.fromController,
-              focusNode: widget.fromFocusNode,
-              hintText: 'From',
-              textAlign: TextAlign.left,
-              isFromField: true,
-              showMyLocationDefault: widget.showMyLocationDefault,
-              accentColor: widget.accentColor,
+    return CompositedTransformTarget(
+      link: widget.layerLink,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFFFF),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0x1A000000)), // ~10% black
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x14000000), // subtle shadow
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
-          ),
-          // Divider
-          SizedBox(
-            width: 44,
-            height: 36,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // The thin divider line behind the button
-                Container(width: 1, height: 28, color: const Color(0x1A000000)),
-                // The swap button centered on the divider
-                GestureDetector(
-                  onTap: () {
-                    final fromText = widget.fromController.text;
-                    final toText = widget.toController.text;
-                    if (fromText.isEmpty && toText.isEmpty) {
-                      showValidationToast(
-                        context,
-                        "Supply at least one location to swap",
-                      );
-                      return;
-                    }
-                    _swapFields();
-                    // Light haptic on successful swap
-                    Haptics.mediumTick();
-                  },
-                  onTapDown: (_) => setState(() => _swapPressed = true),
-                  onTapUp: (_) => setState(() => _swapPressed = false),
-                  onTapCancel: () => setState(() => _swapPressed = false),
-                  child: AnimatedScale(
-                    duration: const Duration(milliseconds: 100),
-                    scale: _swapPressed ? 0.92 : 1.0,
-                    curve: Curves.easeOut,
-                    child: AnimatedContainer(
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            // From
+            Expanded(
+              child: _InlineField(
+                controller: widget.fromController,
+                focusNode: widget.fromFocusNode,
+                hintText: 'From',
+                textAlign: TextAlign.left,
+                isFromField: true,
+                showMyLocationDefault: widget.showMyLocationDefault,
+                accentColor: widget.accentColor,
+              ),
+            ),
+            // Divider
+            SizedBox(
+              width: 44,
+              height: 36,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // The thin divider line behind the button
+                  Container(
+                    width: 1,
+                    height: 28,
+                    color: const Color(0x1A000000),
+                  ),
+                  // The swap button centered on the divider
+                  GestureDetector(
+                    onTap: () {
+                      final fromText = widget.fromController.text;
+                      final toText = widget.toController.text;
+                      if (fromText.isEmpty && toText.isEmpty) {
+                        showValidationToast(
+                          context,
+                          "Supply at least one location to swap",
+                        );
+                        return;
+                      }
+                      final swapped = widget.onSwapRequested();
+                      if (!swapped) return;
+                      // Light haptic on successful swap
+                      Haptics.mediumTick();
+                    },
+                    onTapDown: (_) => setState(() => _swapPressed = true),
+                    onTapUp: (_) => setState(() => _swapPressed = false),
+                    onTapCancel: () => setState(() => _swapPressed = false),
+                    child: AnimatedScale(
                       duration: const Duration(milliseconds: 100),
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: _swapPressed
-                            ? const Color(0xFFF5F5F5)
-                            : const Color(0xFFFFFFFF),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0x1A000000)),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color(0x14000000),
-                            blurRadius: 6,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        LucideIcons.arrowLeftRight,
-                        size: 16,
-                        color: widget.accentColor,
+                      scale: _swapPressed ? 0.92 : 1.0,
+                      curve: Curves.easeOut,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 100),
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: _swapPressed
+                              ? const Color(0xFFF5F5F5)
+                              : const Color(0xFFFFFFFF),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0x1A000000)),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x14000000),
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          LucideIcons.arrowLeftRight,
+                          size: 16,
+                          color: widget.accentColor,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          // To
-          Expanded(
-            child: _InlineField(
-              controller: widget.toController,
-              focusNode: widget.toFocusNode,
-              hintText: 'To',
-              textAlign: TextAlign.right,
-              isFromField: false,
-              showMyLocationDefault: false,
-              accentColor: widget.accentColor,
+            // To
+            Expanded(
+              child: _InlineField(
+                controller: widget.toController,
+                focusNode: widget.toFocusNode,
+                hintText: 'To',
+                textAlign: TextAlign.right,
+                isFromField: false,
+                showMyLocationDefault: false,
+                accentColor: widget.accentColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

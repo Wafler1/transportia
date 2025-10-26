@@ -24,6 +24,10 @@ class Haptics {
     await _tryVibrate(duration: 20, amplitude: 120);
   }
 
+  static Future<void> lightTick() async {
+    await _tryVibrate(duration: 12, amplitude: 120);
+  }
+
   static Future<void> mediumTick() async {
     await _tryVibrate(duration: 18, amplitude: 200);
   }
