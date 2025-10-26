@@ -37,7 +37,6 @@ flutter:
 
   assets:
     - assets/images/welcome-image.png
-    - assets/icon/icon.png
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a
@@ -124,8 +123,8 @@ flutter_native_splash:
   # general image for all platform (except android 12+):
   # allows you to specify an image used in the splash screen. It must be a
   # png file and should be sized for 4x pixel density.
-  image:                assets/icon/icon.png
-  image_dark:          assets/icon/icon-invert.png
+  image:                assets/branding/icon.png
+  image_dark:          assets/branding/icon-invert.png
   # platform-specific image. will override general image if active:
   #image_android:       assets/splash-android.png
   #image_dark_android:  assets/splash-invert-android.png
@@ -212,11 +211,11 @@ flutter_native_splash:
 
     # branding:
     # The branding image dimensions must be 800x320 px.
-    #branding:      assets/dart.png      
+    branding:      assets/branding/banner.png    
     #branding_dark: assets/dart_dark.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/icon/icon-outline.png"
+  image_path: "assets/branding/icon-outline.png"
