@@ -9,12 +9,14 @@ class PressableHighlight extends StatefulWidget {
     required this.child,
     this.highlightColor,
     this.borderRadius = const BorderRadius.all(Radius.circular(32)),
+    this.enableHaptics = true,
   });
 
   final VoidCallback onPressed;
   final Widget child;
   final Color? highlightColor;
   final BorderRadius borderRadius;
+  final bool enableHaptics;
 
   @override
   State<PressableHighlight> createState() => _PressableHighlightState();
@@ -37,7 +39,9 @@ class _PressableHighlightState extends State<PressableHighlight> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        Haptics.subtlePress();
+        if (widget.enableHaptics) {
+          Haptics.subtlePress();
+        }
         widget.onPressed();
       },
       onTapDown: (_) => _setPressed(true),

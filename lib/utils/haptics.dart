@@ -22,6 +22,10 @@ class Haptics {
     await _tryVibrate(duration: 20, amplitude: 80);
     await Future.delayed(const Duration(milliseconds: 40));
     await _tryVibrate(duration: 20, amplitude: 120);
+    await Future.delayed(const Duration(milliseconds: 40));
+    await _tryVibrate(duration: 20, amplitude: 160);
+    await Future.delayed(const Duration(milliseconds: 40));
+    await _tryVibrate(duration: 20, amplitude: 200);
   }
 
   static Future<void> lightTick() async {

@@ -22,6 +22,8 @@ class BottomCard extends StatelessWidget {
     required this.onUnfocus,
     required this.onSwapRequested,
     required this.routeFieldLink,
+    required this.fromLoading,
+    required this.toLoading,
   });
 
   final bool isCollapsed;
@@ -38,6 +40,8 @@ class BottomCard extends StatelessWidget {
   final VoidCallback onUnfocus;
   final bool Function() onSwapRequested;
   final LayerLink routeFieldLink;
+  final bool fromLoading;
+  final bool toLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -138,6 +142,8 @@ class BottomCard extends StatelessWidget {
                     accentColor: AppColors.accent,
                     onSwapRequested: onSwapRequested,
                     layerLink: routeFieldLink,
+                    fromLoading: fromLoading,
+                    toLoading: toLoading,
                   ),
                 ),
 
@@ -237,9 +243,23 @@ class BottomCard extends StatelessWidget {
 }
 
 class PillButton extends StatefulWidget {
-  const PillButton({super.key, required this.onTap, required this.child});
+  const PillButton({
+    super.key,
+    required this.onTap,
+    required this.child,
+    this.restingColor = const Color(0x0F000000),
+    this.pressedColor = const Color(0x14000000),
+    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
+    this.borderColor = const Color(0x11000000),
+    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  });
   final VoidCallback onTap;
   final Widget child;
+  final Color restingColor;
+  final Color pressedColor;
+  final BorderRadius borderRadius;
+  final Color borderColor;
+  final EdgeInsetsGeometry padding;
   @override
   State<PillButton> createState() => _PillButtonState();
 }
@@ -261,11 +281,11 @@ class _PillButtonState extends State<PillButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
-            color: _pressed ? const Color(0x14000000) : const Color(0x0F000000),
-            border: Border.all(color: const Color(0x11000000)),
-            borderRadius: BorderRadius.circular(12),
+            color: _pressed ? widget.pressedColor : widget.restingColor,
+            border: Border.all(color: widget.borderColor),
+            borderRadius: widget.borderRadius,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: widget.padding,
           child: widget.child,
         ),
       ),

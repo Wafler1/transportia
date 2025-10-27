@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:shimmer/shimmer.dart';
 import '../widgets/validation_toast.dart';
 import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
@@ -18,6 +19,8 @@ class RouteFieldBox extends StatefulWidget {
     this.accentColor = AppColors.accent,
     required this.onSwapRequested,
     required this.layerLink,
+    this.fromLoading = false,
+    this.toLoading = false,
   });
 
   final TextEditingController fromController;
@@ -28,6 +31,8 @@ class RouteFieldBox extends StatefulWidget {
   final Color accentColor;
   final bool Function() onSwapRequested;
   final LayerLink layerLink;
+  final bool fromLoading;
+  final bool toLoading;
 
   @override
   State<RouteFieldBox> createState() => _RouteFieldBoxState();
@@ -95,6 +100,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 isFromField: true,
                 showMyLocationDefault: widget.showMyLocationDefault,
                 accentColor: widget.accentColor,
+                showLoading: widget.fromLoading,
               ),
             ),
             // Divider
@@ -173,6 +179,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 isFromField: false,
                 showMyLocationDefault: false,
                 accentColor: widget.accentColor,
+                showLoading: widget.toLoading,
               ),
             ),
           ],
@@ -191,6 +198,7 @@ class _InlineField extends StatelessWidget {
     required this.showMyLocationDefault,
     required this.accentColor,
     this.focusNode,
+    this.showLoading = false,
   });
 
   final TextEditingController controller;
@@ -200,6 +208,7 @@ class _InlineField extends StatelessWidget {
   final bool showMyLocationDefault;
   final Color accentColor;
   final FocusNode? focusNode;
+  final bool showLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -280,6 +289,38 @@ class _InlineField extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
+            ),
+            Positioned.fill(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                child: !showLoading
+                    ? const SizedBox.shrink()
+                    : IgnorePointer(
+                        child: Align(
+                          alignment: textAlign == TextAlign.right
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Shimmer.fromColors(
+                            baseColor: const Color(0xFFE2E7EC),
+                            highlightColor: const Color(0xFFF7F9FC),
+                            period: const Duration(milliseconds: 1100),
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                maxWidth: 160,
+                                minWidth: 96,
+                              ),
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2E7EC),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
               ),
             ),
           ],

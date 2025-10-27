@@ -14,8 +14,8 @@ import '../services/location_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/haptics.dart';
-import '../widgets/glass_icon_button.dart';
 import '../widgets/route_bottom_card.dart';
+import '../widgets/pressable_highlight.dart';
 import '../widgets/route_suggestions_overlay.dart';
 
 class MapScreen extends StatefulWidget {
@@ -81,6 +81,9 @@ class _MapScreenState extends State<MapScreen>
   int _markerRefreshToken = 0;
   bool _didAddMarkerImages = false;
   LatLng? _longPressLatLng;
+  bool _isLongPressClosing = false;
+  final Map<RouteFieldKind, String> _pendingReverseGeocodeKeys = {};
+  final Set<RouteFieldKind> _reverseGeocodeLoading = <RouteFieldKind>{};
 
   @override
   void initState() {
@@ -111,7 +114,7 @@ class _MapScreenState extends State<MapScreen>
             (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
         if (collapsed != _isSheetCollapsed) {
           setState(() => _isSheetCollapsed = collapsed);
-          if (collapsed) _dismissLongPressOverlay();
+          if (!collapsed) _dismissLongPressOverlay(animated: false);
         }
         if (_isSheetCollapsed) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -246,8 +249,8 @@ class _MapScreenState extends State<MapScreen>
           unawaited(LocationService.saveLastLatLng(_lastUserLatLng!));
           if (firstFix && !_didAutoCenter) {
             _didAutoCenter = true;
+            unawaited(_centerToUserKeepZoom());
           }
-          unawaited(_centerToUserKeepZoom());
         }, onError: (_) {});
   }
 
@@ -375,7 +378,18 @@ class _MapScreenState extends State<MapScreen>
           final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
           final showOverlay = _activeSuggestionField != null;
           final showLongPressOverlay =
-              _longPressLatLng != null && _isSheetCollapsed;
+              (_longPressLatLng != null && _isSheetCollapsed) ||
+              (_isLongPressClosing && _longPressLatLng != null);
+          const double pillRevealStart = 0.72;
+          final double pillProgress =
+              ((progress - pillRevealStart) / (1 - pillRevealStart)).clamp(
+                0.0,
+                1.0,
+              );
+          final double pillVisibility = Curves.easeOutCubic.transform(
+            pillProgress,
+          );
+          final double pillYOffset = (1 - pillVisibility) * 18;
           return Stack(
             children: [
               // Map behind (isolated repaint)
@@ -410,56 +424,22 @@ class _MapScreenState extends State<MapScreen>
                     switchOutCurve: Curves.easeInCubic,
                     child: !showLongPressOverlay
                         ? const SizedBox.shrink()
-                        : GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: _dismissLongPressOverlay,
-                            child: Container(
-                              alignment: Alignment.topCenter,
-                              padding: const EdgeInsets.only(
-                                top: 80,
-                                left: 16,
-                                right: 16,
-                              ),
-                              child: _MapLongPressOverlay(
-                                latLng: _longPressLatLng!,
-                                onSelectFrom: () =>
-                                    _onLongPressChoice(RouteFieldKind.from),
-                                onSelectTo: () =>
-                                    _onLongPressChoice(RouteFieldKind.to),
-                                onDismiss: _dismissLongPressOverlay,
-                              ),
+                        : SizedBox.expand(
+                            child: _LongPressSelectionModal(
+                              key: ValueKey(_longPressLatLng),
+                              latLng: _longPressLatLng!,
+                              isClosing: _isLongPressClosing,
+                              onSelectFrom: () =>
+                                  _onLongPressChoice(RouteFieldKind.from),
+                              onSelectTo: () =>
+                                  _onLongPressChoice(RouteFieldKind.to),
+                              onDismissRequested: _dismissLongPressOverlay,
+                              onClosed: _handleLongPressOverlayClosed,
                             ),
                           ),
                   ),
                 ),
               ),
-
-              // Map controls (only when sheet is collapsed)
-              if (_isSheetCollapsed)
-                SafeArea(
-                  child: Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          GlassIconButton(
-                            icon: _is3DMode
-                                ? LucideIcons.undoDot
-                                : LucideIcons.box,
-                            onTap: _toggle3D,
-                          ),
-                          const SizedBox(height: 10),
-                          GlassIconButton(
-                            icon: LucideIcons.locate,
-                            onTap: _centerOnUser2D,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
 
               // Draggable white card anchored to bottom
               // The bottom card; position changes on drag. Snaps animate via controller above.
@@ -521,6 +501,10 @@ class _MapScreenState extends State<MapScreen>
                         onUnfocus: _unfocusInputs,
                         onSwapRequested: _handleSwapRequested,
                         routeFieldLink: _routeFieldLink,
+                        fromLoading: _isReverseGeocodeLoading(
+                          RouteFieldKind.from,
+                        ),
+                        toLoading: _isReverseGeocodeLoading(RouteFieldKind.to),
                       ),
                       CompositedTransformFollower(
                         link: _routeFieldLink,
@@ -566,6 +550,27 @@ class _MapScreenState extends State<MapScreen>
                   ),
                 ),
               ),
+
+              if (_sheetTop != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: math.max(0.0, _sheetTop! - 44),
+                  child: IgnorePointer(
+                    ignoring: pillVisibility < 0.05,
+                    child: Opacity(
+                      opacity: pillVisibility,
+                      child: Transform.translate(
+                        offset: Offset(0, pillYOffset),
+                        child: _MapControlPills(
+                          is3DMode: _is3DMode,
+                          onToggle3D: _toggle3D,
+                          onLocate: _centerOnUser2D,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           );
         },
@@ -976,22 +981,105 @@ class _MapScreenState extends State<MapScreen>
 
   void _onMapLongClick(math.Point<double> point, LatLng coordinate) {
     if (!_isSheetCollapsed) return;
-    setState(() => _longPressLatLng = coordinate);
+    Haptics.mediumTick();
+    setState(() {
+      _longPressLatLng = coordinate;
+      _isLongPressClosing = false;
+      _pendingReverseGeocodeKeys.clear();
+    });
   }
 
-  void _dismissLongPressOverlay() {
+  void _dismissLongPressOverlay({bool animated = true}) {
     if (_longPressLatLng == null) return;
-    setState(() => _longPressLatLng = null);
+    if (!animated) {
+      _handleLongPressOverlayClosed();
+      return;
+    }
+    if (_isLongPressClosing) return;
+    setState(() => _isLongPressClosing = true);
+  }
+
+  void _handleLongPressOverlayClosed() {
+    if (_longPressLatLng == null && !_isLongPressClosing) return;
+    setState(() {
+      _longPressLatLng = null;
+      _isLongPressClosing = false;
+    });
   }
 
   void _onLongPressChoice(RouteFieldKind kind) {
+    final latLng = _longPressLatLng;
+    if (latLng == null) return;
     Haptics.lightTick();
+    _setReverseGeocodeLoading(kind, true);
     _dismissLongPressOverlay();
+    _pendingReverseGeocodeKeys[kind] = _latLngKey(latLng);
+    unawaited(_applyLongPressSelection(kind, latLng));
   }
 
+  Future<void> _applyLongPressSelection(
+    RouteFieldKind kind,
+    LatLng latLng,
+  ) async {
+    TransitousLocationSuggestion? suggestion;
+    try {
+      suggestion = await TransitousGeocodeService.reverseGeocode(place: latLng);
+    } catch (_) {
+      suggestion = null;
+    }
+    if (!mounted) return;
+
+    final pendingKey = _pendingReverseGeocodeKeys[kind];
+    final thisKey = _latLngKey(latLng);
+    if (pendingKey != thisKey) {
+      if (pendingKey == null) {
+        _setReverseGeocodeLoading(kind, false);
+      }
+      return;
+    }
+    _pendingReverseGeocodeKeys.remove(kind);
+
+    suggestion ??= TransitousLocationSuggestion(
+      id: 'reverse-${latLng.latitude.toStringAsFixed(6)}-${latLng.longitude.toStringAsFixed(6)}',
+      name: _formatLatLngLabel(latLng),
+      lat: latLng.latitude,
+      lon: latLng.longitude,
+      type: 'PLACE',
+    );
+
+    _setControllerText(kind, suggestion.name);
+    _setSelection(kind, suggestion, notify: true);
+    _clearSuggestions();
+    _maybeFitSelectionsOnCollapsed();
+    _setReverseGeocodeLoading(kind, false);
+  }
+
+  String _latLngKey(LatLng latLng) =>
+      '${latLng.latitude.toStringAsFixed(6)},${latLng.longitude.toStringAsFixed(6)}';
+
+  String _formatLatLngLabel(LatLng latLng) =>
+      '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}';
+
+  void _setReverseGeocodeLoading(RouteFieldKind kind, bool isLoading) {
+    if (!mounted) return;
+    final hasKind = _reverseGeocodeLoading.contains(kind);
+    if (isLoading && hasKind) return;
+    if (!isLoading && !hasKind) return;
+    setState(() {
+      if (isLoading) {
+        _reverseGeocodeLoading.add(kind);
+      } else {
+        _reverseGeocodeLoading.remove(kind);
+      }
+    });
+  }
+
+  bool _isReverseGeocodeLoading(RouteFieldKind kind) =>
+      _reverseGeocodeLoading.contains(kind);
+
   void _onMapTap(math.Point<double> point, LatLng coordinate) {
-    if (_isSheetCollapsed) return;
     _dismissLongPressOverlay();
+    if (_isSheetCollapsed) return;
     _unfocusInputs();
     _stopDragRumble();
     final colTop = _lastComputedCollapsedTop;
@@ -1044,16 +1132,204 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  // Pop is handled via PopScope in build()
-
   void _unfocusInputs() {
     FocusScope.of(context).unfocus();
+    _dismissLongPressOverlay();
     _clearSuggestions();
   }
 }
 
-class _MapLongPressOverlay extends StatelessWidget {
-  const _MapLongPressOverlay({
+class _MapControlPills extends StatelessWidget {
+  const _MapControlPills({
+    required this.is3DMode,
+    required this.onToggle3D,
+    required this.onLocate,
+  });
+
+  final bool is3DMode;
+  final VoidCallback onToggle3D;
+  final VoidCallback onLocate;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle threeDLabelStyle = TextStyle(
+      color: is3DMode ? AppColors.accent : AppColors.black,
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    );
+
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PillButton(
+              onTap: onToggle3D,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              restingColor: AppColors.white,
+              pressedColor: const Color(0xFFF4F6F8),
+              borderRadius: BorderRadius.circular(18),
+              borderColor: const Color(0x1A000000),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    is3DMode ? LucideIcons.undoDot : LucideIcons.box,
+                    size: 16,
+                    color: is3DMode ? AppColors.accent : AppColors.black,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    is3DMode ? 'Exit 3D' : '3D View',
+                    style: threeDLabelStyle,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            PillButton(
+              onTap: onLocate,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              restingColor: AppColors.white,
+              pressedColor: const Color(0xFFF4F6F8),
+              borderRadius: BorderRadius.circular(18),
+              borderColor: const Color(0x1A000000),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(LucideIcons.locate, size: 16, color: AppColors.black),
+                  SizedBox(width: 6),
+                  Text(
+                    'Locate',
+                    style: TextStyle(
+                      color: AppColors.black,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LongPressSelectionModal extends StatefulWidget {
+  const _LongPressSelectionModal({
+    super.key,
+    required this.latLng,
+    required this.onSelectFrom,
+    required this.onSelectTo,
+    required this.onDismissRequested,
+    required this.onClosed,
+    required this.isClosing,
+  });
+
+  final LatLng latLng;
+  final VoidCallback onSelectFrom;
+  final VoidCallback onSelectTo;
+  final VoidCallback onDismissRequested;
+  final VoidCallback onClosed;
+  final bool isClosing;
+
+  @override
+  State<_LongPressSelectionModal> createState() =>
+      _LongPressSelectionModalState();
+}
+
+class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _hasShown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            _hasShown = true;
+          }
+          if (status == AnimationStatus.dismissed && _hasShown) {
+            widget.onClosed();
+          }
+        });
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _LongPressSelectionModal oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isClosing && widget.isClosing) {
+      _controller.reverse();
+    } else if (oldWidget.latLng != widget.latLng && !widget.isClosing) {
+      _hasShown = false;
+      _controller.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final double value = animation.value;
+        final double slide = (1 - value) * 24.0;
+        final double scale = 0.94 + (value * 0.06);
+        final double backdropOpacity = value * 0.6;
+        return Stack(
+          children: [
+            Opacity(
+              opacity: backdropOpacity,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onDismissRequested,
+                child: Container(color: const Color(0xBF000000)),
+              ),
+            ),
+            Align(
+              child: Opacity(
+                opacity: value,
+                child: Transform.translate(
+                  offset: Offset(0, slide),
+                  child: Transform.scale(scale: scale, child: child),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      child: _LongPressModalCard(
+        latLng: widget.latLng,
+        onSelectFrom: widget.onSelectFrom,
+        onSelectTo: widget.onSelectTo,
+        onDismiss: widget.onDismissRequested,
+      ),
+    );
+  }
+}
+
+class _LongPressModalCard extends StatelessWidget {
+  const _LongPressModalCard({
     required this.latLng,
     required this.onSelectFrom,
     required this.onSelectTo,
@@ -1067,134 +1343,209 @@ class _MapLongPressOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedSlide(
-      duration: const Duration(milliseconds: 220),
-      offset: const Offset(0, 0),
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 220),
-        opacity: 1,
-        child: Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x1A000000),
-                blurRadius: 20,
-                offset: Offset(0, 12),
-              ),
-            ],
+    final size = MediaQuery.sizeOf(context);
+    final double maxWidth = math.min(size.width - 48.0, 340.0);
+    const double iconBoxSize = 40.0;
+
+    Widget segment(
+      String label,
+      IconData icon,
+      VoidCallback onTap,
+      BorderRadius radius,
+      bool alignEnd,
+    ) {
+      return Expanded(
+        child: PillButton(
+          onTap: onTap,
+          borderRadius: radius,
+          restingColor: const Color(0x00000000),
+          pressedColor: const Color(0x00000000),
+          borderColor: const Color(0x00000000),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: FittedBox(
+            alignment: alignEnd ? Alignment.centerRight : Alignment.centerLeft,
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: alignEnd
+                  ? MainAxisAlignment.end
+                  : MainAxisAlignment.start,
+              children: alignEnd
+                  ? [
+                      Text(
+                        label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(icon, size: 18, color: AppColors.black),
+                    ]
+                  : [
+                      Icon(icon, size: 18, color: AppColors.black),
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: AppColors.black,
+                        ),
+                      ),
+                    ],
+            ),
           ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: const [
-                  Icon(LucideIcons.mapPin, size: 18, color: AppColors.black),
-                  SizedBox(width: 8),
-                  Text(
-                    'Use this spot?',
-                    style: TextStyle(
-                      color: AppColors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 36,
+              offset: Offset(0, 24),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: iconBoxSize,
+                  height: iconBoxSize,
+                  decoration: BoxDecoration(
+                    color: const Color(0x0F000000),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0x11000000)),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    LucideIcons.mapPin,
+                    size: 18,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: iconBoxSize,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Use this spot',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 17,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        Text(
+                          '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 13,
+                            color: Color(0x99000000),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Choose how to use this location:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                color: Color(0x99000000),
               ),
-              const SizedBox(height: 8),
-              Text(
-                '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}',
-                style: const TextStyle(color: Color(0x99000000), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F6F8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0x11000000)),
               ),
-              const SizedBox(height: 16),
-              Row(
+              padding: const EdgeInsets.all(4),
+              child: Row(
                 children: [
-                  Expanded(
-                    child: _LongPressOptionButton(
-                      label: 'Set as origin',
-                      icon: LucideIcons.navigation,
-                      onTap: onSelectFrom,
+                  segment(
+                    'Origin',
+                    LucideIcons.arrowUpFromDot,
+                    onSelectFrom,
+                    const BorderRadius.only(
+                      topLeft: Radius.circular(14),
+                      bottomLeft: Radius.circular(14),
                     ),
+                    false,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _LongPressOptionButton(
-                      label: 'Set as destination',
-                      icon: LucideIcons.flag,
-                      onTap: onSelectTo,
+                  Container(
+                    width: 1,
+                    height: 30,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    color: const Color(0x33000000),
+                  ),
+                  segment(
+                    'Destination',
+                    LucideIcons.arrowDownToDot,
+                    onSelectTo,
+                    const BorderRadius.only(
+                      topRight: Radius.circular(14),
+                      bottomRight: Radius.circular(14),
                     ),
+                    true,
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onDismiss,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(LucideIcons.x, size: 16, color: Color(0x99000000)),
-                    SizedBox(width: 6),
+            ),
+            const SizedBox(height: 24),
+            Align(
+              alignment: Alignment.center,
+              child: PressableHighlight(
+                onPressed: onDismiss,
+                highlightColor: AppColors.accent,
+                borderRadius: BorderRadius.circular(14),
+                enableHaptics: false,
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.x, size: 18, color: AppColors.accent),
+                    SizedBox(width: 8),
                     Text(
                       'Dismiss',
                       style: TextStyle(
-                        color: Color(0x99000000),
-                        fontSize: 13,
+                        color: AppColors.accent,
                         fontWeight: FontWeight.w600,
+                        fontSize: 15,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LongPressOptionButton extends StatelessWidget {
-  const _LongPressOptionButton({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0x0F000000),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0x11000000)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 16, color: AppColors.black),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ],
         ),
@@ -1202,320 +1553,3 @@ class _LongPressOptionButton extends StatelessWidget {
     );
   }
 }
-
-/* class _PillButton extends StatefulWidget {
-  const _PillButton({required this.onTap, required this.child});
-  final VoidCallback onTap;
-  final Widget child;
-  @override
-  State<_PillButton> createState() => _PillButtonState();
-}
-
-class _PillButtonState extends State<_PillButton> {
-  bool _pressed = false;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 90),
-        scale: _pressed ? 0.97 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed ? const Color(0x14000000) : const Color(0x0F000000),
-            border: Border.all(color: const Color(0x11000000)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatefulWidget {
-  const _PrimaryButton({required this.onTap, required this.child});
-  final VoidCallback onTap;
-  final Widget child;
-  @override
-  State<_PrimaryButton> createState() => _PrimaryButtonState();
-}
-
-class _PrimaryButtonState extends State<_PrimaryButton> {
-  bool _pressed = false;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 80),
-        scale: _pressed ? 0.985 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed
-                ? const Color.fromARGB(255, 0, 105, 124)
-                : AppColors.accent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomCard extends StatelessWidget {
-  const _BottomCard({
-    required this.isCollapsed,
-    required this.collapseProgress,
-    required this.onHandleTap,
-    required this.onDragStart,
-    required this.onDragUpdate,
-    required this.onDragEnd,
-    required this.fromCtrl,
-    required this.toCtrl,
-    required this.fromFocusNode,
-    required this.toFocusNode,
-    required this.showMyLocationDefault,
-    required this.onUnfocus,
-  });
-
-  final bool isCollapsed;
-  final double collapseProgress; // 0.0 (expanded) -> 1.0 (collapsed)
-  final VoidCallback onHandleTap;
-  final VoidCallback onDragStart;
-  final ValueChanged<double> onDragUpdate; // dy delta
-  final ValueChanged<double> onDragEnd; // velocity dy
-  final TextEditingController fromCtrl;
-  final TextEditingController toCtrl;
-  final FocusNode fromFocusNode;
-  final FocusNode toFocusNode;
-  final bool showMyLocationDefault;
-  final VoidCallback onUnfocus;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000), // ~10% black
-            blurRadius: 14,
-            offset: Offset(0, -6),
-          ),
-        ],
-      ),
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: onUnfocus,
-        child: Listener(
-          onPointerDown: (_) => onUnfocus(),
-          child: SafeArea(
-          top: false,
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Drag handle area
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onHandleTap,
-              onVerticalDragStart: (_) => onDragStart(),
-              onVerticalDragUpdate: (d) => onDragUpdate(d.delta.dy),
-              onVerticalDragEnd: (d) => onDragEnd(d.velocity.pixelsPerSecond.dy),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 18),
-                  Container(
-                    width: 48,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: const Color(0x33000000),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                ],
-              ),
-            ),
-
-            // Title above the pickers; fade and collapse height progressively with drag
-            Builder(builder: (context) {
-              // Start fading the header from mid -> collapsed
-              final fadeStart = 0.5;
-              final t = ((collapseProgress - fadeStart) / (1 - fadeStart)).clamp(0.0, 1.0);
-              final opacity = 1.0 - Curves.easeOut.transform(t);
-              return GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onTap: onUnfocus,
-                child: ClipRect(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    heightFactor: opacity, // shrink height as it fades
-                    child: Opacity(
-                      opacity: opacity,
-                      child: const Padding(
-                        padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Where to?',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF000000),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-
-            // Field box (fixed padding; handle remains constant size)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: RouteFieldBox(
-                fromController: fromCtrl,
-                toController: toCtrl,
-                fromFocusNode: fromFocusNode,
-                toFocusNode: toFocusNode,
-                showMyLocationDefault: showMyLocationDefault,
-                accentColor: AppColors.accent,
-              ),
-            ),
-
-            // Time and Search actions (expanded only)
-            if (!isCollapsed)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Builder(
-                  builder: (context) {
-                    const double start = 0.5; // begin sliding near mid-drag
-                    final double raw = (collapseProgress - start) / (1 - start);
-                    final double t = raw.clamp(0.0, 1.0);
-                    final double dy = 16.0 * t; // slight slide 0..16 px
-                    return GestureDetector(
-                      behavior: HitTestBehavior.translucent,
-                      onTap: onUnfocus,
-                      child: Transform.translate(
-                        offset: Offset(0, dy),
-                        child: Row(
-                          children: [
-                            // Time selector (placeholder UI)
-                            _PillButton(
-                              onTap: () { onUnfocus(); },
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(LucideIcons.clock, size: 16, color: Color(0xFF000000)),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Now',
-                                    style: TextStyle(
-                                      color: Color(0xFF000000),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Spacer(),
-                            // Search button (primary)
-                            _PrimaryButton(
-                              onTap: () {
-                                onUnfocus();
-                                final needsFrom = !showMyLocationDefault;
-                                final fromEmpty = fromCtrl.text.trim().isEmpty;
-                                final toEmpty = toCtrl.text.trim().isEmpty;
-                                final invalid = (needsFrom && fromEmpty) || toEmpty;
-                                if (invalid) {
-                                  final msg = showMyLocationDefault
-                                      ? 'Please enter a destination'
-                                      : 'Please enter both locations';
-                                  showValidationToast(context, msg);
-                                  return;
-                                }
-                                try { Vibration.vibrate(duration: 18, amplitude: 200); } catch (_) {}
-                                // TODO: Implement actual search action
-                              },
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Text(
-                                    'Search',
-                                    style: TextStyle(
-                                      color: Color(0xFFFFFFFF),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-            // Suggestions only when expanded
-            if (!isCollapsed) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Text(
-                  'Suggestions',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF000000),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: _SuggestionsList(
-                    items: const [
-                      _Suggestion(icon: LucideIcons.house, title: 'Home', subtitle: 'Save your home'),
-                      _Suggestion(icon: LucideIcons.building, title: 'Work', subtitle: 'Save your workplace'),
-                      _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Café', subtitle: 'Old Town, 1.2 km'),
-                      _Suggestion(icon: LucideIcons.mapPin, title: 'Recent: Station', subtitle: 'Central Station'),
-                    ],
-                    onItemTap: onUnfocus,
-                  ),
-                ),
-              ),
-            ],
-          ],
-          ),
-        ),
-      ),
-    ),
-    );
-  }
-}
-
-*/
