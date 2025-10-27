@@ -1,5 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../models/route_field_kind.dart';
+import '../screens/itinerary_list_screen.dart';
+import '../services/location_service.dart';
+import '../services/transitous_geocode_service.dart';
 import '../widgets/route_field_box.dart';
 import '../widgets/validation_toast.dart';
 import '../utils/haptics.dart';
@@ -24,6 +28,8 @@ class BottomCard extends StatelessWidget {
     required this.routeFieldLink,
     required this.fromLoading,
     required this.toLoading,
+    required this.fromSelection,
+    required this.toSelection,
   });
 
   final bool isCollapsed;
@@ -42,6 +48,8 @@ class BottomCard extends StatelessWidget {
   final LayerLink routeFieldLink;
   final bool fromLoading;
   final bool toLoading;
+  final TransitousLocationSuggestion? fromSelection;
+  final TransitousLocationSuggestion? toSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +201,7 @@ class BottomCard extends StatelessWidget {
                                 const Spacer(),
                                 // Search button (primary)
                                 PrimaryButton(
-                                  onTap: () {
+                                  onTap: () async {
                                     onUnfocus();
                                     final needsFrom = !showMyLocationDefault;
                                     final fromEmpty = fromCtrl.text
@@ -210,7 +218,34 @@ class BottomCard extends StatelessWidget {
                                       return;
                                     }
                                     Haptics.mediumTick();
-                                    // TODO: Implement actual search action
+
+                                    double? fromLat, fromLon, toLat, toLon;
+
+                                    if (fromSelection != null) {
+                                      fromLat = fromSelection!.lat;
+                                      fromLon = fromSelection!.lon;
+                                    } else {
+                                      final location = await LocationService.currentPosition();
+                                      fromLat = location.latitude;
+                                      fromLon = location.longitude;
+                                    }
+
+                                    if (toSelection != null) {
+                                      toLat = toSelection!.lat;
+                                      toLon = toSelection!.lon;
+                                    } else {
+                                      showValidationToast(context, 'Please select a destination');
+                                      return;
+                                    }
+
+                                    Navigator.of(context).push(CupertinoPageRoute(
+                                      builder: (_) => ItineraryListScreen(
+                                        fromLat: fromLat!,
+                                        fromLon: fromLon!,
+                                        toLat: toLat!,
+                                        toLon: toLon!,
+                                      ),
+                                    ));
                                   },
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,

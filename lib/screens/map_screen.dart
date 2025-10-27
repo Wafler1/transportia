@@ -526,6 +526,8 @@ class _MapScreenState extends State<MapScreen>
                           RouteFieldKind.from,
                         ),
                         toLoading: _isReverseGeocodeLoading(RouteFieldKind.to),
+                        fromSelection: _fromSelection,
+                        toSelection: _toSelection,
                       ),
                       CompositedTransformFollower(
                         link: _routeFieldLink,
