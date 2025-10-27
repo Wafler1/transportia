@@ -380,7 +380,7 @@ class _MapScreenState extends State<MapScreen>
           final showLongPressOverlay =
               (_longPressLatLng != null && _isSheetCollapsed) ||
               (_isLongPressClosing && _longPressLatLng != null);
-          const double pillRevealStart = 0.72;
+          const double pillRevealStart = 0.7;
           final double pillProgress =
               ((progress - pillRevealStart) / (1 - pillRevealStart)).clamp(
                 0.0,
@@ -389,7 +389,7 @@ class _MapScreenState extends State<MapScreen>
           final double pillVisibility = Curves.easeOutCubic.transform(
             pillProgress,
           );
-          final double pillYOffset = (1 - pillVisibility) * 18;
+          final double pillYOffset = (1 - pillVisibility) * 32;
           return Stack(
             children: [
               // Map behind (isolated repaint)
@@ -414,6 +414,27 @@ class _MapScreenState extends State<MapScreen>
                   ),
                 ),
               ),
+
+              if (_sheetTop != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: math.max(0.0, _sheetTop! - 46),
+                  child: IgnorePointer(
+                    ignoring: pillVisibility < 0.05,
+                    child: Opacity(
+                      opacity: pillVisibility,
+                      child: Transform.translate(
+                        offset: Offset(0, pillYOffset),
+                        child: _MapControlPills(
+                          is3DMode: _is3DMode,
+                          onToggle3D: _toggle3D,
+                          onLocate: _centerOnUser2D,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
               Positioned.fill(
                 child: IgnorePointer(
@@ -550,27 +571,6 @@ class _MapScreenState extends State<MapScreen>
                   ),
                 ),
               ),
-
-              if (_sheetTop != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: math.max(0.0, _sheetTop! - 44),
-                  child: IgnorePointer(
-                    ignoring: pillVisibility < 0.05,
-                    child: Opacity(
-                      opacity: pillVisibility,
-                      child: Transform.translate(
-                        offset: Offset(0, pillYOffset),
-                        child: _MapControlPills(
-                          is3DMode: _is3DMode,
-                          onToggle3D: _toggle3D,
-                          onLocate: _centerOnUser2D,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           );
         },
@@ -1160,61 +1160,102 @@ class _MapControlPills extends StatelessWidget {
 
     return Center(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        constraints: const BoxConstraints(maxWidth: 320),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        constraints: const BoxConstraints(maxWidth: 300),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PillButton(
+            _MapControlChip(
               onTap: onToggle3D,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              restingColor: AppColors.white,
-              pressedColor: const Color(0xFFF4F6F8),
-              borderRadius: BorderRadius.circular(18),
-              borderColor: const Color(0x1A000000),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    is3DMode ? LucideIcons.undoDot : LucideIcons.box,
-                    size: 16,
-                    color: is3DMode ? AppColors.accent : AppColors.black,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    is3DMode ? 'Exit 3D' : '3D View',
-                    style: threeDLabelStyle,
-                  ),
-                ],
+              width: 112,
+              leading: Icon(
+                is3DMode ? LucideIcons.undoDot : LucideIcons.box,
+                size: 16,
+                color: is3DMode ? AppColors.accent : AppColors.black,
+              ),
+              label: Text(
+                is3DMode ? 'Exit 3D' : '3D View',
+                textAlign: TextAlign.center,
+                style: threeDLabelStyle,
               ),
             ),
-            const SizedBox(width: 10),
-            PillButton(
+            const SizedBox(width: 8),
+            _MapControlChip(
               onTap: onLocate,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              restingColor: AppColors.white,
-              pressedColor: const Color(0xFFF4F6F8),
-              borderRadius: BorderRadius.circular(18),
-              borderColor: const Color(0x1A000000),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(LucideIcons.locate, size: 16, color: AppColors.black),
-                  SizedBox(width: 6),
-                  Text(
-                    'Locate',
-                    style: TextStyle(
-                      color: AppColors.black,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              width: 104,
+              leading: const Icon(
+                LucideIcons.locate,
+                size: 16,
+                color: AppColors.black,
+              ),
+              label: const Text(
+                'Locate',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.black,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MapControlChip extends StatelessWidget {
+  const _MapControlChip({
+    required this.onTap,
+    required this.leading,
+    required this.label,
+    this.width = 124,
+  });
+
+  final VoidCallback onTap;
+  final Widget leading;
+  final Widget label;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = _ChipContent(
+      leading: leading,
+      label: label,
+    );
+
+
+    return PillButton(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      restingColor: AppColors.white,
+      pressedColor: const Color(0xFFF4F6F8),
+      borderRadius: BorderRadius.circular(18),
+      borderColor: const Color(0x1A000000),
+      child: SizedBox(width: width, child: content),
+    );
+  }
+}
+
+class _ChipContent extends StatelessWidget {
+  const _ChipContent({required this.leading, required this.label});
+
+  final Widget leading;
+  final Widget label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(width: 20, child: Center(child: leading)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Align(alignment: Alignment.center, child: label),
+        ),
+      ],
     );
   }
 }
