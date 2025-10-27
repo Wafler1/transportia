@@ -1,10 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:entaria_app/utils/custom_page_route.dart';
+import 'package:entaria_app/utils/leg_helper.dart'; // Added back
+// Core Flutter widgets (no Material UI)
+import 'package:flutter/widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
+import '../widgets/custom_card.dart';
 import '../models/itinerary.dart';
 import '../services/routing_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/glass_icon_button.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../widgets/custom_app_bar.dart';
+import '../utils/duration_formatter.dart';
 import 'itinerary_detail_screen.dart';
 
 class ItineraryListScreen extends StatefulWidget {
@@ -46,7 +51,14 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       child: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            CustomAppBar(
+              title: 'Search Results',
+              // Unfocus any active text fields before returning to the map.
+              onBackButtonPressed: () {
+                FocusScope.of(context).unfocus();
+                Navigator.of(context).pop();
+              },
+            ),
             Expanded(
               child: FutureBuilder<List<Itinerary>>(
                 future: _itinerariesFuture,
@@ -70,9 +82,8 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                     itemBuilder: (context, index) {
                       return GestureDetector(
                       onTap: () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) =>
-                              ItineraryDetailScreen(itinerary: itineraries[index]),
+                        Navigator.of(context).push(CustomPageRoute(
+                          child: ItineraryDetailScreen(itinerary: itineraries[index]),
                         ));
                       },
                       child: ItineraryCard(itinerary: itineraries[index]),
@@ -88,33 +99,10 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Row(
-        children: [
-          GlassIconButton(
-            icon: LucideIcons.arrowLeft,
-            onTap: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Search Results',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildLoadingSkeleton() {
     return Shimmer.fromColors(
-      baseColor: AppColors.black.withOpacity(0.1),
-      highlightColor: AppColors.black.withOpacity(0.05),
+      baseColor: const Color(0x1A000000),
+      highlightColor: const Color(0x0D000000),
       child: ListView.builder(
         itemCount: 5,
         itemBuilder: (context, index) {
@@ -128,7 +116,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
               ),
             ),
           );
-        },
+        }
       ),
     );
   }
@@ -141,22 +129,14 @@ class ItineraryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.black.withOpacity(0.2)),
-        ),
-        child: Column(
+    return CustomCard(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(
-                  '${(itinerary.duration / 60).round()} min',
+                  formatDuration(itinerary.duration),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -178,9 +158,9 @@ class ItineraryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '${itinerary.startTime.hour}:${itinerary.startTime.minute.toString().padLeft(2, '0')} - ${itinerary.endTime.hour}:${itinerary.endTime.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                color: AppColors.black.withOpacity(0.5),
+                color: Color(0x80000000),
               ),
             ),
             const SizedBox(height: 8),
@@ -189,8 +169,42 @@ class ItineraryCard extends StatelessWidget {
               runSpacing: 4.0,
               children: itinerary.legs.map((leg) => LegWidget(leg: leg)).toList(),
             ),
+            // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+              child: SizedBox(
+                height: 1,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0x33000000), // semi‑transparent
+                  ),
+                ),
+              ),
+            ),
+            // Bottom-right "More" action
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Text(
+                    'More',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.accent,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    LucideIcons.chevronRight,
+                    size: 16,
+                    color: AppColors.accent,
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
       ),
     );
   }
@@ -203,92 +217,12 @@ class LegWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    IconData icon;
-    switch (leg.mode) {
-      case 'WALK':
-        icon = LucideIcons.footprints;
-        break;
-      case 'BIKE':
-        icon = LucideIcons.bike;
-        break;
-      case 'RENTAL':
-        icon = LucideIcons.carTaxiFront;
-        break;
-      case 'CAR':
-        icon = LucideIcons.carFront;
-        break;
-      case 'CAR_PARKING':
-        icon = LucideIcons.parkingMeter;
-        break;
-      case 'CAR_DROPOFF':
-        icon = LucideIcons.parkingMeter;
-        break;
-      case 'ODM':
-        icon = LucideIcons.carTaxiFront;
-        break;
-      // TODO: FLEX and TRANSIT
-      case 'TRAM':
-        icon = LucideIcons.tramFront;
-        break;
-      case 'SUBWAY':
-        icon = LucideIcons.squareArrowDown;
-        break;
-      case 'FERRY':
-        icon = LucideIcons.ship;
-        break;
-      case 'AIRPLANE':
-        icon = LucideIcons.planeTakeoff;
-        break;
-      case 'SUBURBAN':
-        icon = LucideIcons.tramFront;
-        break;
-      case 'BUS':
-        icon = LucideIcons.busFront;
-        break;
-      case 'COACH':
-        icon = LucideIcons.bus;
-        break;
-      case 'RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'HIGHSPEED_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'LONG_DISTANCE':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'NIGHT_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'REGIONAL_FAST_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'REGIONAL_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'CABLE_CAR':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'AERIAL_LIFT':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'FUNICULAR':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'AREAL_LIFT':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'METRO':
-        icon = LucideIcons.squareArrowDown;
-        break;
-      default:
-        icon = LucideIcons.circleQuestionMark;  
-    }
+    IconData icon = getLegIcon(leg.mode);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: AppColors.black.withOpacity(0.5)),
+        Icon(icon, size: 16, color: const Color(0x80000000)),
         const SizedBox(width: 4),
         if (leg.routeShortName != null)
           Text(

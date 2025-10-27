@@ -37,6 +37,9 @@ class Leg {
   final String? routeShortName;
   final String? routeLongName;
   final String? headsign;
+  // Hex color strings like "#FF0000" for UI styling.
+  final String? routeColor;
+  final String? routeTextColor;
 
   Leg({
     required this.mode,
@@ -48,6 +51,8 @@ class Leg {
     this.routeShortName,
     this.routeLongName,
     this.headsign,
+    this.routeColor,
+    this.routeTextColor,
   });
 
   factory Leg.fromJson(Map<String, dynamic> json) {
@@ -61,6 +66,8 @@ class Leg {
       routeShortName: json['routeShortName'],
       routeLongName: json['routeLongName'],
       headsign: json['headsign'],
+      routeColor: json['routeColor'],
+      routeTextColor: json['routeTextColor'],
     );
   }
 }

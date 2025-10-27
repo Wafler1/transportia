@@ -1,9 +1,12 @@
+import 'package:entaria_app/utils/leg_helper.dart';
 
-import 'package:flutter/material.dart';
+import '../utils/duration_formatter.dart';
+import 'package:flutter/widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/itinerary.dart';
 import '../theme/app_colors.dart';
-import '../widgets/glass_icon_button.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_card.dart';
 
 class ItineraryDetailScreen extends StatelessWidget {
   final Itinerary itinerary;
@@ -12,13 +15,16 @@ class ItineraryDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
+    return Container(
+      color: AppColors.white,
+      child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(context),
+            CustomAppBar(
+              title: 'Itinerary Details',
+              onBackButtonPressed: () => Navigator.of(context).pop(),
+            ),
             Expanded(
               child: ListView.builder(
                 itemCount: itinerary.legs.length,
@@ -33,29 +39,6 @@ class ItineraryDetailScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12.0),
-      child: Row(
-        children: [
-          GlassIconButton(
-            icon: LucideIcons.arrowLeft,
-            onTap: () => Navigator.of(context).pop(),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'Itinerary Details',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class LegDetailsWidget extends StatelessWidget {
@@ -65,33 +48,19 @@ class LegDetailsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      child: Container(
-        padding: const EdgeInsets.all(12.0),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.black.withOpacity(0.2)),
-        ),
-        child: Column(
+    return CustomCard(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 _buildLegIcon(),
                 const SizedBox(width: 8),
-                Text(
-                  leg.mode,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black,
-                  ),
-                ),
+                // Title with optional route colour styling
+                _buildTitleWidget(),
                 const Spacer(),
                 Text(
-                  '${(leg.duration / 60).round()} min',
+                  formatDuration(leg.duration),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -101,15 +70,14 @@ class LegDetailsWidget extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            if (leg.routeShortName != null)
-              Text(
-                '${leg.routeShortName} ${leg.headsign ?? ''}',
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black,
-                ),
+            Text(
+              '${getTransitModeName(leg.mode)}${leg.headsign != null && leg.headsign!.isNotEmpty ? " • ${leg.headsign}" : ''}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.black,
               ),
+            ),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -117,9 +85,9 @@ class LegDetailsWidget extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '${leg.startTime.hour}:${leg.startTime.minute.toString().padLeft(2, '0')} - ${leg.fromName}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.black.withOpacity(0.5),
+                    color: Color(0x80000000),
                   ),
                 ),
               ],
@@ -131,101 +99,60 @@ class LegDetailsWidget extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   '${leg.endTime.hour}:${leg.endTime.minute.toString().padLeft(2, '0')} - ${leg.toName}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.black.withOpacity(0.5),
+                    color: Color(0x80000000),
                   ),
                 ),
               ],
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildLegIcon() {
-    IconData icon;
-    switch (leg.mode) {
-      case 'WALK':
-        icon = LucideIcons.footprints;
-        break;
-      case 'BIKE':
-        icon = LucideIcons.bike;
-        break;
-      case 'RENTAL':
-        icon = LucideIcons.carTaxiFront;
-        break;
-      case 'CAR':
-        icon = LucideIcons.carFront;
-        break;
-      case 'CAR_PARKING':
-        icon = LucideIcons.parkingMeter;
-        break;
-      case 'CAR_DROPOFF':
-        icon = LucideIcons.parkingMeter;
-        break;
-      case 'ODM':
-        icon = LucideIcons.carTaxiFront;
-        break;
-      // TODO: FLEX and TRANSIT
-      case 'TRAM':
-        icon = LucideIcons.tramFront;
-        break;
-      case 'SUBWAY':
-        icon = LucideIcons.squareArrowDown;
-        break;
-      case 'FERRY':
-        icon = LucideIcons.ship;
-        break;
-      case 'AIRPLANE':
-        icon = LucideIcons.planeTakeoff;
-        break;
-      case 'SUBURBAN':
-        icon = LucideIcons.tramFront;
-        break;
-      case 'BUS':
-        icon = LucideIcons.busFront;
-        break;
-      case 'COACH':
-        icon = LucideIcons.bus;
-        break;
-      case 'RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'HIGHSPEED_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'LONG_DISTANCE':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'NIGHT_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'REGIONAL_FAST_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'REGIONAL_RAIL':
-        icon = LucideIcons.trainFront;
-        break;
-      case 'CABLE_CAR':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'AERIAL_LIFT':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'FUNICULAR':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'AREAL_LIFT':
-        icon = LucideIcons.cableCar;
-        break;
-      case 'METRO':
-        icon = LucideIcons.squareArrowDown;
-        break;
-      default:
-        icon = LucideIcons.circleQuestionMark;  
+    return Icon(getLegIcon(leg.mode), size: 24, color: AppColors.black);
+  }
+
+  // Parse a hex colour string like "#FF0000" into a Flutter Color.
+  Color? _parseHexColor(String? hex) {
+    if (hex == null) return null;
+    var cleaned = hex.replaceAll('#', '');
+    if (cleaned.length == 6) cleaned = 'FF' + cleaned;
+    if (cleaned.length != 8) return null;
+    return Color(int.parse('0x$cleaned'));
+  }
+
+  // Build the title widget, applying background and text colours if provided.
+  Widget _buildTitleWidget() {
+    if (leg.routeShortName != null) {
+      final bg = _parseHexColor(leg.routeColor);
+      final txt = _parseHexColor(leg.routeTextColor) ?? AppColors.black;
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: bg ?? const Color(0x00000000),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          leg.routeShortName!,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: txt,
+          ),
+        ),
+      );
     }
-    return Icon(icon, size: 24, color: AppColors.black);
+    // Fallback to transit mode name when no short name.
+    return Text(
+      getTransitModeName(leg.mode),
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+        color: AppColors.black,
+      ),
+    );
   }
 }

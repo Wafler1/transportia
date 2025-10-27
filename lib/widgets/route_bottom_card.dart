@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../models/route_field_kind.dart';
 import '../screens/itinerary_list_screen.dart';
 import '../services/location_service.dart';
 import '../services/transitous_geocode_service.dart';
@@ -192,7 +191,7 @@ class BottomCard extends StatelessWidget {
                                         style: TextStyle(
                                           color: AppColors.black,
                                           fontSize: 15,
-                                          fontWeight: FontWeight.w600,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
                                     ],
@@ -245,7 +244,7 @@ class BottomCard extends StatelessWidget {
                                         toLat: toLat!,
                                         toLon: toLon!,
                                       ),
-                                    ));
+                                    )).then((_) => onUnfocus());
                                   },
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,

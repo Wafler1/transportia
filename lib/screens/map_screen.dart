@@ -335,14 +335,18 @@ class _MapScreenState extends State<MapScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isSheetCollapsed,
+      canPop: !_fromFocus.hasFocus && !_toFocus.hasFocus && !_isSheetCollapsed,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          final expTop = _lastComputedExpandedTop;
-          final colTop = _lastComputedCollapsedTop;
-          if (expTop != null && colTop != null) {
-            _animateTo(expTop, colTop);
-            _stopDragRumble();
+          if (_fromFocus.hasFocus || _toFocus.hasFocus) {
+            _unfocusInputs();
+          } else {
+            final expTop = _lastComputedExpandedTop;
+            final colTop = _lastComputedCollapsedTop;
+            if (expTop != null && colTop != null) {
+              _animateTo(expTop, colTop);
+              _stopDragRumble();
+            }
           }
         }
       },
@@ -1157,7 +1161,7 @@ class _MapControlPills extends StatelessWidget {
     final TextStyle threeDLabelStyle = TextStyle(
       color: is3DMode ? AppColors.accent : AppColors.black,
       fontSize: 14,
-      fontWeight: FontWeight.w600,
+      fontWeight: FontWeight.w500,
     );
 
     return Center(
@@ -1196,7 +1200,7 @@ class _MapControlPills extends StatelessWidget {
                 style: TextStyle(
                   color: AppColors.black,
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -1421,7 +1425,7 @@ class _LongPressModalCard extends StatelessWidget {
                         softWrap: false,
                         overflow: TextOverflow.fade,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           fontSize: 15,
                           color: AppColors.black,
                         ),
@@ -1438,7 +1442,7 @@ class _LongPressModalCard extends StatelessWidget {
                         softWrap: false,
                         overflow: TextOverflow.fade,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           fontSize: 15,
                           color: AppColors.black,
                         ),
@@ -1582,7 +1586,7 @@ class _LongPressModalCard extends StatelessWidget {
                       'Dismiss',
                       style: TextStyle(
                         color: AppColors.accent,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w500,
                         fontSize: 15,
                       ),
                     ),
