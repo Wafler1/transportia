@@ -21,56 +21,53 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     // button stays left‑aligned.
     return Padding(
       padding: const EdgeInsets.all(12.0),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-            // Back button positioned on the left edge, stretched vertically to allow full tap effect
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
+      child: SizedBox(
+        height: preferredSize.height,
+        width: double.infinity,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
               child: PressableHighlight(
-                onPressed: onBackButtonPressed ?? () => Navigator.of(context).pop(),
+                onPressed:
+                    onBackButtonPressed ?? () => Navigator.of(context).pop(),
                 borderRadius: BorderRadius.circular(22),
                 enableHaptics: false,
-                // Expand to fill vertical space so the ripple/highlight covers full height.
-                child: SizedBox.expand(
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(
-                          LucideIcons.chevronLeft,
-                          size: 20,
-                          color: AppColors.accent,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Back',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.accent,
-                          ),
-                        ),
-                      ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(
+                      LucideIcons.chevronLeft,
+                      size: 20,
+                      color: AppColors.accent,
                     ),
-                  ),
+                    SizedBox(width: 4),
+                    Text(
+                      'Back',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          // Centered title
-          Center(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppColors.black,
+            Center(
+              child: Text(
+                title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

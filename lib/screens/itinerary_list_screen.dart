@@ -215,6 +215,15 @@ class LegWidget extends StatelessWidget {
 
   const LegWidget({super.key, required this.leg});
 
+  // Parse a hex colour string like "#FF0000" into a Flutter Color.
+  Color? _parseHexColor(String? hex) {
+    if (hex == null) return null;
+    var cleaned = hex.replaceAll('#', '');
+    if (cleaned.length == 6) cleaned = 'FF' + cleaned;
+    if (cleaned.length != 8) return null;
+    return Color(int.parse('0x$cleaned'));
+  }
+
   @override
   Widget build(BuildContext context) {
     IconData icon = getLegIcon(leg.mode);
@@ -222,15 +231,27 @@ class LegWidget extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: const Color(0x80000000)),
+        SizedBox(
+          height: 18, // Match the height of the text container (14 font + 2*2 padding)
+          child: Center(
+            child: Icon(icon, size: 16, color: const Color(0x80000000)),
+          ),
+        ),
         const SizedBox(width: 4),
         if (leg.routeShortName != null)
-          Text(
-            leg.routeShortName!,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.black,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: _parseHexColor(leg.routeColor) ?? const Color(0x00000000),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              leg.routeShortName!,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _parseHexColor(leg.routeTextColor) ?? AppColors.black,
+              ),
             ),
           ),
       ],

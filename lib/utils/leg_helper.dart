@@ -90,19 +90,19 @@ String getTransitModeName(String mode) {
     case 'BUS':
       return 'Bus';
     case 'COACH':
-      return 'Long-distance Bus';
+      return 'Coach Bus';
     case 'RAIL':
       return 'Train';
     case 'HIGHSPEED_RAIL':
       return 'High-speed Train';
     case 'LONG_DISTANCE':
-      return 'Long-distance Train';
+      return 'Train';
     case 'NIGHT_RAIL':
       return 'Night Train';
     case 'REGIONAL_FAST_RAIL':
-      return 'Regional Fast Train';
+      return 'Express Train';
     case 'REGIONAL_RAIL':
-      return 'Regional Train';
+      return 'Train';
     case 'CABLE_CAR':
       return 'Cable Car';
     case 'AERIAL_LIFT':
