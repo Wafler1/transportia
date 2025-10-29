@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/time_selection.dart';
+import '../models/trip_history_item.dart';
 import '../services/transitous_geocode_service.dart';
 import '../widgets/route_field_box.dart';
 import '../theme/app_colors.dart';
@@ -30,6 +31,8 @@ class BottomCard extends StatefulWidget {
     required this.timeSelectionLayerLink,
     required this.onTimeSelectionTap,
     required this.timeSelection,
+    required this.recentTrips,
+    required this.onRecentTripTap,
     this.tripsRefreshKey = 0,
   });
 
@@ -55,6 +58,8 @@ class BottomCard extends StatefulWidget {
   final LayerLink timeSelectionLayerLink;
   final VoidCallback onTimeSelectionTap;
   final TimeSelection timeSelection;
+  final List<TripHistoryItem> recentTrips;
+  final ValueChanged<TripHistoryItem> onRecentTripTap;
   final int tripsRefreshKey;
 
   @override
@@ -187,10 +192,7 @@ class _BottomCardState extends State<BottomCard> {
                                 CompositedTransformTarget(
                                   link: widget.timeSelectionLayerLink,
                                   child: PillButton(
-                                    onTap: () {
-                                      widget.onUnfocus();
-                                      widget.onTimeSelectionTap();
-                                    },
+                                    onTap: widget.onTimeSelectionTap,
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -235,6 +237,74 @@ class _BottomCardState extends State<BottomCard> {
                           ),
                         );
                       },
+                    ),
+                  ),
+
+                // Favourites section (placeholder, expanded only)
+                if (!widget.isCollapsed)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: widget.onUnfocus,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Favourites',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.black,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Text(
+                                'No favourites yet',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0x66000000),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Recent trips section (expanded only)
+                if (!widget.isCollapsed && widget.recentTrips.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 16),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.translucent,
+                      onTap: widget.onUnfocus,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Recent trips',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ...widget.recentTrips.map((trip) => Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _RecentTripTile(
+                                  trip: trip,
+                                  onTap: () => widget.onRecentTripTap(trip),
+                                ),
+                              )),
+                        ],
+                      ),
                     ),
                   ),
               ],
@@ -331,6 +401,81 @@ class _PrimaryButtonState extends State<PrimaryButton> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: widget.child,
         ),
+      ),
+    );
+  }
+}
+
+class _RecentTripTile extends StatelessWidget {
+  const _RecentTripTile({required this.trip, required this.onTap});
+
+  final TripHistoryItem trip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: const Color(0x0F000000),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0x11000000)),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              LucideIcons.route,
+              size: 18,
+              color: AppColors.black,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  trip.fromName,
+                  style: const TextStyle(
+                    color: AppColors.black,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(
+                      LucideIcons.chevronRight,
+                      size: 14,
+                      color: Color(0x99000000),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        trip.toName,
+                        style: const TextStyle(
+                          color: Color(0x99000000),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

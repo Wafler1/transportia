@@ -303,7 +303,7 @@ class LegDetailsWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            leg.routeShortName!,
+            leg.routeShortName!.length > 0 ? leg.routeShortName! : getTransitModeName(leg.mode),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

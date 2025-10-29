@@ -257,7 +257,8 @@ class _DateSelector extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: const Color(0x0F000000),
+        border: Border.all(color: const Color(0x11000000)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -386,7 +387,7 @@ class _NumberPickerState extends State<_NumberPicker> {
     if (_autoScrollDirection == direction) return;
     _autoScrollDirection = direction;
     _autoScrollTimer?.cancel();
-    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 160), (_) {
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
       if (_autoScrollDirection == 1) {
         _increment();
       } else if (_autoScrollDirection == -1) {
@@ -443,7 +444,8 @@ class _NumberPickerState extends State<_NumberPicker> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
+        color: const Color(0x0F000000),
+        border: Border.all(color: const Color(0x11000000)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -451,7 +453,7 @@ class _NumberPickerState extends State<_NumberPicker> {
           GestureDetector(
             onTap: _increment,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: Icon(
                 LucideIcons.chevronUp,
                 size: 20,
@@ -492,7 +494,7 @@ class _NumberPickerState extends State<_NumberPicker> {
           GestureDetector(
             onTap: _decrement,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               child: Icon(
                 LucideIcons.chevronDown,
                 size: 20,

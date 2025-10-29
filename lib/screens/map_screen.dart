@@ -13,8 +13,10 @@ import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
 import '../models/route_field_kind.dart';
 import '../models/time_selection.dart';
+import '../models/trip_history_item.dart';
 import '../screens/itinerary_list_screen.dart';
 import '../services/location_service.dart';
+import '../services/recent_trips_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/haptics.dart';
@@ -93,6 +95,7 @@ class _MapScreenState extends State<MapScreen>
   bool _showTimeSelectionOverlay = false;
   TimeSelection _timeSelection = TimeSelection.now();
   int _tripsRefreshKey = 0;
+  List<TripHistoryItem> _recentTrips = [];
 
   @override
   void initState() {
@@ -143,6 +146,7 @@ class _MapScreenState extends State<MapScreen>
     _toFocus.addListener(_onAnyFieldFocus);
     _fromCtrl.addListener(_handleFromTextChanged);
     _toCtrl.addListener(_handleToTextChanged);
+    unawaited(_loadRecentTrips());
   }
 
   @override
@@ -348,6 +352,11 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _toggleTimeSelectionOverlay() {
+    // Only unfocus inputs when opening the time selection overlay
+    // This closes the suggestions overlay smoothly without flickering
+    if (!_showTimeSelectionOverlay) {
+      _unfocusInputs();
+    }
     setState(() {
       _showTimeSelectionOverlay = !_showTimeSelectionOverlay;
     });
@@ -356,10 +365,12 @@ class _MapScreenState extends State<MapScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_fromFocus.hasFocus && !_toFocus.hasFocus && !_isSheetCollapsed,
+      canPop: !_fromFocus.hasFocus && !_toFocus.hasFocus && !_isSheetCollapsed && !_showTimeSelectionOverlay,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          if (_fromFocus.hasFocus || _toFocus.hasFocus) {
+          if (_showTimeSelectionOverlay) {
+            _toggleTimeSelectionOverlay();
+          } else if (_fromFocus.hasFocus || _toFocus.hasFocus) {
             _unfocusInputs();
           } else {
             final expTop = _lastComputedExpandedTop;
@@ -557,6 +568,8 @@ class _MapScreenState extends State<MapScreen>
                         timeSelectionLayerLink: _timeSelectionLayerLink,
                         onTimeSelectionTap: _toggleTimeSelectionOverlay,
                         timeSelection: _timeSelection,
+                        recentTrips: _recentTrips,
+                        onRecentTripTap: _onRecentTripTap,
                         tripsRefreshKey: _tripsRefreshKey,
                       ),
                       CompositedTransformFollower(
@@ -677,6 +690,19 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
+    // Save trip to history
+    try {
+      final trip = TripHistoryItem.fromSelections(
+        from: _fromSelection,
+        to: _toSelection!,
+        userLat: fromLat,
+        userLon: fromLon,
+      );
+      await RecentTripsService.saveTrip(trip);
+    } catch (_) {
+      // Silently fail if history save fails
+    }
+
     Navigator.of(context).push(CupertinoPageRoute(
       builder: (_) => ItineraryListScreen(
         fromLat: fromLat!,
@@ -690,6 +716,7 @@ class _MapScreenState extends State<MapScreen>
     )).then((_) {
       _unfocusInputs();
       setState(() => _tripsRefreshKey++);
+      unawaited(_loadRecentTrips());
     });
   }
 
@@ -1251,6 +1278,49 @@ class _MapScreenState extends State<MapScreen>
     FocusScope.of(context).unfocus();
     _dismissLongPressOverlay();
     _clearSuggestions();
+  }
+
+  Future<void> _loadRecentTrips() async {
+    final trips = await RecentTripsService.getRecentTrips();
+    if (!mounted) return;
+    setState(() {
+      _recentTrips = trips;
+    });
+  }
+
+  void _onRecentTripTap(TripHistoryItem trip) {
+    Haptics.lightTick();
+
+    // Handle From field - leave empty if it was "My Location"
+    if (trip.fromName != 'My Location') {
+      final fromSuggestion = TransitousLocationSuggestion(
+        id: 'history-from-${trip.fromLat}-${trip.fromLon}',
+        name: trip.fromName,
+        lat: trip.fromLat,
+        lon: trip.fromLon,
+        type: 'PLACE',
+      );
+      _setControllerText(RouteFieldKind.from, trip.fromName);
+      _setSelection(RouteFieldKind.from, fromSuggestion, notify: true);
+    } else {
+      // Clear the from field for "My Location"
+      _setControllerText(RouteFieldKind.from, '');
+      _setSelection(RouteFieldKind.from, null, notify: true);
+    }
+
+    // Set the To field
+    final toSuggestion = TransitousLocationSuggestion(
+      id: 'history-to-${trip.toLat}-${trip.toLon}',
+      name: trip.toName,
+      lat: trip.toLat,
+      lon: trip.toLon,
+      type: 'PLACE',
+    );
+    _setControllerText(RouteFieldKind.to, trip.toName);
+    _setSelection(RouteFieldKind.to, toSuggestion, notify: true);
+
+    // Trigger search with current time (no time parameters)
+    _search(TimeSelection.now());
   }
 }
 
