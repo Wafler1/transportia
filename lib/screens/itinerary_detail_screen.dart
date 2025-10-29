@@ -66,7 +66,8 @@ class JourneyOverviewWidget extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+    final localTime = time.toLocal();
+    return '${localTime.hour}:${localTime.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -242,7 +243,7 @@ class LegDetailsWidget extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    '${leg.startTime.hour}:${leg.startTime.minute.toString().padLeft(2, '0')} - ${leg.fromName}',
+                    '${leg.startTime.toLocal().hour}:${leg.startTime.toLocal().minute.toString().padLeft(2, '0')} - ${leg.fromName}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0x80000000),
@@ -260,7 +261,7 @@ class LegDetailsWidget extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    '${leg.endTime.hour}:${leg.endTime.minute.toString().padLeft(2, '0')} - ${leg.toName}',
+                    '${leg.endTime.toLocal().hour}:${leg.endTime.toLocal().minute.toString().padLeft(2, '0')} - ${leg.toName}',
                     style: const TextStyle(
                       fontSize: 14,
                       color: Color(0x80000000),

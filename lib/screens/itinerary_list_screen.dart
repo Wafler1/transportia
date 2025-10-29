@@ -168,7 +168,7 @@ class ItineraryCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${itinerary.startTime.hour}:${itinerary.startTime.minute.toString().padLeft(2, '0')} - ${itinerary.endTime.hour}:${itinerary.endTime.minute.toString().padLeft(2, '0')}',
+              '${itinerary.startTime.toLocal().hour}:${itinerary.startTime.toLocal().minute.toString().padLeft(2, '0')} - ${itinerary.endTime.toLocal().hour}:${itinerary.endTime.toLocal().minute.toString().padLeft(2, '0')}',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0x80000000),

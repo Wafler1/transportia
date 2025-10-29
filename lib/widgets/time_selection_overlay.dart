@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/time_selection.dart';
 import '../theme/app_colors.dart';
+import 'pressable_highlight.dart';
 
 class TimeSelectionOverlay extends StatefulWidget {
   const TimeSelectionOverlay({
@@ -100,7 +101,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                   color: AppColors.black,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Depart/Arrive toggle
               Row(
@@ -126,7 +127,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Date Selection
               _DateSelector(
@@ -135,7 +136,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                   setState(() => _selectedDate = date);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Time Selection
               _TimeSelector(
@@ -148,25 +149,35 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                   setState(() => _selectedMinute = minute);
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // Action buttons
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Now',
-                      isPrimary: false,
-                      onTap: _handleSetNow,
-                    ),
+                  _ActionButton(
+                    label: 'Now',
+                    isPrimary: false,
+                    onTap: _handleSetNow,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: _ActionButton(
-                      label: 'Confirm',
-                      isPrimary: true,
-                      onTap: _handleConfirm,
+                  PressableHighlight(
+                    onPressed: _handleConfirm,
+                    highlightColor: AppColors.accent,
+                    borderRadius: BorderRadius.circular(14),
+                    enableHaptics: false,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(width: 8),
+                        Text(
+                          'Confirm',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w500,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -448,26 +459,30 @@ class _NumberPickerState extends State<_NumberPicker> {
         border: Border.all(color: const Color(0x11000000)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: _increment,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              child: Icon(
-                LucideIcons.chevronUp,
-                size: 20,
-                color: widget.value < widget.maxValue
-                    ? AppColors.black.withValues(alpha: 0.6)
-                    : AppColors.black.withValues(alpha: 0.2),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onVerticalDragStart: _handleDragStart,
+        onVerticalDragUpdate: _handleDragUpdate,
+        onVerticalDragEnd: _handleDragEnd,
+        child: Column(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _increment,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                child: Center(
+                  child: Icon(
+                    LucideIcons.chevronUp,
+                    size: 20,
+                    color: widget.value < widget.maxValue
+                        ? AppColors.black.withValues(alpha: 0.6)
+                        : AppColors.black.withValues(alpha: 0.2),
+                  ),
+                ),
               ),
             ),
-          ),
-          GestureDetector(
-            onVerticalDragStart: _handleDragStart,
-            onVerticalDragUpdate: _handleDragUpdate,
-            onVerticalDragEnd: _handleDragEnd,
-            child: Container(
+            Container(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
               child: Column(
                 children: [
@@ -490,21 +505,24 @@ class _NumberPickerState extends State<_NumberPicker> {
                 ],
               ),
             ),
-          ),
-          GestureDetector(
-            onTap: _decrement,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              child: Icon(
-                LucideIcons.chevronDown,
-                size: 20,
-                color: widget.value > widget.minValue
-                    ? AppColors.black.withValues(alpha: 0.6)
-                    : AppColors.black.withValues(alpha: 0.2),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _decrement,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                child: Center(
+                  child: Icon(
+                    LucideIcons.chevronDown,
+                    size: 20,
+                    color: widget.value > widget.minValue
+                        ? AppColors.black.withValues(alpha: 0.6)
+                        : AppColors.black.withValues(alpha: 0.2),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -526,7 +544,7 @@ class _ToggleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.accent : AppColors.white,
           borderRadius: BorderRadius.circular(8),
