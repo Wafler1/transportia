@@ -1,9 +1,11 @@
+import 'package:entaria_app/services/transitous_geocode_service.dart';
 import 'package:entaria_app/utils/custom_page_route.dart';
 import 'package:entaria_app/utils/leg_helper.dart'; // Added back
 // Core Flutter widgets (no Material UI)
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
+import '../models/time_selection.dart';
 import '../widgets/custom_card.dart';
 import '../models/itinerary.dart';
 import '../services/routing_service.dart';
@@ -17,6 +19,9 @@ class ItineraryListScreen extends StatefulWidget {
   final double fromLon;
   final double toLat;
   final double toLon;
+  final TimeSelection timeSelection;
+  final TransitousLocationSuggestion? fromSelection;
+  final TransitousLocationSuggestion? toSelection;
 
   const ItineraryListScreen({
     super.key,
@@ -24,6 +29,9 @@ class ItineraryListScreen extends StatefulWidget {
     required this.fromLon,
     required this.toLat,
     required this.toLon,
+    required this.timeSelection,
+    this.fromSelection,
+    this.toSelection,
   });
 
   @override
@@ -41,7 +49,10 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       fromLon: widget.fromLon,
       toLat: widget.toLat,
       toLon: widget.toLon,
-    );
+      timeSelection: widget.timeSelection,
+    ).then((itineraries) {
+      return itineraries;
+    });
   }
 
   @override

@@ -1,14 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../screens/itinerary_list_screen.dart';
-import '../services/location_service.dart';
+import '../models/time_selection.dart';
 import '../services/transitous_geocode_service.dart';
 import '../widgets/route_field_box.dart';
-import '../widgets/validation_toast.dart';
-import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
 
-class BottomCard extends StatelessWidget {
+class BottomCard extends StatefulWidget {
   const BottomCard({
     super.key,
     required this.isCollapsed,
@@ -29,6 +26,11 @@ class BottomCard extends StatelessWidget {
     required this.toLoading,
     required this.fromSelection,
     required this.toSelection,
+    required this.onSearch,
+    required this.timeSelectionLayerLink,
+    required this.onTimeSelectionTap,
+    required this.timeSelection,
+    this.tripsRefreshKey = 0,
   });
 
   final bool isCollapsed;
@@ -49,7 +51,17 @@ class BottomCard extends StatelessWidget {
   final bool toLoading;
   final TransitousLocationSuggestion? fromSelection;
   final TransitousLocationSuggestion? toSelection;
+  final ValueChanged<TimeSelection> onSearch;
+  final LayerLink timeSelectionLayerLink;
+  final VoidCallback onTimeSelectionTap;
+  final TimeSelection timeSelection;
+  final int tripsRefreshKey;
 
+  @override
+  State<BottomCard> createState() => _BottomCardState();
+}
+
+class _BottomCardState extends State<BottomCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -66,9 +78,9 @@ class BottomCard extends StatelessWidget {
       ),
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
-        onTap: onUnfocus,
+        onTap: widget.onUnfocus,
         child: Listener(
-          onPointerDown: (_) => onUnfocus(),
+          onPointerDown: (_) => widget.onUnfocus(),
           child: SafeArea(
             top: false,
             child: Column(
@@ -77,11 +89,11 @@ class BottomCard extends StatelessWidget {
                 // Drag handle area
                 GestureDetector(
                   behavior: HitTestBehavior.opaque,
-                  onTap: onHandleTap,
-                  onVerticalDragStart: (_) => onDragStart(),
-                  onVerticalDragUpdate: (d) => onDragUpdate(d.delta.dy),
+                  onTap: widget.onHandleTap,
+                  onVerticalDragStart: (_) => widget.onDragStart(),
+                  onVerticalDragUpdate: (d) => widget.onDragUpdate(d.delta.dy),
                   onVerticalDragEnd: (d) =>
-                      onDragEnd(d.velocity.pixelsPerSecond.dy),
+                      widget.onDragEnd(d.velocity.pixelsPerSecond.dy),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -104,12 +116,12 @@ class BottomCard extends StatelessWidget {
                   builder: (context) {
                     // Start fading the header from mid -> collapsed
                     final fadeStart = 0.5;
-                    final t = ((collapseProgress - fadeStart) / (1 - fadeStart))
+                    final t = ((widget.collapseProgress - fadeStart) / (1 - fadeStart))
                         .clamp(0.0, 1.0);
                     final opacity = 1.0 - Curves.easeOut.transform(t);
                     return GestureDetector(
                       behavior: HitTestBehavior.translucent,
-                      onTap: onUnfocus,
+                      onTap: widget.onUnfocus,
                       child: ClipRect(
                         child: Align(
                           alignment: Alignment.topCenter,
@@ -141,111 +153,69 @@ class BottomCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                   child: RouteFieldBox(
-                    fromController: fromCtrl,
-                    toController: toCtrl,
-                    fromFocusNode: fromFocusNode,
-                    toFocusNode: toFocusNode,
-                    showMyLocationDefault: showMyLocationDefault,
+                    fromController: widget.fromCtrl,
+                    toController: widget.toCtrl,
+                    fromFocusNode: widget.fromFocusNode,
+                    toFocusNode: widget.toFocusNode,
+                    showMyLocationDefault: widget.showMyLocationDefault,
                     accentColor: AppColors.accent,
-                    onSwapRequested: onSwapRequested,
-                    layerLink: routeFieldLink,
-                    fromLoading: fromLoading,
-                    toLoading: toLoading,
+                    onSwapRequested: widget.onSwapRequested,
+                    layerLink: widget.routeFieldLink,
+                    fromLoading: widget.fromLoading,
+                    toLoading: widget.toLoading,
                   ),
                 ),
 
                 // Time and Search actions (expanded only)
-                if (!isCollapsed)
+                if (!widget.isCollapsed)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     child: Builder(
                       builder: (context) {
                         const double start = 0.5; // begin sliding near mid-drag
                         final double raw =
-                            (collapseProgress - start) / (1 - start);
+                            (widget.collapseProgress - start) / (1 - start);
                         final double t = raw.clamp(0.0, 1.0);
                         final double dy = 16.0 * t; // slight slide 0..16 px
                         return GestureDetector(
                           behavior: HitTestBehavior.translucent,
-                          onTap: onUnfocus,
+                          onTap: widget.onUnfocus,
                           child: Transform.translate(
                             offset: Offset(0, dy),
                             child: Row(
                               children: [
-                                // Time selector (placeholder UI)
-                                PillButton(
-                                  onTap: () {
-                                    onUnfocus();
-                                  },
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(
-                                        LucideIcons.clock,
-                                        size: 16,
-                                        color: AppColors.black,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Now',
-                                        style: TextStyle(
+                                CompositedTransformTarget(
+                                  link: widget.timeSelectionLayerLink,
+                                  child: PillButton(
+                                    onTap: () {
+                                      widget.onUnfocus();
+                                      widget.onTimeSelectionTap();
+                                    },
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          LucideIcons.clock,
+                                          size: 16,
                                           color: AppColors.black,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w500,
                                         ),
-                                      ),
-                                    ],
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          widget.timeSelection.toDisplayString(),
+                                          style: const TextStyle(
+                                            color: AppColors.black,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                                 const Spacer(),
                                 // Search button (primary)
                                 PrimaryButton(
-                                  onTap: () async {
-                                    onUnfocus();
-                                    final needsFrom = !showMyLocationDefault;
-                                    final fromEmpty = fromCtrl.text
-                                        .trim()
-                                        .isEmpty;
-                                    final toEmpty = toCtrl.text.trim().isEmpty;
-                                    final invalid =
-                                        (needsFrom && fromEmpty) || toEmpty;
-                                    if (invalid) {
-                                      final msg = showMyLocationDefault
-                                          ? 'Please enter a destination'
-                                          : 'Please enter both locations';
-                                      showValidationToast(context, msg);
-                                      return;
-                                    }
-                                    Haptics.mediumTick();
-
-                                    double? fromLat, fromLon, toLat, toLon;
-
-                                    if (fromSelection != null) {
-                                      fromLat = fromSelection!.lat;
-                                      fromLon = fromSelection!.lon;
-                                    } else {
-                                      final location = await LocationService.currentPosition();
-                                      fromLat = location.latitude;
-                                      fromLon = location.longitude;
-                                    }
-
-                                    if (toSelection != null) {
-                                      toLat = toSelection!.lat;
-                                      toLon = toSelection!.lon;
-                                    } else {
-                                      showValidationToast(context, 'Please select a destination');
-                                      return;
-                                    }
-
-                                    Navigator.of(context).push(CupertinoPageRoute(
-                                      builder: (_) => ItineraryListScreen(
-                                        fromLat: fromLat!,
-                                        fromLon: fromLon!,
-                                        toLat: toLat!,
-                                        toLon: toLon!,
-                                      ),
-                                    )).then((_) => onUnfocus());
-                                  },
+                                  onTap: () => widget.onSearch(widget.timeSelection),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: const [
@@ -275,6 +245,7 @@ class BottomCard extends StatelessWidget {
     );
   }
 }
+
 
 class PillButton extends StatefulWidget {
   const PillButton({

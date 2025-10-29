@@ -2,21 +2,26 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:entaria_app/widgets/time_selection_overlay.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
 import '../models/route_field_kind.dart';
+import '../models/time_selection.dart';
+import '../screens/itinerary_list_screen.dart';
 import '../services/location_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/haptics.dart';
-import '../widgets/route_bottom_card.dart';
 import '../widgets/pressable_highlight.dart';
+import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
+import '../widgets/validation_toast.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key, this.deferInit = false, this.activateOnShow});
@@ -75,6 +80,7 @@ class _MapScreenState extends State<MapScreen>
   bool _suppressFromListener = false;
   bool _suppressToListener = false;
   final LayerLink _routeFieldLink = LayerLink();
+  final LayerLink _timeSelectionLayerLink = LayerLink();
   bool _focusEvaluationScheduled = false;
   Symbol? _fromSymbol;
   Symbol? _toSymbol;
@@ -84,6 +90,9 @@ class _MapScreenState extends State<MapScreen>
   bool _isLongPressClosing = false;
   final Map<RouteFieldKind, String> _pendingReverseGeocodeKeys = {};
   final Set<RouteFieldKind> _reverseGeocodeLoading = <RouteFieldKind>{};
+  bool _showTimeSelectionOverlay = false;
+  TimeSelection _timeSelection = TimeSelection.now();
+  int _tripsRefreshKey = 0;
 
   @override
   void initState() {
@@ -332,6 +341,18 @@ class _MapScreenState extends State<MapScreen>
 
   void _onCameraIdle() {}
 
+  void _onTimeSelectionChanged(TimeSelection newSelection) {
+    setState(() {
+      _timeSelection = newSelection;
+    });
+  }
+
+  void _toggleTimeSelectionOverlay() {
+    setState(() {
+      _showTimeSelectionOverlay = !_showTimeSelectionOverlay;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -532,6 +553,11 @@ class _MapScreenState extends State<MapScreen>
                         toLoading: _isReverseGeocodeLoading(RouteFieldKind.to),
                         fromSelection: _fromSelection,
                         toSelection: _toSelection,
+                        onSearch: _search,
+                        timeSelectionLayerLink: _timeSelectionLayerLink,
+                        onTimeSelectionTap: _toggleTimeSelectionOverlay,
+                        timeSelection: _timeSelection,
+                        tripsRefreshKey: _tripsRefreshKey,
                       ),
                       CompositedTransformFollower(
                         link: _routeFieldLink,
@@ -573,6 +599,39 @@ class _MapScreenState extends State<MapScreen>
                                 ),
                         ),
                       ),
+                      CompositedTransformFollower(
+                        link: _timeSelectionLayerLink,
+                        showWhenUnlinked: false,
+                        targetAnchor: Alignment.bottomLeft,
+                        followerAnchor: Alignment.topLeft,
+                        offset: const Offset(0, 8),
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          switchInCurve: Curves.easeOutCubic,
+                          switchOutCurve: Curves.easeInCubic,
+                          transitionBuilder: (child, animation) {
+                            final offsetTween = Tween<Offset>(
+                              begin: const Offset(0, -0.05),
+                              end: Offset.zero,
+                            );
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: animation.drive(offsetTween),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: !_showTimeSelectionOverlay
+                              ? const SizedBox.shrink()
+                              : TimeSelectionOverlay(
+                                  width: overlayWidth,
+                                  currentSelection: _timeSelection,
+                                  onSelectionChanged: _onTimeSelectionChanged,
+                                  onDismiss: _toggleTimeSelectionOverlay,
+                                ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -582,6 +641,56 @@ class _MapScreenState extends State<MapScreen>
         },
       ),
     );
+  }
+
+  Future<void> _search(TimeSelection timeSelection) async {
+    _unfocusInputs();
+    final needsFrom = !_hasLocationPermission;
+    final fromEmpty = _fromCtrl.text.trim().isEmpty;
+    final toEmpty = _toCtrl.text.trim().isEmpty;
+    final invalid = (needsFrom && fromEmpty) || toEmpty;
+    if (invalid) {
+      final msg = _hasLocationPermission
+          ? 'Please enter a destination'
+          : 'Please enter both locations';
+      showValidationToast(context, msg);
+      return;
+    }
+    Haptics.mediumTick();
+
+    double? fromLat, fromLon, toLat, toLon;
+
+    if (_fromSelection != null) {
+      fromLat = _fromSelection!.lat;
+      fromLon = _fromSelection!.lon;
+    } else {
+      final location = await LocationService.currentPosition();
+      fromLat = location.latitude;
+      fromLon = location.longitude;
+    }
+
+    if (_toSelection != null) {
+      toLat = _toSelection!.lat;
+      toLon = _toSelection!.lon;
+    } else {
+      showValidationToast(context, 'Please select a destination');
+      return;
+    }
+
+    Navigator.of(context).push(CupertinoPageRoute(
+      builder: (_) => ItineraryListScreen(
+        fromLat: fromLat!,
+        fromLon: fromLon!,
+        toLat: toLat!,
+        toLon: toLon!,
+        timeSelection: timeSelection,
+        fromSelection: _fromSelection,
+        toSelection: _toSelection,
+      ),
+    )).then((_) {
+      _unfocusInputs();
+      setState(() => _tripsRefreshKey++);
+    });
   }
 
   Future<void> _centerToUserKeepZoom() async {
