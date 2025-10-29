@@ -93,6 +93,7 @@ class TransitousGeocodeService {
   static Future<List<TransitousLocationSuggestion>> fetchSuggestions({
     required String text,
     LatLng? placeBias,
+    String? type,
   }) async {
     final query = text.trim();
     if (query.length < 3) {
@@ -105,6 +106,10 @@ class TransitousGeocodeService {
       params['place'] =
           '${placeBias.latitude.toStringAsFixed(6)},${placeBias.longitude.toStringAsFixed(6)}';
       params['placeBias'] = '5';
+    }
+
+    if (type != null) {
+      params['type'] = type;
     }
 
     final uri = Uri.https(_host, _path, params);

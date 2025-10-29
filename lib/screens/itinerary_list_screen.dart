@@ -1,7 +1,6 @@
 import 'package:entaria_app/services/transitous_geocode_service.dart';
 import 'package:entaria_app/utils/custom_page_route.dart';
-import 'package:entaria_app/utils/leg_helper.dart'; // Added back
-// Core Flutter widgets (no Material UI)
+import 'package:entaria_app/utils/leg_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
@@ -11,6 +10,7 @@ import '../models/itinerary.dart';
 import '../services/routing_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/floating_nav_bar.dart';
 import '../utils/duration_formatter.dart';
 import 'itinerary_detail_screen.dart';
 
@@ -69,53 +69,73 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       child: Container(
         color: AppColors.white,
         child: SafeArea(
-          child: Column(
+          child: Stack(
             children: [
-              CustomAppBar(
-                title: 'Search Results',
-                // Unfocus any active text fields before returning to the map.
-                onBackButtonPressed: () {
-                  FocusScope.of(context).unfocus();
-                  Navigator.of(context).pop();
-                },
-              ),
-            Expanded(
-              child: FutureBuilder<List<Itinerary>>(
-                future: _itinerariesFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return _buildLoadingSkeleton();
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text('Error: ${snapshot.error}'),
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
-                      child: Text('No routes found.'),
-                    );
-                  }
-                  final itineraries = snapshot.data!;
-                  return ListView.builder(
-                    itemCount: itineraries.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(CustomPageRoute(
-                          child: ItineraryDetailScreen(itinerary: itineraries[index]),
-                        ));
-                      },
-                      child: ItineraryCard(itinerary: itineraries[index]),
-                    );
+              Column(
+                children: [
+                  CustomAppBar(
+                    title: 'Search Results',
+                    // Unfocus any active text fields before returning to the map.
+                    onBackButtonPressed: () {
+                      FocusScope.of(context).unfocus();
+                      Navigator.of(context).pop();
                     },
-                  );
-                },
+                  ),
+                  Expanded(
+                    child: FutureBuilder<List<Itinerary>>(
+                      future: _itinerariesFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return _buildLoadingSkeleton();
+                        }
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text('Error: ${snapshot.error}'),
+                          );
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(
+                            child: Text('No routes found.'),
+                          );
+                        }
+                        final itineraries = snapshot.data!;
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 96), // Add padding for navbar
+                          itemCount: itineraries.length,
+                          itemBuilder: (context, index) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(CustomPageRoute(
+                                  child: ItineraryDetailScreen(itinerary: itineraries[index]),
+                                ));
+                              },
+                              child: ItineraryCard(itinerary: itineraries[index]),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+
+              // Floating navigation bar
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FloatingNavBar(
+                  currentIndex: 0, // Map tab (where we came from)
+                  onIndexChanged: (index) {
+                    // Pop back with the selected tab index
+                    Navigator.of(context).pop(index);
+                  },
+                  visibility: 1.0,
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

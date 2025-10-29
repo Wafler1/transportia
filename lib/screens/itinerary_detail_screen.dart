@@ -7,6 +7,7 @@ import '../models/itinerary.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/floating_nav_bar.dart';
 
 class ItineraryDetailScreen extends StatelessWidget {
   final Itinerary itinerary;
@@ -18,21 +19,41 @@ class ItineraryDetailScreen extends StatelessWidget {
     return Container(
       color: AppColors.white,
       child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            CustomAppBar(
-              title: 'Itinerary Details',
-              onBackButtonPressed: () => Navigator.of(context).pop(),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CustomAppBar(
+                  title: 'Itinerary Details',
+                  onBackButtonPressed: () => Navigator.of(context).pop(),
+                ),
+                JourneyOverviewWidget(itinerary: itinerary),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 96), // Add padding for navbar
+                    itemCount: itinerary.legs.length,
+                    itemBuilder: (context, index) {
+                      final leg = itinerary.legs[index];
+                      return LegDetailsWidget(leg: leg);
+                    },
+                  ),
+                ),
+              ],
             ),
-            JourneyOverviewWidget(itinerary: itinerary),
-            Expanded(
-              child: ListView.builder(
-                itemCount: itinerary.legs.length,
-                itemBuilder: (context, index) {
-                  final leg = itinerary.legs[index];
-                  return LegDetailsWidget(leg: leg);
+
+            // Floating navigation bar
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: FloatingNavBar(
+                currentIndex: 0, // Map tab (where we came from)
+                onIndexChanged: (index) {
+                  // Pop back with the selected tab index
+                  Navigator.of(context).pop(index);
                 },
+                visibility: 1.0,
               ),
             ),
           ],

@@ -31,6 +31,9 @@ class MapScreen extends StatefulWidget {
     this.deferInit = false,
     this.activateOnShow,
     this.onCollapseChanged,
+    this.onCollapseProgressChanged,
+    this.onOverlayVisibilityChanged,
+    this.onTabChangeRequested,
   });
 
   // If true, skip location permission/init until activated.
@@ -39,6 +42,12 @@ class MapScreen extends StatefulWidget {
   final ValueListenable<bool>? activateOnShow;
   // Callback when the sheet collapse state changes
   final ValueChanged<bool>? onCollapseChanged;
+  // Callback when the sheet collapse progress changes (0.0 = expanded, 1.0 = collapsed)
+  final ValueChanged<double>? onCollapseProgressChanged;
+  // Callback when overlays (time selection, route suggestions) are shown/hidden
+  final ValueChanged<bool>? onOverlayVisibilityChanged;
+  // Callback when a tab change is requested from a detail screen
+  final ValueChanged<int>? onTabChangeRequested;
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
@@ -361,6 +370,12 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  void _notifyOverlayVisibility() {
+    // Check if any overlay is currently visible
+    final overlaysVisible = _showTimeSelectionOverlay || _activeSuggestionField != null;
+    widget.onOverlayVisibilityChanged?.call(overlaysVisible);
+  }
+
   void _toggleTimeSelectionOverlay() {
     // Only unfocus inputs when opening the time selection overlay
     // This closes the suggestions overlay smoothly without flickering
@@ -370,6 +385,8 @@ class _MapScreenState extends State<MapScreen>
     setState(() {
       _showTimeSelectionOverlay = !_showTimeSelectionOverlay;
     });
+    // Notify overlay visibility change
+    _notifyOverlayVisibility();
   }
 
   @override
@@ -421,6 +438,9 @@ class _MapScreenState extends State<MapScreen>
           final progress = denom <= 0.0
               ? 1.0
               : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
+
+          // Notify progress for smooth navbar animation
+          widget.onCollapseProgressChanged?.call(progress);
 
           final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
           final showOverlay = _activeSuggestionField != null;
@@ -847,6 +867,8 @@ class _MapScreenState extends State<MapScreen>
       _activeSuggestionField = kind;
       _isFetchingSuggestions = true;
     });
+    // Notify overlay visibility change
+    _notifyOverlayVisibility();
     final placeBias = _placeBiasLatLng();
     TransitousGeocodeService.fetchSuggestions(text: query, placeBias: placeBias)
         .then((results) {
@@ -883,6 +905,8 @@ class _MapScreenState extends State<MapScreen>
       _isFetchingSuggestions = false;
       _activeSuggestionField = null;
     });
+    // Notify overlay visibility change
+    _notifyOverlayVisibility();
   }
 
   void _onSuggestionSelected(

@@ -16,34 +16,20 @@ class AccountScreen extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Row(
                   children: [
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.accent,
-                            AppColors.accent.withOpacity(0.7),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.accent.withOpacity(0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        color: AppColors.accent.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: const Icon(
                         LucideIcons.user,
-                        size: 32,
-                        color: AppColors.white,
+                        size: 24,
+                        color: AppColors.accent,
                       ),
                     ),
                     const SizedBox(width: 16),

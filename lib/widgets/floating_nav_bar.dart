@@ -20,6 +20,7 @@ class FloatingNavBar extends StatelessWidget {
     final opacity = visibility.clamp(0.0, 1.0);
     final translateY = (1 - opacity) * 32; // Slide down 32px when hiding
     final blur = (1 - opacity) * 8.0; // Blur when fading out
+    final scale = 0.92 + (opacity * 0.08); // Shrink from 1.0 to 0.92 when hiding
 
     return IgnorePointer(
       ignoring: opacity < 0.1,
@@ -27,14 +28,16 @@ class FloatingNavBar extends StatelessWidget {
         opacity: opacity,
         child: Transform.translate(
           offset: Offset(0, translateY),
-          child: ImageFiltered(
-            imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: 16,
-              ),
+          child: Transform.scale(
+            scale: scale,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  bottom: 16,
+                ),
               child: Container(
                 height: 64,
                 decoration: BoxDecoration(
@@ -74,6 +77,7 @@ class FloatingNavBar extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }
