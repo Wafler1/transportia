@@ -57,19 +57,28 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            CustomAppBar(
-              title: 'Search Results',
-              // Unfocus any active text fields before returning to the map.
-              onBackButtonPressed: () {
-                FocusScope.of(context).unfocus();
-                Navigator.of(context).pop();
-              },
-            ),
+    return PopScope(
+      // Handle both back button and back gesture
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          // Unfocus any active text fields before returning to the map
+          // This prevents fields from auto-focusing when returning via back gesture
+          FocusScope.of(context).unfocus();
+        }
+      },
+      child: Container(
+        color: AppColors.white,
+        child: SafeArea(
+          child: Column(
+            children: [
+              CustomAppBar(
+                title: 'Search Results',
+                // Unfocus any active text fields before returning to the map.
+                onBackButtonPressed: () {
+                  FocusScope.of(context).unfocus();
+                  Navigator.of(context).pop();
+                },
+              ),
             Expanded(
               child: FutureBuilder<List<Itinerary>>(
                 future: _itinerariesFuture,
@@ -106,6 +115,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

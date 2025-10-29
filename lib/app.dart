@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
-import 'screens/map_screen.dart';
+import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
 
 class EntariaApp extends StatelessWidget {
@@ -65,6 +65,6 @@ class _RootGateState extends State<_RootGate> {
       // Simple placeholder while loading preference.
       return const SizedBox.expand();
     }
-    return _seen! ? const MapScreen() : const WelcomeScreen();
+    return _seen! ? const MainNavigationScreen() : const WelcomeScreen();
   }
 }

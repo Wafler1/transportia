@@ -13,12 +13,14 @@ class TimeSelectionOverlay extends StatefulWidget {
     required this.currentSelection,
     required this.onSelectionChanged,
     required this.onDismiss,
+    this.showDepartArriveToggle = true,
   });
 
   final double width;
   final TimeSelection currentSelection;
   final void Function(TimeSelection) onSelectionChanged;
   final VoidCallback onDismiss;
+  final bool showDepartArriveToggle;
 
   @override
   State<TimeSelectionOverlay> createState() => _TimeSelectionOverlayState();
@@ -104,30 +106,31 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
               const SizedBox(height: 10),
 
               // Depart/Arrive toggle
-              Row(
-                children: [
-                  Expanded(
-                    child: _ToggleButton(
-                      label: 'Depart at',
-                      isSelected: !_isArriveBy,
-                      onTap: () {
-                        setState(() => _isArriveBy = false);
-                      },
+              if (widget.showDepartArriveToggle)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ToggleButton(
+                        label: 'Depart at',
+                        isSelected: !_isArriveBy,
+                        onTap: () {
+                          setState(() => _isArriveBy = false);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _ToggleButton(
-                      label: 'Arrive by',
-                      isSelected: _isArriveBy,
-                      onTap: () {
-                        setState(() => _isArriveBy = true);
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ToggleButton(
+                        label: 'Arrive by',
+                        isSelected: _isArriveBy,
+                        onTap: () {
+                          setState(() => _isArriveBy = true);
+                        },
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
+                  ],
+                ),
+              if (widget.showDepartArriveToggle) const SizedBox(height: 10),
 
               // Date Selection
               _DateSelector(

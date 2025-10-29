@@ -26,12 +26,19 @@ import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/validation_toast.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key, this.deferInit = false, this.activateOnShow});
+  const MapScreen({
+    super.key,
+    this.deferInit = false,
+    this.activateOnShow,
+    this.onCollapseChanged,
+  });
 
   // If true, skip location permission/init until activated.
   final bool deferInit;
   // Optional external trigger to activate deferred init when revealed.
   final ValueListenable<bool>? activateOnShow;
+  // Callback when the sheet collapse state changes
+  final ValueChanged<bool>? onCollapseChanged;
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
@@ -70,6 +77,7 @@ class _MapScreenState extends State<MapScreen>
   bool _hasVibrator = false;
   bool _hasCustomVibration = false;
   Timer? _dragVibeTimer;
+  Timer? _unfocusDebounceTimer;
   bool _didInitLocation = false;
   VoidCallback? _activateListener;
   TransitousLocationSuggestion? _fromSelection;
@@ -126,6 +134,7 @@ class _MapScreenState extends State<MapScreen>
             (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
         if (collapsed != _isSheetCollapsed) {
           setState(() => _isSheetCollapsed = collapsed);
+          widget.onCollapseChanged?.call(collapsed);
           if (!collapsed) _dismissLongPressOverlay(animated: false);
         }
         if (_isSheetCollapsed) {
@@ -159,6 +168,7 @@ class _MapScreenState extends State<MapScreen>
     _fromFocus.dispose();
     _toFocus.dispose();
     _stopDragRumble();
+    _unfocusDebounceTimer?.cancel();
     _activateListener?.call();
     _activateListener = null;
     unawaited(_removeRouteSymbols());
@@ -401,6 +411,7 @@ class _MapScreenState extends State<MapScreen>
           final bool collapsed = ((_sheetTop! - collapsedTop).abs() < 1.0);
           if (collapsed != _isSheetCollapsed) {
             _isSheetCollapsed = collapsed;
+            widget.onCollapseChanged?.call(collapsed);
           }
 
           final animDuration =
@@ -642,6 +653,7 @@ class _MapScreenState extends State<MapScreen>
                                   currentSelection: _timeSelection,
                                   onSelectionChanged: _onTimeSelectionChanged,
                                   onDismiss: _toggleTimeSelectionOverlay,
+                                  showDepartArriveToggle: true,
                                 ),
                         ),
                       ),
@@ -1255,10 +1267,25 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted) return;
     final hasFrom = _fromFocus.hasFocus;
     final hasTo = _toFocus.hasFocus;
+
     if (!hasFrom && !hasTo) {
-      _clearSuggestions();
+      // Field lost focus - delay clearing suggestions to prevent flicker
+      // if focus is regained quickly (e.g., when tapping same field)
+      _unfocusDebounceTimer?.cancel();
+      _unfocusDebounceTimer = Timer(const Duration(milliseconds: 100), () {
+        if (!mounted) return;
+        // Double-check focus state after delay
+        if (!_fromFocus.hasFocus && !_toFocus.hasFocus) {
+          _clearSuggestions();
+        }
+      });
       return;
     }
+
+    // Field has focus - cancel any pending unfocus action
+    _unfocusDebounceTimer?.cancel();
+    _unfocusDebounceTimer = null;
+
     final field = hasFrom ? RouteFieldKind.from : RouteFieldKind.to;
     if (_activeSuggestionField != field) {
       setState(() => _activeSuggestionField = field);
@@ -1275,6 +1302,8 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _unfocusInputs() {
+    _unfocusDebounceTimer?.cancel();
+    _unfocusDebounceTimer = null;
     FocusScope.of(context).unfocus();
     _dismissLongPressOverlay();
     _clearSuggestions();
