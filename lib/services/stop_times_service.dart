@@ -21,6 +21,7 @@ class StopTimesService {
     final params = <String, String>{
       'stopId': stopId,
       'n': n.toString(),
+      'radius': '20',
     };
 
     if (pageCursor != null) {

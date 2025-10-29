@@ -13,6 +13,8 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/floating_nav_bar.dart';
 import '../utils/duration_formatter.dart';
 import 'itinerary_detail_screen.dart';
+import '../widgets/load_more_button.dart';
+// Pagination response model imported via RoutingService; no direct reference needed.
 
 class ItineraryListScreen extends StatefulWidget {
   final double fromLat;
@@ -39,20 +41,57 @@ class ItineraryListScreen extends StatefulWidget {
 }
 
 class _ItineraryListScreenState extends State<ItineraryListScreen> {
-  Future<List<Itinerary>>? _itinerariesFuture;
+  List<Itinerary> _itineraries = [];
+  bool _isLoading = true;
+  bool _isLoadingMore = false;
+  String? _nextPageCursor;
 
   @override
   void initState() {
     super.initState();
-    _itinerariesFuture = RoutingService.findRoutes(
-      fromLat: widget.fromLat,
-      fromLon: widget.fromLon,
-      toLat: widget.toLat,
-      toLon: widget.toLon,
-      timeSelection: widget.timeSelection,
-    ).then((itineraries) {
-      return itineraries;
-    });
+    _loadInitial();
+  }
+
+  Future<void> _loadInitial() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await RoutingService.findRoutesPaginated(
+        fromLat: widget.fromLat,
+        fromLon: widget.fromLon,
+        toLat: widget.toLat,
+        toLon: widget.toLon,
+        timeSelection: widget.timeSelection,
+      );
+      setState(() {
+        _itineraries = response.itineraries;
+        _nextPageCursor = response.nextPageCursor;
+        _isLoading = false;
+      });
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || _nextPageCursor == null) return;
+    setState(() => _isLoadingMore = true);
+    try {
+      final response = await RoutingService.findRoutesPaginated(
+        fromLat: widget.fromLat,
+        fromLon: widget.fromLon,
+        toLat: widget.toLat,
+        toLon: widget.toLon,
+        timeSelection: widget.timeSelection,
+        pageCursor: _nextPageCursor,
+      );
+      setState(() {
+        _itineraries.addAll(response.itineraries);
+        _nextPageCursor = response.nextPageCursor;
+        _isLoadingMore = false;
+      });
+    } catch (_) {
+      setState(() => _isLoadingMore = false);
+    }
   }
 
   @override
@@ -82,39 +121,32 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                     },
                   ),
                   Expanded(
-                    child: FutureBuilder<List<Itinerary>>(
-                      future: _itinerariesFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return _buildLoadingSkeleton();
-                        }
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Text('Error: ${snapshot.error}'),
-                          );
-                        }
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(
-                            child: Text('No routes found.'),
-                          );
-                        }
-                        final itineraries = snapshot.data!;
-                        return ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 96), // Add padding for navbar
-                          itemCount: itineraries.length,
-                          itemBuilder: (context, index) {
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).push(CustomPageRoute(
-                                  child: ItineraryDetailScreen(itinerary: itineraries[index]),
-                                ));
-                              },
-                              child: ItineraryCard(itinerary: itineraries[index]),
-                            );
-                          },
-                        );
-                      },
-                    ),
+                        child: _isLoading
+                            ? _buildLoadingSkeleton()
+                            : _itineraries.isEmpty
+                                ? const Center(child: Text('No routes found.'))
+                                : ListView.builder(
+                                    padding: const EdgeInsets.only(bottom: 96),
+                                    itemCount: _itineraries.length + (_nextPageCursor != null ? 1 : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index == _itineraries.length) {
+                                        // Load more button
+                                        return LoadMoreButton(
+                                          onTap: _loadMore,
+                                          isLoading: _isLoadingMore,
+                                        );
+                                      }
+                                      final itin = _itineraries[index];
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.of(context).push(CustomPageRoute(
+                                            child: ItineraryDetailScreen(itinerary: itin),
+                                          ));
+                                        },
+                                        child: ItineraryCard(itinerary: itin),
+                                      );
+                                    },
+                                  ),
                   ),
                 ],
               ),

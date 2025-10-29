@@ -10,7 +10,7 @@ import '../services/location_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../utils/leg_helper.dart' show getLegIcon;
-import '../widgets/pressable_highlight.dart';
+import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/time_selection_overlay.dart';
 import '../widgets/validation_toast.dart';
@@ -451,10 +451,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                   itemBuilder: (context, index) {
                                     if (index == _stopTimes!.length) {
                                       // Load more button
-                                      return _LoadMoreButton(
-                                        onTap: _loadMore,
-                                        isLoading: _isLoadingMore,
-                                      );
+                                    return LoadMoreButton(
+                                      onTap: _loadMore,
+                                      isLoading: _isLoadingMore,
+                                    );
                                     }
                                     return _StopTimeCard(
                                       stopTime: _stopTimes![index],
@@ -849,49 +849,4 @@ class _StopTimeCard extends StatelessWidget {
   }
 }
 
-class _LoadMoreButton extends StatelessWidget {
-  const _LoadMoreButton({
-    required this.onTap,
-    required this.isLoading,
-  });
-
-  final VoidCallback onTap;
-  final bool isLoading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      alignment: Alignment.center,
-      child: PressableHighlight(
-        onPressed: isLoading ? () {} : onTap,
-        enableHaptics: false,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isLoading)
-              const CupertinoActivityIndicator(
-                radius: 10,
-                color: AppColors.accent,
-              )
-            else ...[
-              const Text(
-                "Load more",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.accent,
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                LucideIcons.chevronDown,
-                size: 20,
-                color: AppColors.accent,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+// LoadMoreButton widget has been moved to lib/widgets/load_more_button.dart
