@@ -783,9 +783,9 @@ class _StopTimeCard extends StatelessWidget {
                   // Route badge (without icon)
                   Container(
                     constraints: const BoxConstraints(
-                      minWidth: 40,
+                      minWidth: 30,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     decoration: BoxDecoration(
                       color: routeColor,
                       borderRadius: BorderRadius.circular(4),

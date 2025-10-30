@@ -254,28 +254,84 @@ class ItineraryCard extends StatelessWidget {
                 ),
               ),
             ),
-            // Bottom-right "More" action
-            Align(
-              alignment: Alignment.centerRight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text(
-                    'More',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+            // Bottom row with stats on left and "More" action on right
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Left side: transfers, calories, alerts
+                Row(
+                  children: [
+                    // Transfers
+                    Icon(
+                      LucideIcons.repeat,
+                      size: 16,
+                      color: AppColors.black.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${itinerary.transfers}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.black.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Calories (only show if there's walking)
+                    if (itinerary.walkingDistance > 0) ...[
+                      Icon(
+                        LucideIcons.flame,
+                        size: 16,
+                        color: AppColors.black.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${itinerary.calories}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.black.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    // Alerts (only show if there are alerts)
+                    if (itinerary.alertsCount > 0) ...[
+                      Icon(
+                        LucideIcons.triangleAlert,
+                        size: 16,
+                        color: AppColors.black.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${itinerary.alertsCount}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.black.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                // Right side: "More" action
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text(
+                      'More',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(
+                      LucideIcons.chevronRight,
+                      size: 16,
                       color: AppColors.accent,
                     ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(
-                    LucideIcons.chevronRight,
-                    size: 16,
-                    color: AppColors.accent,
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ],
       ),
@@ -311,15 +367,15 @@ class LegWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        if (leg.routeShortName != null)
+        if (leg.displayName != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: _parseHexColor(leg.routeColor) ?? const Color(0x00000000),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              leg.routeShortName!.length > 0 ? leg.routeShortName! : getTransitModeName(leg.mode),
+              leg.displayName!.length > 0 ? leg.displayName! : getTransitModeName(leg.mode),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
