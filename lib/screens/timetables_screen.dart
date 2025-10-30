@@ -6,9 +6,11 @@ import '../theme/app_colors.dart';
 import '../models/time_selection.dart';
 import '../models/route_field_kind.dart';
 import '../models/stop_time.dart';
+import '../screens/connection_info_screen.dart';
 import '../services/location_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart' show getLegIcon;
 import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
@@ -159,6 +161,24 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     });
   }
 
+  List<StopTime> _deduplicateStopTimes(List<StopTime> stopTimes) {
+    final seen = <String>{};
+    final deduplicated = <StopTime>[];
+
+    for (final stopTime in stopTimes) {
+      // Create a unique key based on tripId, departure time, and headsign
+      final departureTime = stopTime.place.departure?.toIso8601String() ?? '';
+      final key = '${stopTime.tripId}|$departureTime|${stopTime.headsign}';
+
+      if (!seen.contains(key)) {
+        seen.add(key);
+        deduplicated.add(stopTime);
+      }
+    }
+
+    return deduplicated;
+  }
+
   Future<void> _onSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
@@ -183,13 +203,13 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     try {
       final response = await StopTimesService.fetchStopTimes(
         stopId: _selectedStop?.id ?? '',
-        n: 25,
+        n: 20,
       );
 
       if (!mounted) return;
 
       setState(() {
-        _stopTimes = response.stopTimes;
+        _stopTimes = _deduplicateStopTimes(response.stopTimes);
         _nextPageCursor = response.nextPageCursor;
         _isLoadingStopTimes = false;
       });
@@ -223,7 +243,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       if (!mounted) return;
 
       setState(() {
-        _stopTimes = [...?_stopTimes, ...response.stopTimes];
+        // Deduplicate the combined list to avoid duplicates across pages
+        _stopTimes = _deduplicateStopTimes([...?_stopTimes, ...response.stopTimes]);
         _nextPageCursor = response.nextPageCursor;
         _isLoadingMore = false;
       });
@@ -456,8 +477,18 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       isLoading: _isLoadingMore,
                                     );
                                     }
-                                    return _StopTimeCard(
-                                      stopTime: _stopTimes![index],
+                                    final stopTime = _stopTimes![index];
+                                    return GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(context).push(CustomPageRoute(
+                                          child: ConnectionInfoScreen(
+                                            tripId: stopTime.tripId,
+                                          ),
+                                        ));
+                                      },
+                                      child: _StopTimeCard(
+                                        stopTime: stopTime,
+                                      ),
                                     );
                                   },
                                 )

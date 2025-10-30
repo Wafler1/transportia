@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:shimmer/shimmer.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../services/transitous_geocode_service.dart';
@@ -470,77 +471,107 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   }
 }
 
-class _RecentTripTile extends StatelessWidget {
+class _RecentTripTile extends StatefulWidget {
   const _RecentTripTile({required this.trip, required this.onTap});
 
   final TripHistoryItem trip;
   final VoidCallback onTap;
 
   @override
+  State<_RecentTripTile> createState() => _RecentTripTileState();
+}
+
+class _RecentTripTileState extends State<_RecentTripTile> {
+  bool _isLoading = false;
+
+  void _handleTap() async {
+    if (_isLoading) return; // Prevent multiple clicks
+
+    setState(() => _isLoading = true);
+
+    // Call the onTap callback
+    widget.onTap();
+
+    // Reset loading state after a delay (navigation will have happened by then)
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final content = Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0x0F000000),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0x11000000)),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            LucideIcons.route,
+            size: 18,
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.trip.fromName,
+                style: const TextStyle(
+                  color: AppColors.black,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  const Icon(
+                    LucideIcons.chevronRight,
+                    size: 14,
+                    color: Color(0x99000000),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      widget.trip.toName,
+                      style: const TextStyle(
+                        color: Color(0x99000000),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0x0F000000),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x11000000)),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              LucideIcons.route,
-              size: 18,
-              color: AppColors.black,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  trip.fromName,
-                  style: const TextStyle(
-                    color: AppColors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(
-                      LucideIcons.chevronRight,
-                      size: 14,
-                      color: Color(0x99000000),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        trip.toName,
-                        style: const TextStyle(
-                          color: Color(0x99000000),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      onTap: _handleTap,
+      child: _isLoading
+          ? Shimmer.fromColors(
+              baseColor: const Color(0x1A000000),
+              highlightColor: const Color(0x0D000000),
+              child: content,
+            )
+          : content,
     );
   }
 }

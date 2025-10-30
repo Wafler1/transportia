@@ -113,6 +113,7 @@ class _MapScreenState extends State<MapScreen>
   TimeSelection _timeSelection = TimeSelection.now();
   int _tripsRefreshKey = 0;
   List<TripHistoryItem> _recentTrips = [];
+  bool _isSearching = false; // Prevent multiple search requests
 
   @override
   void initState() {
@@ -689,6 +690,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _search(TimeSelection timeSelection) async {
+    // Prevent multiple simultaneous search requests
+    if (_isSearching) return;
+
     _unfocusInputs();
     final needsFrom = !_hasLocationPermission;
     final fromEmpty = _fromCtrl.text.trim().isEmpty;
@@ -701,6 +705,8 @@ class _MapScreenState extends State<MapScreen>
       showValidationToast(context, msg);
       return;
     }
+
+    setState(() => _isSearching = true);
     Haptics.mediumTick();
 
     double? fromLat, fromLon, toLat, toLon;
@@ -747,7 +753,10 @@ class _MapScreenState extends State<MapScreen>
       ),
     )).then((_) {
       _unfocusInputs();
-      setState(() => _tripsRefreshKey++);
+      setState(() {
+        _tripsRefreshKey++;
+        _isSearching = false;
+      });
       unawaited(_loadRecentTrips());
     });
   }

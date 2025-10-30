@@ -1,3 +1,5 @@
+import '../models/itinerary.dart' show Alert;
+
 class StopTimesResponse {
   final List<StopTime> stopTimes;
   final StopPlace place;
@@ -105,6 +107,7 @@ class StopPlace {
   final String? pickupType;
   final String? dropoffType;
   final bool? cancelled;
+  final List<Alert> alerts;
 
   const StopPlace({
     required this.name,
@@ -124,6 +127,7 @@ class StopPlace {
     this.pickupType,
     this.dropoffType,
     this.cancelled,
+    this.alerts = const [],
   });
 
   factory StopPlace.fromJson(Map<String, dynamic> json) {
@@ -153,6 +157,10 @@ class StopPlace {
       pickupType: json['pickupType'] as String?,
       dropoffType: json['dropoffType'] as String?,
       cancelled: json['cancelled'] as bool?,
+      alerts: (json['alerts'] as List<dynamic>?)
+              ?.map((item) => Alert.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 }

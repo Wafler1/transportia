@@ -10,7 +10,6 @@ import '../models/itinerary.dart';
 import '../services/routing_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/floating_nav_bar.dart';
 import '../utils/duration_formatter.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
@@ -108,62 +107,43 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       child: Container(
         color: AppColors.white,
         child: SafeArea(
-          child: Stack(
+          child: Column(
             children: [
-              Column(
-                children: [
-                  CustomAppBar(
-                    title: 'Search Results',
-                    // Unfocus any active text fields before returning to the map.
-                    onBackButtonPressed: () {
-                      FocusScope.of(context).unfocus();
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                  Expanded(
-                        child: _isLoading
-                            ? _buildLoadingSkeleton()
-                            : _itineraries.isEmpty
-                                ? const Center(child: Text('No routes found.'))
-                                : ListView.builder(
-                                    padding: const EdgeInsets.only(bottom: 96),
-                                    itemCount: _itineraries.length + (_nextPageCursor != null ? 1 : 0),
-                                    itemBuilder: (context, index) {
-                                      if (index == _itineraries.length) {
-                                        // Load more button
-                                        return LoadMoreButton(
-                                          onTap: _loadMore,
-                                          isLoading: _isLoadingMore,
-                                        );
-                                      }
-                                      final itin = _itineraries[index];
-                                      return GestureDetector(
-                                        onTap: () {
-                                          Navigator.of(context).push(CustomPageRoute(
-                                            child: ItineraryDetailScreen(itinerary: itin),
-                                          ));
-                                        },
-                                        child: ItineraryCard(itinerary: itin),
-                                      );
-                                    },
-                                  ),
-                  ),
-                ],
+              CustomAppBar(
+                title: 'Search Results',
+                // Unfocus any active text fields before returning to the map.
+                onBackButtonPressed: () {
+                  FocusScope.of(context).unfocus();
+                  Navigator.of(context).pop();
+                },
               ),
-
-              // Floating navigation bar
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: FloatingNavBar(
-                  currentIndex: 0, // Map tab (where we came from)
-                  onIndexChanged: (index) {
-                    // Pop back with the selected tab index
-                    Navigator.of(context).pop(index);
-                  },
-                  visibility: 1.0,
-                ),
+              Expanded(
+                    child: _isLoading
+                        ? _buildLoadingSkeleton()
+                        : _itineraries.isEmpty
+                            ? const Center(child: Text('No routes found.'))
+                            : ListView.builder(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                itemCount: _itineraries.length + (_nextPageCursor != null ? 1 : 0),
+                                itemBuilder: (context, index) {
+                                  if (index == _itineraries.length) {
+                                    // Load more button
+                                    return LoadMoreButton(
+                                      onTap: _loadMore,
+                                      isLoading: _isLoadingMore,
+                                    );
+                                  }
+                                  final itin = _itineraries[index];
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(CustomPageRoute(
+                                        child: ItineraryDetailScreen(itinerary: itin),
+                                      ));
+                                    },
+                                    child: ItineraryCard(itinerary: itin),
+                                  );
+                                },
+                              ),
               ),
             ],
           ),

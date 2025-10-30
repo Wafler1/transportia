@@ -9,7 +9,6 @@ import '../theme/app_colors.dart';
 import '../utils/custom_page_route.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
-import '../widgets/floating_nav_bar.dart';
 import 'itinerary_map_screen.dart';
 
 class ItineraryDetailScreen extends StatelessWidget {
@@ -22,41 +21,22 @@ class ItineraryDetailScreen extends StatelessWidget {
     return Container(
       color: AppColors.white,
       child: SafeArea(
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CustomAppBar(
-                  title: 'Itinerary Details',
-                  onBackButtonPressed: () => Navigator.of(context).pop(),
-                ),
-                JourneyOverviewWidget(itinerary: itinerary),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 96), // Add padding for navbar
-                    itemCount: itinerary.legs.length,
-                    itemBuilder: (context, index) {
-                      final leg = itinerary.legs[index];
-                      return LegDetailsWidget(leg: leg);
-                    },
-                  ),
-                ),
-              ],
+            CustomAppBar(
+              title: 'Itinerary Details',
+              onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
-
-            // Floating navigation bar
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: FloatingNavBar(
-                currentIndex: 0, // Map tab (where we came from)
-                onIndexChanged: (index) {
-                  // Pop back with the selected tab index
-                  Navigator.of(context).pop(index);
+            JourneyOverviewWidget(itinerary: itinerary),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 16),
+                itemCount: itinerary.legs.length,
+                itemBuilder: (context, index) {
+                  final leg = itinerary.legs[index];
+                  return LegDetailsWidget(leg: leg);
                 },
-                visibility: 1.0,
               ),
             ),
           ],
@@ -414,22 +394,21 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Metadata section
-        _buildMetadataSection(),
 
         // Alerts
         if (widget.leg.alerts.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           ...widget.leg.alerts.map((alert) => _buildAlertWidget(alert)),
+          const SizedBox(height: 6),
         ],
-
-        const SizedBox(height: 12),
 
         // Timeline
         FixedTimeline.tileBuilder(
           theme: TimelineThemeData(
             nodePosition: 0,
-            color: AppColors.accent,
+            color: widget.leg.routeColor != null
+                ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
+                : AppColors.accent,
             indicatorTheme: const IndicatorThemeData(
               size: 16,
             ),
@@ -451,22 +430,33 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
               final stop = stops[index];
               if (stop.isFirst || stop.isLast) {
                 return DotIndicator(
-                  color: AppColors.accent,
+                  color: widget.leg.routeColor != null
+                ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
+                : AppColors.accent,
                   size: 16
                 );
               }
               return DotIndicator(
-                color: AppColors.accent.withValues(alpha: 0.6),
+                color: widget.leg.routeColor != null
+                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accent.withValues(alpha: 0.6)
+                : AppColors.accent.withValues(alpha: 0.6),
                 size: 12,
               );
             },
             connectorBuilder: (context, index, connectorType) {
               return SolidLineConnector(
-                color: AppColors.accent.withValues(alpha: 0.6),
+                color: widget.leg.routeColor != null
+                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accent.withValues(alpha: 0.6)
+                : AppColors.accent.withValues(alpha: 0.6),
               );
             },
           ),
         ),
+
+        const SizedBox(height: 12),
+
+        // Metadata section
+        _buildMetadataSection(),
       ],
     );
   }

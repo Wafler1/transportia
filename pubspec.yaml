@@ -27,6 +27,7 @@ dependencies:
   http: ^1.2.2
   shimmer: ^3.0.0
   timelines_plus: ^1.0.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

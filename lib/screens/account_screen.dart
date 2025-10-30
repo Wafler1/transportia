@@ -1,5 +1,7 @@
+import 'package:entaria_app/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 
 class AccountScreen extends StatelessWidget {
@@ -60,14 +62,116 @@ class AccountScreen extends StatelessWidget {
                 ),
               ),
 
+              // Sponsored by Wafler.one banner
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: GestureDetector(
+                  onTap: () async {
+                    try {
+                      final uri = Uri.parse('http://wafler.one?ref=entaria');
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } catch (e) {
+                      showValidationToast(context, "Unable to open link.");
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0x1A000000)),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x08000000),
+                          blurRadius: 12,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Color(0xFFFC970A).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            LucideIcons.sparkles,
+                            size: 22,
+                            color: Color(0xFFFC970A),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Created by ',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0x80000000),
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Wafler.one',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFFFC970A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Helping you travel smarter',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0x66000000),
+                                  height: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Account section
+              _buildSection(
+                title: 'Account',
+                items: [
+                  _SettingsItem(
+                    icon: LucideIcons.circleUser,
+                    title: 'Account',
+                    subtitle: 'Manage your account settings',
+                    onTap: () {},
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
               // Settings sections
               _buildSection(
                 title: 'Preferences',
                 items: [
                   _SettingsItem(
-                    icon: LucideIcons.bell,
-                    title: 'Notifications',
-                    subtitle: 'Manage your notifications',
+                    icon: LucideIcons.heart,
+                    title: 'Favourites',
+                    subtitle: 'Manage your favourite places',
                     onTap: () {},
                   ),
                   _SettingsItem(
@@ -93,45 +197,13 @@ class AccountScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: LucideIcons.info,
                     title: 'About Entaria',
-                    subtitle: 'Version, credits, and more',
+                    subtitle: 'About, credits, and more',
                     onTap: () {},
                   ),
                   _SettingsItem(
-                    icon: LucideIcons.shield,
-                    title: 'Privacy Policy',
-                    subtitle: 'How we protect your data',
-                    onTap: () {},
-                  ),
-                  _SettingsItem(
-                    icon: LucideIcons.fileText,
-                    title: 'Terms of Service',
-                    subtitle: 'Terms and conditions',
-                    onTap: () {},
-                  ),
-                  _SettingsItem(
-                    icon: LucideIcons.heart,
-                    title: 'Support Development',
-                    subtitle: 'Help keep Entaria free',
-                    onTap: () {},
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              _buildSection(
-                title: 'Help',
-                items: [
-                  _SettingsItem(
-                    icon: LucideIcons.circleQuestionMark,
-                    title: 'Help Center',
-                    subtitle: 'FAQs and guides',
-                    onTap: () {},
-                  ),
-                  _SettingsItem(
-                    icon: LucideIcons.messageCircle,
-                    title: 'Contact Us',
-                    subtitle: 'Get in touch',
+                    icon: LucideIcons.scale,
+                    title: 'Legal',
+                    subtitle: 'Privacy policy and terms of service',
                     onTap: () {},
                   ),
                 ],
@@ -174,7 +246,7 @@ class AccountScreen extends StatelessWidget {
                         color: Color(0x66000000),
                       ),
                     ),
-                    // Add extra padding to account for floating nav bar (64px + 16px padding + 16px buffer = 96px)
+                    // Add extra padding to account for floating nav bar
                     const SizedBox(height: 112),
                   ],
                 ),
