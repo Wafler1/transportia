@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
+import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../widgets/route_field_box.dart';
 import '../theme/app_colors.dart';
@@ -34,6 +35,9 @@ class BottomCard extends StatefulWidget {
     required this.timeSelection,
     required this.recentTrips,
     required this.onRecentTripTap,
+    required this.favorites,
+    required this.onFavoriteTap,
+    required this.hasLocationPermission,
     this.tripsRefreshKey = 0,
   });
 
@@ -61,6 +65,9 @@ class BottomCard extends StatefulWidget {
   final TimeSelection timeSelection;
   final List<TripHistoryItem> recentTrips;
   final ValueChanged<TripHistoryItem> onRecentTripTap;
+  final List<FavoritePlace> favorites;
+  final ValueChanged<FavoritePlace> onFavoriteTap;
+  final bool hasLocationPermission;
   final int tripsRefreshKey;
 
   @override
@@ -191,7 +198,7 @@ class _BottomCardState extends State<BottomCard> {
                         fromFocusNode: widget.fromFocusNode,
                         toFocusNode: widget.toFocusNode,
                         showMyLocationDefault: widget.showMyLocationDefault,
-                        accentColor: AppColors.accent,
+                        accentColor: AppColors.accentOf(context),
                         onSwapRequested: widget.onSwapRequested,
                         layerLink: widget.routeFieldLink,
                         fromLoading: widget.fromLoading,
@@ -329,6 +336,43 @@ class _BottomCardState extends State<BottomCard> {
                               ),
                             ),
 
+                            // Favourites section
+                            if (widget.favorites.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: widget.onUnfocus,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Favourites',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ...widget.favorites
+                                          .take(3)
+                                          .map((favorite) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 12),
+                                                child: _FavoriteTile(
+                                                  favorite: favorite,
+                                                  hasLocationPermission: widget.hasLocationPermission,
+                                                  onTap: () => widget
+                                                      .onFavoriteTap(favorite),
+                                                ),
+                                              )),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
                             // Recent trips section
                             if (widget.recentTrips.isNotEmpty)
                               Padding(
@@ -459,8 +503,8 @@ class _PrimaryButtonState extends State<PrimaryButton> {
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
             color: _pressed
-                ? const Color.fromARGB(255, 0, 105, 124)
-                : AppColors.accent,
+                ? AppColors.accentOf(context).withValues(alpha: 0.85)
+                : AppColors.accentOf(context),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -572,6 +616,97 @@ class _RecentTripTileState extends State<_RecentTripTile> {
               child: content,
             )
           : content,
+    );
+  }
+}
+
+class _FavoriteTile extends StatelessWidget {
+  const _FavoriteTile({
+    required this.favorite,
+    required this.hasLocationPermission,
+    required this.onTap,
+  });
+
+  final FavoritePlace favorite;
+  final bool hasLocationPermission;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.accentOf(context).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: AppColors.accentOf(context).withValues(alpha: 0.2),
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              LucideIcons.heart,
+              size: 18,
+              color: AppColors.accentOf(context),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  favorite.name,
+                  style: const TextStyle(
+                    color: AppColors.black,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      LucideIcons.mapPin,
+                      size: 14,
+                      color: AppColors.accentOf(context).withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${favorite.lat.toStringAsFixed(4)}, ${favorite.lon.toStringAsFixed(4)}',
+                        style: const TextStyle(
+                          color: Color(0x99000000),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            hasLocationPermission
+                ? LucideIcons.chevronRight
+                : LucideIcons.mapPinOff,
+            size: 20,
+            color: hasLocationPermission
+                ? const Color(0x99000000)
+                : const Color(0xFFFF3B30),
+          ),
+        ],
+      ),
     );
   }
 }

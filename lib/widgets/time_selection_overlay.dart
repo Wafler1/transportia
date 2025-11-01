@@ -165,17 +165,17 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                   ),
                   PressableHighlight(
                     onPressed: _handleConfirm,
-                    highlightColor: AppColors.accent,
+                    highlightColor: AppColors.accentOf(context),
                     borderRadius: BorderRadius.circular(14),
                     enableHaptics: false,
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(width: 8),
                         Text(
                           'Confirm',
                           style: TextStyle(
-                            color: AppColors.accent,
+                            color: AppColors.accentOf(context),
                             fontWeight: FontWeight.w500,
                             fontSize: 15,
                           ),
@@ -549,7 +549,7 @@ class _ToggleButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent : AppColors.white,
+          color: isSelected ? AppColors.accentOf(context) : AppColors.white,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(

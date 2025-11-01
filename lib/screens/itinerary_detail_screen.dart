@@ -181,7 +181,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                 child: Icon(
                   LucideIcons.map,
                   size: 20,
-                  color: AppColors.accent,
+                  color: AppColors.accentOf(context),
                 ),
               ),
             ],
@@ -258,7 +258,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   Icon(
                     _isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                     size: 16,
-                    color: AppColors.accent,
+                    color: AppColors.accentOf(context),
                   ),
                 ],
               ],
@@ -408,7 +408,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             nodePosition: 0,
             color: widget.leg.routeColor != null
                 ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
-                : AppColors.accent,
+                : AppColors.accentOf(context),
             indicatorTheme: const IndicatorThemeData(
               size: 16,
             ),
@@ -432,22 +432,22 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                 return DotIndicator(
                   color: widget.leg.routeColor != null
                 ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
-                : AppColors.accent,
+                : AppColors.accentOf(context),
                   size: 16
                 );
               }
               return DotIndicator(
                 color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accent.withValues(alpha: 0.6)
-                : AppColors.accent.withValues(alpha: 0.6),
+                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accentOf(context).withValues(alpha: 0.6)
+                : AppColors.accentOf(context).withValues(alpha: 0.6),
                 size: 12,
               );
             },
             connectorBuilder: (context, index, connectorType) {
               return SolidLineConnector(
                 color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accent.withValues(alpha: 0.6)
-                : AppColors.accent.withValues(alpha: 0.6),
+                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accentOf(context).withValues(alpha: 0.6)
+                : AppColors.accentOf(context).withValues(alpha: 0.6),
               );
             },
           ),

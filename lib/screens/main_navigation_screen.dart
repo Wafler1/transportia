@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import '../widgets/floating_nav_bar.dart';
 import 'map_screen.dart';
 import 'timetables_screen.dart';
-import 'account_screen.dart';
+import 'user_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});

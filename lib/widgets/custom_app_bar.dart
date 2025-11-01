@@ -36,19 +36,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 enableHaptics: false,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Icon(
                       LucideIcons.chevronLeft,
                       size: 20,
-                      color: AppColors.accent,
+                      color: AppColors.accentOf(context),
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Text(
                       'Back',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.accent,
+                        color: AppColors.accentOf(context),
                       ),
                     ),
                   ],

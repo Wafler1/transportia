@@ -1,3 +1,11 @@
+import 'dart:ui';
+import 'package:entaria_app/screens/appearance_screen.dart';
+import 'package:entaria_app/screens/statistics_screen.dart';
+import 'package:entaria_app/screens/favourites_screen.dart';
+import 'package:entaria_app/screens/info_screen.dart';
+import 'package:entaria_app/screens/legal_screen.dart';
+import 'package:entaria_app/screens/location_settings_screen.dart';
+import 'package:entaria_app/utils/custom_page_route.dart';
 import 'package:entaria_app/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -25,13 +33,13 @@ class AccountScreen extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.accent.withOpacity(0.12),
+                        color: AppColors.accentOf(context).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.user,
                         size: 24,
-                        color: AppColors.accent,
+                        color: AppColors.accentOf(context),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -39,7 +47,7 @@ class AccountScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Account',
+                          'User',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -62,7 +70,7 @@ class AccountScreen extends StatelessWidget {
                 ),
               ),
 
-              // Sponsored by Wafler.one banner
+              // Sponsored by Wafler.one banner with orange shadow
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: GestureDetector(
@@ -82,6 +90,12 @@ class AccountScreen extends StatelessWidget {
                       border: Border.all(color: const Color(0x1A000000)),
                       boxShadow: const [
                         BoxShadow(
+                          color: Color(0x20FC970A),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                          spreadRadius: 1,
+                        ),
+                        BoxShadow(
                           color: Color(0x08000000),
                           blurRadius: 12,
                           offset: Offset(0, 4),
@@ -94,7 +108,7 @@ class AccountScreen extends StatelessWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: Color(0xFFFC970A).withValues(alpha: 0.12),
+                            color: const Color(0xFFFC970A).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -149,15 +163,19 @@ class AccountScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Account section
+              // Statistics section
               _buildSection(
-                title: 'Account',
+                title: 'Analytics',
                 items: [
                   _SettingsItem(
-                    icon: LucideIcons.circleUser,
-                    title: 'Account',
-                    subtitle: 'Manage your account settings',
-                    onTap: () {},
+                    icon: LucideIcons.chartPie,
+                    title: 'Statistics',
+                    subtitle: 'View your travel statistics',
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const StatisticsScreen(),
+                      ));
+                    },
                   ),
                 ],
               ),
@@ -172,19 +190,31 @@ class AccountScreen extends StatelessWidget {
                     icon: LucideIcons.heart,
                     title: 'Favourites',
                     subtitle: 'Manage your favourite places',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const FavouritesScreen(),
+                      ));
+                    },
                   ),
                   _SettingsItem(
                     icon: LucideIcons.mapPin,
                     title: 'Location',
                     subtitle: 'Location permissions',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const LocationSettingsScreen(),
+                      ));
+                    },
                   ),
                   _SettingsItem(
                     icon: LucideIcons.palette,
                     title: 'Appearance',
                     subtitle: 'Theme and display',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const AppearanceScreen(),
+                      ));
+                    },
                   ),
                 ],
               ),
@@ -198,13 +228,21 @@ class AccountScreen extends StatelessWidget {
                     icon: LucideIcons.info,
                     title: 'About Entaria',
                     subtitle: 'About, credits, and more',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const InfoScreen(),
+                      ));
+                    },
                   ),
                   _SettingsItem(
                     icon: LucideIcons.scale,
                     title: 'Legal',
                     subtitle: 'Privacy policy and terms of service',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).push(CustomPageRoute(
+                        child: const LegalScreen(),
+                      ));
+                    },
                   ),
                 ],
               ),
@@ -350,13 +388,13 @@ class _SettingsItemState extends State<_SettingsItem> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.accent.withOpacity(0.12),
+                color: AppColors.accentOf(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 widget.icon,
                 size: 22,
-                color: AppColors.accent,
+                color: AppColors.accentOf(context),
               ),
             ),
             const SizedBox(width: 16),

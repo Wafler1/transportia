@@ -121,7 +121,7 @@ class _NavBarItemState extends State<_NavBarItem> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: widget.isSelected
-                      ? AppColors.accent.withOpacity(0.12)
+                      ? AppColors.accentOf(context).withValues(alpha: 0.12)
                       : const Color(0x00000000),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -129,7 +129,7 @@ class _NavBarItemState extends State<_NavBarItem> {
                   widget.icon,
                   size: 24,
                   color: widget.isSelected
-                      ? AppColors.accent
+                      ? AppColors.accentOf(context)
                       : const Color(0x66000000),
                 ),
               ),

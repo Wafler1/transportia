@@ -54,18 +54,18 @@ class LoadMoreButton extends StatelessWidget {
                 ),
               ),
             ] else ...[
-              const Text(
+              Text(
                 "Load more",
                 style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.accent,
+                  color: AppColors.accentOf(context),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 LucideIcons.chevronDown,
                 size: 20,
-                color: AppColors.accent,
+                color: AppColors.accentOf(context),
               ),
             ],
           ],

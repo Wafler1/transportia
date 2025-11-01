@@ -115,21 +115,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               const SizedBox(height: 28),
                               PressableHighlight(
                                 onPressed: _onContinue,
-                                child: const Row(
+                                child:  Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(
                                       "Let's go",
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: AppColors.accent,
+                                        color: AppColors.accentOf(context),
                                       ),
                                     ),
                                     SizedBox(width: 8),
                                     Icon(
                                       LucideIcons.chevronRight,
                                       size: 20,
-                                      color: AppColors.accent,
+                                      color: AppColors.accentOf(context),
                                     ),
                                   ],
                                 ),

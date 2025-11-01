@@ -1,4 +1,7 @@
+import 'dart:async';
 import 'package:entaria_app/models/itinerary.dart';
+import 'package:entaria_app/screens/itinerary_map_screen.dart';
+import 'package:entaria_app/utils/custom_page_route.dart';
 import 'package:entaria_app/utils/duration_formatter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -27,11 +30,20 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
   TripDetailsResponse? _tripDetails;
   bool _isLoading = true;
   String? _error;
+  Timer? _refreshTimer;
 
   @override
   void initState() {
     super.initState();
     _fetchTripDetails();
+    // Start periodic refresh every 5 seconds to update vehicle position
+    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _tripDetails != null) {
+        setState(() {
+          // This will trigger a rebuild and recalculate the vehicle position
+        });
+      }
+    });
   }
 
   Future<void> _fetchTripDetails() async {
@@ -56,14 +68,14 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
   }
 
   Color _parseHexColor(String? hexString) {
-    if (hexString == null) return AppColors.accent;
+    if (hexString == null) return AppColors.accentOf(context);
     try {
       final buffer = StringBuffer();
       if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
       buffer.write(hexString.replaceFirst('#', ''));
       return Color(int.parse(buffer.toString(), radix: 16));
     } catch (_) {
-      return AppColors.accent;
+      return AppColors.accentOf(context);
     }
   }
 
@@ -331,6 +343,22 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                             ),
                           ],
                         ],
+                      ),
+                    ),
+                    // Map icon button
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(CustomPageRoute(
+                          child: ItineraryMapScreen(tripDetails: _tripDetails!),
+                        ));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        child: Icon(
+                          LucideIcons.map,
+                          size: 20,
+                          color: AppColors.accentOf(context),
+                        ),
                       ),
                     ),
                   ],
@@ -725,6 +753,12 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 }
 

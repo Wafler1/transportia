@@ -16,7 +16,7 @@ class RouteFieldBox extends StatefulWidget {
     this.fromFocusNode,
     this.toFocusNode,
     this.showMyLocationDefault = false,
-    this.accentColor = AppColors.accent,
+    required this.accentColor,
     required this.onSwapRequested,
     required this.layerLink,
     this.fromLoading = false,
@@ -244,7 +244,7 @@ class _InlineField extends StatelessWidget {
                 fontSize: 16,
               ),
               style: const TextStyle(color: AppColors.black, fontSize: 16),
-              cursorColor: const Color(0xFF007185),
+              cursorColor: AppColors.accentOf(context),
               textAlign: textAlign,
               decoration: null, // Let outer container draw the box
               padding: const EdgeInsets.symmetric(vertical: 8),

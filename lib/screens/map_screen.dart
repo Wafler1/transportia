@@ -9,12 +9,15 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:provider/provider.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
+import '../providers/theme_provider.dart';
 import '../models/route_field_kind.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../screens/itinerary_list_screen.dart';
+import '../services/favorites_service.dart';
 import '../services/location_service.dart';
 import '../services/recent_trips_service.dart';
 import '../services/transitous_geocode_service.dart';
@@ -54,7 +57,6 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen>
     with SingleTickerProviderStateMixin {
-  static const _styleUrl = "https://tiles.openfreemap.org/styles/liberty";
   static const double _min3DZoom = 16.0;
   static const CameraPosition _initCam = CameraPosition(
     target: LatLng(50.087, 14.420),
@@ -113,6 +115,7 @@ class _MapScreenState extends State<MapScreen>
   TimeSelection _timeSelection = TimeSelection.now();
   int _tripsRefreshKey = 0;
   List<TripHistoryItem> _recentTrips = [];
+  List<FavoritePlace> _favorites = [];
   bool _isSearching = false; // Prevent multiple search requests
 
   @override
@@ -166,6 +169,7 @@ class _MapScreenState extends State<MapScreen>
     _fromCtrl.addListener(_handleFromTextChanged);
     _toCtrl.addListener(_handleToTextChanged);
     unawaited(_loadRecentTrips());
+    unawaited(_loadFavorites());
   }
 
   @override
@@ -465,7 +469,7 @@ class _MapScreenState extends State<MapScreen>
                 child: RepaintBoundary(
                   child: MapLibreMap(
                     onMapCreated: _onMapCreated,
-                    styleString: _styleUrl,
+                    styleString: context.watch<ThemeProvider>().mapStyleUrl,
                     myLocationEnabled: _hasLocationPermission,
                     myLocationRenderMode: _hasLocationPermission
                         ? MyLocationRenderMode.compass
@@ -603,6 +607,9 @@ class _MapScreenState extends State<MapScreen>
                         recentTrips: _recentTrips,
                         onRecentTripTap: _onRecentTripTap,
                         tripsRefreshKey: _tripsRefreshKey,
+                        favorites: _favorites,
+                        onFavoriteTap: _onFavoriteTap,
+                        hasLocationPermission: _hasLocationPermission,
                       ),
                       CompositedTransformFollower(
                         link: _routeFieldLink,
@@ -1384,6 +1391,41 @@ class _MapScreenState extends State<MapScreen>
     // Trigger search with current time (no time parameters)
     _search(TimeSelection.now());
   }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await FavoritesService.getFavorites();
+    if (!mounted) return;
+    setState(() {
+      _favorites = favorites;
+    });
+  }
+
+  void _onFavoriteTap(FavoritePlace favorite) {
+    if (!_hasLocationPermission) {
+      showValidationToast(context, "Location permission required to use favourites");
+      return;
+    }
+
+    Haptics.lightTick();
+
+    // Clear from field for "My Location"
+    _setControllerText(RouteFieldKind.from, '');
+    _setSelection(RouteFieldKind.from, null, notify: true);
+
+    // Set the To field to the favorite location
+    final toSuggestion = TransitousLocationSuggestion(
+      id: 'favorite-${favorite.lat}-${favorite.lon}',
+      name: favorite.name,
+      lat: favorite.lat,
+      lon: favorite.lon,
+      type: 'PLACE',
+    );
+    _setControllerText(RouteFieldKind.to, favorite.name);
+    _setSelection(RouteFieldKind.to, toSuggestion, notify: true);
+
+    // Trigger search with current time
+    _search(TimeSelection.now());
+  }
 }
 
 class _MapControlPills extends StatelessWidget {
@@ -1400,7 +1442,7 @@ class _MapControlPills extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextStyle threeDLabelStyle = TextStyle(
-      color: is3DMode ? AppColors.accent : AppColors.black,
+      color: is3DMode ? AppColors.accentOf(context) : AppColors.black,
       fontSize: 14,
       fontWeight: FontWeight.w500,
     );
@@ -1418,7 +1460,7 @@ class _MapControlPills extends StatelessWidget {
               leading: Icon(
                 is3DMode ? LucideIcons.undoDot : LucideIcons.box,
                 size: 16,
-                color: is3DMode ? AppColors.accent : AppColors.black,
+                color: is3DMode ? AppColors.accentOf(context) : AppColors.black,
               ),
               label: Text(
                 is3DMode ? 'Exit 3D' : '3D View',
@@ -1815,18 +1857,18 @@ class _LongPressModalCard extends StatelessWidget {
               alignment: Alignment.center,
               child: PressableHighlight(
                 onPressed: onDismiss,
-                highlightColor: AppColors.accent,
+                highlightColor: AppColors.accentOf(context),
                 borderRadius: BorderRadius.circular(14),
                 enableHaptics: false,
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(LucideIcons.x, size: 18, color: AppColors.accent),
+                    Icon(LucideIcons.x, size: 18, color: AppColors.accentOf(context)),
                     SizedBox(width: 8),
                     Text(
                       'Dismiss',
                       style: TextStyle(
-                        color: AppColors.accent,
+                        color: AppColors.accentOf(context),
                         fontWeight: FontWeight.w500,
                         fontSize: 15,
                       ),

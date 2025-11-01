@@ -198,12 +198,12 @@ class ItineraryCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (itinerary.isDirect)
-                  const Text(
+                  Text(
                     'Direct',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.accent,
+                      color: AppColors.accentOf(context),
                     ),
                   ),
               ],
@@ -294,20 +294,20 @@ class ItineraryCard extends StatelessWidget {
                 // Right side: "More" action
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Text(
                       'More',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.accent,
+                        color: AppColors.accentOf(context),
                       ),
                     ),
                     SizedBox(width: 4),
                     Icon(
                       LucideIcons.chevronRight,
                       size: 16,
-                      color: AppColors.accent,
+                      color: AppColors.accentOf(context),
                     ),
                   ],
                 ),

@@ -1,4 +1,4 @@
-import '../models/itinerary.dart' show Alert;
+import '../models/itinerary.dart' show Alert, EncodedPolyline;
 
 class TripDetailsResponse {
   final int duration;
@@ -58,6 +58,7 @@ class TripLeg {
   final String? source;
   final List<TripPlace> intermediateStops;
   final List<Alert> alerts;
+  final EncodedPolyline? legGeometry;
 
   const TripLeg({
     required this.mode,
@@ -89,6 +90,7 @@ class TripLeg {
     this.source,
     this.intermediateStops = const [],
     this.alerts = const [],
+    this.legGeometry,
   });
 
   factory TripLeg.fromJson(Map<String, dynamic> json) {
@@ -134,6 +136,9 @@ class TripLeg {
               ?.map((item) => Alert.fromJson(item as Map<String, dynamic>))
               .toList() ??
           const [],
+      legGeometry: json['legGeometry'] != null
+          ? EncodedPolyline.fromJson(json['legGeometry'] as Map<String, dynamic>)
+          : null,
     );
   }
 }

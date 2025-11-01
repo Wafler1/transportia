@@ -324,13 +324,13 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.accent.withOpacity(0.12),
+                                  color: AppColors.accentOf(context).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   LucideIcons.clock,
                                   size: 24,
-                                  color: AppColors.accent,
+                                  color: AppColors.accentOf(context),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -405,7 +405,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                         ),
                                         decoration: null,
                                         padding: const EdgeInsets.symmetric(vertical: 8),
-                                        cursorColor: AppColors.accent,
+                                        cursorColor: AppColors.accentOf(context),
                                         maxLines: 1,
                                         textInputAction: TextInputAction.search,
                                         onSubmitted: (_) => _onSearch(),
@@ -724,8 +724,8 @@ class _SearchButtonState extends State<_SearchButton> {
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
             color: _pressed
-                ? const Color.fromARGB(255, 0, 105, 124)
-                : AppColors.accent,
+                ? AppColors.accentOf(context).withValues(alpha: 0.85)
+                : AppColors.accentOf(context),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -757,7 +757,7 @@ class _StopTimeCard extends StatelessWidget {
     return '$hour:$minute';
   }
 
-  Color _parseHexColor(String hexString) {
+  Color _parseHexColor(String hexString, BuildContext context) {
     try {
       final buffer = StringBuffer();
       if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
@@ -771,10 +771,10 @@ class _StopTimeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final routeColor = stopTime.routeColor != null
-        ? _parseHexColor(stopTime.routeColor!)
-        : AppColors.accent;
+        ? _parseHexColor(stopTime.routeColor!, context)
+        : AppColors.accentOf(context);
     final routeTextColor = stopTime.routeTextColor != null
-        ? _parseHexColor(stopTime.routeTextColor!)
+        ? _parseHexColor(stopTime.routeTextColor!, context)
         : AppColors.white;
 
     final modeIcon = getLegIcon(stopTime.mode);
