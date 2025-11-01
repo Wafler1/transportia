@@ -2,7 +2,8 @@
 class TimeSelection {
   final DateTime dateTime;
   final bool isArriveBy; // true = arrive by, false = depart at
-  final bool _isDefaultNow; // Internal flag to track if this is unmodified "Now"
+  final bool
+  _isDefaultNow; // Internal flag to track if this is unmodified "Now"
 
   const TimeSelection({
     required this.dateTime,
@@ -49,7 +50,8 @@ class TimeSelection {
       dateStr = '${dateTime.day}/${dateTime.month}';
     }
 
-    final timeStr = '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    final timeStr =
+        '${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
     return '$dateStr $timeStr';
   }
 

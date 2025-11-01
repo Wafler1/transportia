@@ -20,7 +20,8 @@ class FloatingNavBar extends StatelessWidget {
     final opacity = visibility.clamp(0.0, 1.0);
     final translateY = (1 - opacity) * 32; // Slide down 32px when hiding
     final blur = (1 - opacity) * 8.0; // Blur when fading out
-    final scale = 0.92 + (opacity * 0.08); // Shrink from 1.0 to 0.92 when hiding
+    final scale =
+        0.92 + (opacity * 0.08); // Shrink from 1.0 to 0.92 when hiding
 
     return IgnorePointer(
       ignoring: opacity < 0.1,
@@ -33,51 +34,47 @@ class FloatingNavBar extends StatelessWidget {
             child: ImageFiltered(
               imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
               child: Padding(
-                padding: const EdgeInsets.only(
-                  left: 16,
-                  right: 16,
-                  bottom: 16,
-                ),
-              child: Container(
-                height: 64,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0x1A000000)),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1F000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _NavBarItem(
-                      icon: LucideIcons.mapPinned,
-                      isSelected: currentIndex == 0,
-                      onTap: () => onIndexChanged(0),
-                    ),
-                    _NavBarItem(
-                      icon: LucideIcons.clock,
-                      isSelected: currentIndex == 1,
-                      onTap: () => onIndexChanged(1),
-                    ),
-                    _NavBarItem(
-                      icon: LucideIcons.user,
-                      isSelected: currentIndex == 2,
-                      onTap: () => onIndexChanged(2),
-                    ),
-                  ],
+                padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                child: Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0x1A000000)),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x1F000000),
+                        blurRadius: 24,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _NavBarItem(
+                        icon: LucideIcons.mapPinned,
+                        isSelected: currentIndex == 0,
+                        onTap: () => onIndexChanged(0),
+                      ),
+                      _NavBarItem(
+                        icon: LucideIcons.clock,
+                        isSelected: currentIndex == 1,
+                        onTap: () => onIndexChanged(1),
+                      ),
+                      _NavBarItem(
+                        icon: LucideIcons.user,
+                        isSelected: currentIndex == 2,
+                        onTap: () => onIndexChanged(2),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 }

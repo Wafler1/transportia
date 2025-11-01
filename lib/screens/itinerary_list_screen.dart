@@ -10,7 +10,9 @@ import '../models/itinerary.dart';
 import '../services/routing_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
+import '../utils/color_utils.dart';
 import '../utils/duration_formatter.dart';
+import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
 // Pagination response model imported via RoutingService; no direct reference needed.
@@ -118,32 +120,36 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                 },
               ),
               Expanded(
-                    child: _isLoading
-                        ? _buildLoadingSkeleton()
-                        : _itineraries.isEmpty
-                            ? const Center(child: Text('No routes found.'))
-                            : ListView.builder(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                itemCount: _itineraries.length + (_nextPageCursor != null ? 1 : 0),
-                                itemBuilder: (context, index) {
-                                  if (index == _itineraries.length) {
-                                    // Load more button
-                                    return LoadMoreButton(
-                                      onTap: _loadMore,
-                                      isLoading: _isLoadingMore,
-                                    );
-                                  }
-                                  final itin = _itineraries[index];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(CustomPageRoute(
-                                        child: ItineraryDetailScreen(itinerary: itin),
-                                      ));
-                                    },
-                                    child: ItineraryCard(itinerary: itin),
-                                  );
-                                },
-                              ),
+                child: _isLoading
+                    ? _buildLoadingSkeleton()
+                    : _itineraries.isEmpty
+                    ? const Center(child: Text('No routes found.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        itemCount:
+                            _itineraries.length +
+                            (_nextPageCursor != null ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == _itineraries.length) {
+                            // Load more button
+                            return LoadMoreButton(
+                              onTap: _loadMore,
+                              isLoading: _isLoadingMore,
+                            );
+                          }
+                          final itin = _itineraries[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                CustomPageRoute(
+                                  child: ItineraryDetailScreen(itinerary: itin),
+                                ),
+                              );
+                            },
+                            child: ItineraryCard(itinerary: itin),
+                          );
+                        },
+                      ),
               ),
             ],
           ),
@@ -160,7 +166,10 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         itemCount: 5,
         itemBuilder: (context, index) {
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 8.0,
+            ),
             child: Container(
               height: 100,
               decoration: BoxDecoration(
@@ -169,7 +178,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
               ),
             ),
           );
-        }
+        },
       ),
     );
   }
@@ -184,136 +193,133 @@ class ItineraryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomCard(
       child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                formatDuration(itinerary.duration),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.black,
+                ),
+              ),
+              const Spacer(),
+              if (itinerary.isDirect)
                 Text(
-                  formatDuration(itinerary.duration),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.black,
+                  'Direct',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentOf(context),
                   ),
                 ),
-                const Spacer(),
-                if (itinerary.isDirect)
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}',
+            style: const TextStyle(fontSize: 14, color: Color(0x80000000)),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: itinerary.legs.map((leg) => LegWidget(leg: leg)).toList(),
+          ),
+          // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+            child: SizedBox(
+              height: 1,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color(0x33000000), // semi‑transparent
+                ),
+              ),
+            ),
+          ),
+          // Bottom row with stats on left and "More" action on right
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left side: transfers, calories, alerts
+              Row(
+                children: [
+                  // Transfers
+                  Icon(
+                    LucideIcons.repeat,
+                    size: 16,
+                    color: AppColors.black.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(width: 4),
                   Text(
-                    'Direct',
+                    '${itinerary.transfers}',
                     style: TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accentOf(context),
+                      color: AppColors.black.withValues(alpha: 0.8),
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${itinerary.startTime.toLocal().hour}:${itinerary.startTime.toLocal().minute.toString().padLeft(2, '0')} - ${itinerary.endTime.toLocal().hour}:${itinerary.endTime.toLocal().minute.toString().padLeft(2, '0')}',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0x80000000),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8.0,
-              runSpacing: 4.0,
-              children: itinerary.legs.map((leg) => LegWidget(leg: leg)).toList(),
-            ),
-            // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
-              child: SizedBox(
-                height: 1,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0x33000000), // semi‑transparent
-                  ),
-                ),
-              ),
-            ),
-            // Bottom row with stats on left and "More" action on right
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Left side: transfers, calories, alerts
-                Row(
-                  children: [
-                    // Transfers
+                  const SizedBox(width: 12),
+                  // Calories (only show if there's walking)
+                  if (itinerary.walkingDistance > 0) ...[
                     Icon(
-                      LucideIcons.repeat,
+                      LucideIcons.flame,
                       size: 16,
                       color: AppColors.black.withValues(alpha: 0.6),
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${itinerary.transfers}',
+                      '${itinerary.calories}',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.black.withValues(alpha: 0.8),
                       ),
                     ),
                     const SizedBox(width: 12),
-                    // Calories (only show if there's walking)
-                    if (itinerary.walkingDistance > 0) ...[
-                      Icon(
-                        LucideIcons.flame,
-                        size: 16,
-                        color: AppColors.black.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${itinerary.calories}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.black.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    // Alerts (only show if there are alerts)
-                    if (itinerary.alertsCount > 0) ...[
-                      Icon(
-                        LucideIcons.triangleAlert,
-                        size: 16,
-                        color: AppColors.black.withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${itinerary.alertsCount}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.black.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ],
                   ],
-                ),
-                // Right side: "More" action
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                  // Alerts (only show if there are alerts)
+                  if (itinerary.alertsCount > 0) ...[
+                    Icon(
+                      LucideIcons.triangleAlert,
+                      size: 16,
+                      color: AppColors.black.withValues(alpha: 0.6),
+                    ),
+                    const SizedBox(width: 4),
                     Text(
-                      'More',
+                      '${itinerary.alertsCount}',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.accentOf(context),
+                        color: AppColors.black.withValues(alpha: 0.8),
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Icon(
-                      LucideIcons.chevronRight,
-                      size: 16,
+                  ],
+                ],
+              ),
+              // Right side: "More" action
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'More',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.accentOf(context),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    LucideIcons.chevronRight,
+                    size: 16,
+                    color: AppColors.accentOf(context),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -324,15 +330,6 @@ class LegWidget extends StatelessWidget {
 
   const LegWidget({super.key, required this.leg});
 
-  // Parse a hex colour string like "#FF0000" into a Flutter Color.
-  Color? _parseHexColor(String? hex) {
-    if (hex == null) return null;
-    var cleaned = hex.replaceAll('#', '');
-    if (cleaned.length == 6) cleaned = 'FF' + cleaned;
-    if (cleaned.length != 8) return null;
-    return Color(int.parse('0x$cleaned'));
-  }
-
   @override
   Widget build(BuildContext context) {
     IconData icon = getLegIcon(leg.mode);
@@ -341,7 +338,8 @@ class LegWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 18, // Match the height of the text container (14 font + 2*2 padding)
+          height:
+              18, // Match the height of the text container (14 font + 2*2 padding)
           child: Center(
             child: Icon(icon, size: 16, color: const Color(0x80000000)),
           ),
@@ -351,15 +349,17 @@ class LegWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: _parseHexColor(leg.routeColor) ?? const Color(0x00000000),
+              color: parseHexColor(leg.routeColor) ?? const Color(0x00000000),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
-              leg.displayName!.length > 0 ? leg.displayName! : getTransitModeName(leg.mode),
+              leg.displayName!.length > 0
+                  ? leg.displayName!
+                  : getTransitModeName(leg.mode),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: _parseHexColor(leg.routeTextColor) ?? AppColors.black,
+                color: parseHexColor(leg.routeTextColor) ?? AppColors.black,
               ),
             ),
           ),

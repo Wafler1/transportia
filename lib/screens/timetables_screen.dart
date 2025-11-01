@@ -10,8 +10,10 @@ import '../screens/connection_info_screen.dart';
 import '../services/location_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart' show getLegIcon;
+import '../utils/time_utils.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/time_selection_overlay.dart';
@@ -35,7 +37,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   List<TransitousLocationSuggestion> _suggestions = [];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
-  bool _hasLocationPermission = false;
   LatLng? _lastUserLatLng;
   TransitousLocationSuggestion? _selectedStop;
   List<StopTime>? _stopTimes;
@@ -61,7 +62,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   Future<void> _checkLocationPermission() async {
     final granted = await LocationService.ensurePermission();
     if (!mounted) return;
-    setState(() => _hasLocationPermission = granted);
 
     if (granted) {
       try {
@@ -225,7 +225,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   }
 
   Future<void> _loadMore() async {
-    if (_isLoadingMore || _nextPageCursor == null || _selectedStop?.id == null) {
+    if (_isLoadingMore ||
+        _nextPageCursor == null ||
+        _selectedStop?.id == null) {
       return;
     }
 
@@ -244,7 +246,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
       setState(() {
         // Deduplicate the combined list to avoid duplicates across pages
-        _stopTimes = _deduplicateStopTimes([...?_stopTimes, ...response.stopTimes]);
+        _stopTimes = _deduplicateStopTimes([
+          ...?_stopTimes,
+          ...response.stopTimes,
+        ]);
         _nextPageCursor = response.nextPageCursor;
         _isLoadingMore = false;
       });
@@ -324,7 +329,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentOf(context).withValues(alpha: 0.12),
+                                  color: AppColors.accentOf(
+                                    context,
+                                  ).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Icon(
@@ -372,7 +379,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFFFFFF),
                                   borderRadius: BorderRadius.circular(14),
-                                  border: Border.all(color: const Color(0x1A000000)),
+                                  border: Border.all(
+                                    color: const Color(0x1A000000),
+                                  ),
                                   boxShadow: const [
                                     BoxShadow(
                                       color: Color(0x14000000),
@@ -381,7 +390,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                     ),
                                   ],
                                 ),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
                                 child: Row(
                                   children: [
                                     const Icon(
@@ -404,8 +416,12 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                           fontSize: 16,
                                         ),
                                         decoration: null,
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        cursorColor: AppColors.accentOf(context),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        cursorColor: AppColors.accentOf(
+                                          context,
+                                        ),
                                         maxLines: 1,
                                         textInputAction: TextInputAction.search,
                                         onSubmitted: (_) => _onSearch(),
@@ -447,9 +463,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 ),
                               ),
                               const Spacer(),
-                              _SearchButton(
-                                onTap: _onSearch,
-                              ),
+                              _SearchButton(onTap: _onSearch),
                             ],
                           ),
                         ],
@@ -461,82 +475,84 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                       child: _isLoadingStopTimes
                           ? _buildLoadingSkeleton()
                           : _stopTimes != null
-                              ? ListView.builder(
-                                  padding: const EdgeInsets.only(
-                                    left: 20,
-                                    right: 20,
-                                    top: 12,
-                                    bottom: 96, // Padding for navbar
-                                  ),
-                                  itemCount: _stopTimes!.length + (_nextPageCursor != null ? 1 : 0),
-                                  itemBuilder: (context, index) {
-                                    if (index == _stopTimes!.length) {
-                                      // Load more button
-                                    return LoadMoreButton(
-                                      onTap: _loadMore,
-                                      isLoading: _isLoadingMore,
-                                    );
-                                    }
-                                    final stopTime = _stopTimes![index];
-                                    return GestureDetector(
-                                      onTap: () {
-                                        Navigator.of(context).push(CustomPageRoute(
-                                          child: ConnectionInfoScreen(
-                                            tripId: stopTime.tripId,
-                                          ),
-                                        ));
-                                      },
-                                      child: _StopTimeCard(
-                                        stopTime: stopTime,
+                          ? ListView.builder(
+                              padding: const EdgeInsets.only(
+                                left: 20,
+                                right: 20,
+                                top: 12,
+                                bottom: 96, // Padding for navbar
+                              ),
+                              itemCount:
+                                  _stopTimes!.length +
+                                  (_nextPageCursor != null ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _stopTimes!.length) {
+                                  // Load more button
+                                  return LoadMoreButton(
+                                    onTap: _loadMore,
+                                    isLoading: _isLoadingMore,
+                                  );
+                                }
+                                final stopTime = _stopTimes![index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      CustomPageRoute(
+                                        child: ConnectionInfoScreen(
+                                          tripId: stopTime.tripId,
+                                        ),
                                       ),
                                     );
                                   },
-                                )
-                              : Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(40),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          width: 80,
-                                          height: 80,
-                                          decoration: BoxDecoration(
-                                            color: const Color(0x0A000000),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: const Icon(
-                                            LucideIcons.trainFront,
-                                            size: 40,
-                                            color: Color(0x33000000),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        const Text(
-                                          'Search for a stop',
-                                          style: TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        const Text(
-                                          'Enter a stop name above to view\ndepartures and arrivals',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0x66000000),
-                                            height: 1.4,
-                                          ),
-                                        ),
-                                        // Add padding at bottom for navbar
-                                        const SizedBox(height: 96),
-                                      ],
+                                  child: _StopTimeCard(stopTime: stopTime),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(40),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: 80,
+                                      height: 80,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0x0A000000),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Icon(
+                                        LucideIcons.trainFront,
+                                        size: 40,
+                                        color: Color(0x33000000),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 24),
+                                    const Text(
+                                      'Search for a stop',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.black,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Enter a stop name above to view\ndepartures and arrivals',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0x66000000),
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    // Add padding at bottom for navbar
+                                    const SizedBox(height: 96),
+                                  ],
                                 ),
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -632,10 +648,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 }
 
 class _TimeButton extends StatefulWidget {
-  const _TimeButton({
-    required this.timeSelection,
-    required this.onTap,
-  });
+  const _TimeButton({required this.timeSelection, required this.onTap});
 
   final TimeSelection timeSelection;
   final VoidCallback onTap;
@@ -662,9 +675,7 @@ class _TimeButtonState extends State<_TimeButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
-            color: _pressed
-                ? const Color(0x14000000)
-                : const Color(0x0F000000),
+            color: _pressed ? const Color(0x14000000) : const Color(0x0F000000),
             border: Border.all(color: const Color(0x11000000)),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -672,11 +683,7 @@ class _TimeButtonState extends State<_TimeButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                LucideIcons.clock,
-                size: 16,
-                color: AppColors.black,
-              ),
+              const Icon(LucideIcons.clock, size: 16, color: AppColors.black),
               const SizedBox(width: 8),
               Text(
                 widget.timeSelection.toDisplayString(),
@@ -695,9 +702,7 @@ class _TimeButtonState extends State<_TimeButton> {
 }
 
 class _SearchButton extends StatefulWidget {
-  const _SearchButton({
-    required this.onTap,
-  });
+  const _SearchButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -748,34 +753,11 @@ class _StopTimeCard extends StatelessWidget {
 
   final StopTime stopTime;
 
-  String _formatTime(DateTime? dateTime) {
-    if (dateTime == null) return '-';
-    // Convert to local time
-    final local = dateTime.toLocal();
-    final hour = local.hour.toString().padLeft(2, '0');
-    final minute = local.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  Color _parseHexColor(String hexString, BuildContext context) {
-    try {
-      final buffer = StringBuffer();
-      if (hexString.length == 6 || hexString.length == 7) buffer.write('ff');
-      buffer.write(hexString.replaceFirst('#', ''));
-      return Color(int.parse(buffer.toString(), radix: 16));
-    } catch (_) {
-      return AppColors.accent;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final routeColor = stopTime.routeColor != null
-        ? _parseHexColor(stopTime.routeColor!, context)
-        : AppColors.accentOf(context);
-    final routeTextColor = stopTime.routeTextColor != null
-        ? _parseHexColor(stopTime.routeTextColor!, context)
-        : AppColors.white;
+    final routeColor = parseHexColorOrAccent(context, stopTime.routeColor);
+    final routeTextColor =
+        parseHexColor(stopTime.routeTextColor) ?? AppColors.white;
 
     final modeIcon = getLegIcon(stopTime.mode);
 
@@ -799,11 +781,7 @@ class _StopTimeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Mode icon (not in color badge)
-            Icon(
-              modeIcon,
-              size: 24,
-              color: const Color(0x66000000),
-            ),
+            Icon(modeIcon, size: 24, color: const Color(0x66000000)),
             const SizedBox(width: 12),
             // Route badge and destination in a column
             Expanded(
@@ -813,10 +791,11 @@ class _StopTimeCard extends StatelessWidget {
                 children: [
                   // Route badge (without icon)
                   Container(
-                    constraints: const BoxConstraints(
-                      minWidth: 30,
+                    constraints: const BoxConstraints(minWidth: 30),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 6,
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                     decoration: BoxDecoration(
                       color: routeColor,
                       borderRadius: BorderRadius.circular(4),
@@ -855,7 +834,7 @@ class _StopTimeCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'Arr ${_formatTime(stopTime.place.arrival)}',
+                  'Arr ${formatTime(stopTime.place.arrival, nullPlaceholder: '--:--')}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -864,7 +843,7 @@ class _StopTimeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Dep ${_formatTime(stopTime.place.departure)}',
+                  'Dep ${formatTime(stopTime.place.departure, nullPlaceholder: '--:--')}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,

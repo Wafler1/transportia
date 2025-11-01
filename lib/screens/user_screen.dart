@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:entaria_app/screens/appearance_screen.dart';
 import 'package:entaria_app/screens/statistics_screen.dart';
 import 'package:entaria_app/screens/favourites_screen.dart';
@@ -10,7 +9,10 @@ import 'package:entaria_app/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../theme/app_colors.dart';
+import '../widgets/settings_section.dart';
+import '../widgets/settings_tile.dart';
 
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
@@ -33,7 +35,9 @@ class AccountScreen extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.accentOf(context).withValues(alpha: 0.12),
+                        color: AppColors.accentOf(
+                          context,
+                        ).withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
@@ -72,12 +76,18 @@ class AccountScreen extends StatelessWidget {
 
               // Sponsored by Wafler.one banner with orange shadow
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: GestureDetector(
                   onTap: () async {
                     try {
                       final uri = Uri.parse('http://wafler.one?ref=entaria');
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
                     } catch (e) {
                       showValidationToast(context, "Unable to open link.");
                     }
@@ -108,7 +118,9 @@ class AccountScreen extends StatelessWidget {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFC970A).withValues(alpha: 0.12),
+                            color: const Color(
+                              0xFFFC970A,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
@@ -164,17 +176,17 @@ class AccountScreen extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Statistics section
-              _buildSection(
+              SettingsSection(
                 title: 'Analytics',
-                items: [
-                  _SettingsItem(
+                children: [
+                  SettingsTile(
                     icon: LucideIcons.chartPie,
                     title: 'Statistics',
                     subtitle: 'View your travel statistics',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const StatisticsScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(CustomPageRoute(child: const StatisticsScreen()));
                     },
                   ),
                 ],
@@ -183,37 +195,37 @@ class AccountScreen extends StatelessWidget {
               const SizedBox(height: 12),
 
               // Settings sections
-              _buildSection(
+              SettingsSection(
                 title: 'Preferences',
-                items: [
-                  _SettingsItem(
+                children: [
+                  SettingsTile(
                     icon: LucideIcons.heart,
                     title: 'Favourites',
                     subtitle: 'Manage your favourite places',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const FavouritesScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(CustomPageRoute(child: const FavouritesScreen()));
                     },
                   ),
-                  _SettingsItem(
+                  SettingsTile(
                     icon: LucideIcons.mapPin,
                     title: 'Location',
                     subtitle: 'Location permissions',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const LocationSettingsScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        CustomPageRoute(child: const LocationSettingsScreen()),
+                      );
                     },
                   ),
-                  _SettingsItem(
+                  SettingsTile(
                     icon: LucideIcons.palette,
                     title: 'Appearance',
                     subtitle: 'Theme and display',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const AppearanceScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(CustomPageRoute(child: const AppearanceScreen()));
                     },
                   ),
                 ],
@@ -221,27 +233,27 @@ class AccountScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              _buildSection(
+              SettingsSection(
                 title: 'About',
-                items: [
-                  _SettingsItem(
+                children: [
+                  SettingsTile(
                     icon: LucideIcons.info,
                     title: 'About Entaria',
                     subtitle: 'About, credits, and more',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const InfoScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(CustomPageRoute(child: const InfoScreen()));
                     },
                   ),
-                  _SettingsItem(
+                  SettingsTile(
                     icon: LucideIcons.scale,
                     title: 'Legal',
                     subtitle: 'Privacy policy and terms of service',
-                    onTap: () {
-                      Navigator.of(context).push(CustomPageRoute(
-                        child: const LegalScreen(),
-                      ));
+                    onPressed: () {
+                      Navigator.of(
+                        context,
+                      ).push(CustomPageRoute(child: const LegalScreen()));
                     },
                   ),
                 ],
@@ -291,143 +303,6 @@ class AccountScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    required String title,
-    required List<_SettingsItem> items,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 8),
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Color(0x66000000),
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0x05000000),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0x0A000000)),
-            ),
-            child: Column(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  items[i],
-                  if (i < items.length - 1)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 60),
-                      /* child: Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Color(0x0A000000),
-                      ), */
-                    ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SettingsItem extends StatefulWidget {
-  const _SettingsItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  State<_SettingsItem> createState() => _SettingsItemState();
-}
-
-class _SettingsItemState extends State<_SettingsItem> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
-        decoration: BoxDecoration(
-          color: _pressed
-              ? const Color(0x08000000)
-              : const Color(0x00000000),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.accentOf(context).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                widget.icon,
-                size: 22,
-                color: AppColors.accentOf(context),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0x66000000),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              LucideIcons.chevronRight,
-              size: 20,
-              color: Color(0x33000000),
-            ),
-          ],
         ),
       ),
     );

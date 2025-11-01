@@ -157,7 +157,8 @@ class StopPlace {
       pickupType: json['pickupType'] as String?,
       dropoffType: json['dropoffType'] as String?,
       cancelled: json['cancelled'] as bool?,
-      alerts: (json['alerts'] as List<dynamic>?)
+      alerts:
+          (json['alerts'] as List<dynamic>?)
               ?.map((item) => Alert.fromJson(item as Map<String, dynamic>))
               .toList() ??
           const [],

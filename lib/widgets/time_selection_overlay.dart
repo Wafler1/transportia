@@ -191,10 +191,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
       ),
     );
 
-    return TapRegion(
-      onTapOutside: (_) => widget.onDismiss(),
-      child: card,
-    );
+    return TapRegion(onTapOutside: (_) => widget.onDismiss(), child: card);
   }
 }
 
@@ -252,7 +249,20 @@ class _DateSelector extends StatelessWidget {
     if (selected == today) return 'Today';
     if (selected == tomorrow) return 'Tomorrow';
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${date.day} ${months[date.month - 1]}';
   }
 
@@ -261,7 +271,8 @@ class _DateSelector extends StatelessWidget {
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 30));
 
-    if (newDate.isAfter(now.subtract(const Duration(days: 1))) && newDate.isBefore(maxDate.add(const Duration(days: 1)))) {
+    if (newDate.isAfter(now.subtract(const Duration(days: 1))) &&
+        newDate.isBefore(maxDate.add(const Duration(days: 1)))) {
       onDateChanged(newDate);
     }
   }
@@ -473,7 +484,10 @@ class _NumberPickerState extends State<_NumberPicker> {
               behavior: HitTestBehavior.opaque,
               onTap: _increment,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
                 child: Center(
                   child: Icon(
                     LucideIcons.chevronUp,
@@ -512,7 +526,10 @@ class _NumberPickerState extends State<_NumberPicker> {
               behavior: HitTestBehavior.opaque,
               onTap: _decrement,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 20,
+                  horizontal: 16,
+                ),
                 child: Center(
                   child: Icon(
                     LucideIcons.chevronDown,

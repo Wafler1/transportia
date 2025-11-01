@@ -38,7 +38,9 @@ class TripHistoryItem {
       fromLat = userLat;
       fromLon = userLon;
     } else {
-      throw ArgumentError('Either from selection or user location must be provided');
+      throw ArgumentError(
+        'Either from selection or user location must be provided',
+      );
     }
 
     return TripHistoryItem(
@@ -53,14 +55,14 @@ class TripHistoryItem {
   }
 
   Map<String, dynamic> toJson() => {
-        'fromName': fromName,
-        'fromLat': fromLat,
-        'fromLon': fromLon,
-        'toName': toName,
-        'toLat': toLat,
-        'toLon': toLon,
-        'timestamp': timestamp.millisecondsSinceEpoch,
-      };
+    'fromName': fromName,
+    'fromLat': fromLat,
+    'fromLon': fromLon,
+    'toName': toName,
+    'toLat': toLat,
+    'toLon': toLon,
+    'timestamp': timestamp.millisecondsSinceEpoch,
+  };
 
   factory TripHistoryItem.fromJson(Map<String, dynamic> json) {
     return TripHistoryItem(

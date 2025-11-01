@@ -1,10 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+
 import '../screens/add_favourite_map_screen.dart';
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/custom_page_route.dart';
-import '../widgets/custom_app_bar.dart';
+import '../widgets/app_page_scaffold.dart';
 import '../widgets/validation_toast.dart';
 
 class FavouritesScreen extends StatefulWidget {
@@ -44,9 +45,9 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   }
 
   Future<void> _openAddFavoriteMap() async {
-    final result = await Navigator.of(context).push(
-      CustomPageRoute(child: const AddFavouriteMapScreen()),
-    );
+    final result = await Navigator.of(
+      context,
+    ).push(CustomPageRoute(child: const AddFavouriteMapScreen()));
 
     // Reload favorites if something was added
     if (result == true && mounted) {
@@ -56,44 +57,24 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            CustomAppBar(
-              title: 'Favourites',
-              onBackButtonPressed: () => Navigator.of(context).pop(),
+    final Widget content = _isLoading
+        ? const Center(
+            child: Text(
+              'Loading...',
+              style: TextStyle(fontSize: 14, color: Color(0x66000000)),
             ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: Text(
-                        'Loading...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0x66000000),
-                        ),
-                      ),
-                    )
-                  : _buildContent(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+          )
+        : _favorites.isEmpty
+        ? _buildEmptyState()
+        : _buildFavoritesList();
 
-  Widget _buildContent() {
-    return Column(
-      children: [
-        Expanded(
-          child: _favorites.isEmpty
-              ? _buildEmptyState()
-              : _buildFavoritesList(),
-        ),
-        _buildAddButton(),
-      ],
+    return AppPageScaffold(
+      title: 'Favourites',
+      body: content,
+      footer: Padding(
+        padding: const EdgeInsets.all(20),
+        child: _buildAddButton(),
+      ),
     );
   }
 
@@ -130,10 +111,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             const Text(
               'Add your favourite places for quick access',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0x66000000),
-              ),
+              style: TextStyle(fontSize: 14, color: Color(0x66000000)),
             ),
           ],
         ),
@@ -234,45 +212,37 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   }
 
   Widget _buildAddButton() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: GestureDetector(
-        onTap: _openAddFavoriteMap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: AppColors.accentOf(context),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accentOf(context).withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                LucideIcons.plus,
-                size: 20,
+    return GestureDetector(
+      onTap: _openAddFavoriteMap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.accentOf(context),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.accentOf(context).withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.plus, size: 20, color: AppColors.white),
+            SizedBox(width: 8),
+            Text(
+              'Add Favourite',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
                 color: AppColors.white,
               ),
-              SizedBox(width: 8),
-              Text(
-                'Add Favourite',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-
 }

@@ -18,7 +18,6 @@ class AddFavouriteMapScreen extends StatefulWidget {
 }
 
 class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
-  MapLibreMapController? _controller;
   LatLng? _selectedLocation;
   String? _selectedLocationName;
   bool _isLoadingName = false;
@@ -68,9 +67,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     );
   }
 
-  void _onMapCreated(MapLibreMapController controller) {
-    _controller = controller;
-  }
+  void _onMapCreated(MapLibreMapController controller) {}
 
   void _onMapLongClick(math.Point<double> point, LatLng coordinates) {
     setState(() {
@@ -90,7 +87,8 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
       );
       if (mounted && _selectedLocation == coordinates) {
         setState(() {
-          _selectedLocationName = suggestion?.name ??
+          _selectedLocationName =
+              suggestion?.name ??
               '${coordinates.latitude.toStringAsFixed(4)}, ${coordinates.longitude.toStringAsFixed(4)}';
           _isLoadingName = false;
         });
@@ -109,7 +107,8 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
   Future<void> _saveFavourite() async {
     if (_selectedLocation == null) return;
 
-    final name = _selectedLocationName ??
+    final name =
+        _selectedLocationName ??
         '${_selectedLocation!.latitude.toStringAsFixed(4)}, ${_selectedLocation!.longitude.toStringAsFixed(4)}';
 
     final favorite = FavoritePlace(
@@ -246,8 +245,9 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                           ? null
                           : [
                               BoxShadow(
-                                color: AppColors.accentOf(context)
-                                    .withValues(alpha: 0.3),
+                                color: AppColors.accentOf(
+                                  context,
+                                ).withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),

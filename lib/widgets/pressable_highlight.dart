@@ -33,9 +33,8 @@ class _PressableHighlightState extends State<PressableHighlight> {
 
   @override
   Widget build(BuildContext context) {
-    final tint = (widget.highlightColor ?? AppColors.accentOf(context)).withValues(
-      alpha: 0.15,
-    );
+    final tint = (widget.highlightColor ?? AppColors.accentOf(context))
+        .withValues(alpha: 0.15);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {

@@ -115,7 +115,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               const SizedBox(height: 28),
                               PressableHighlight(
                                 onPressed: _onContinue,
-                                child:  Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Text(

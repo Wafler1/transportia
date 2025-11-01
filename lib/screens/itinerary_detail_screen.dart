@@ -1,14 +1,17 @@
-import 'package:entaria_app/utils/leg_helper.dart';
-
-import '../utils/duration_formatter.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:timelines_plus/timelines_plus.dart';
+
 import '../models/itinerary.dart';
 import '../theme/app_colors.dart';
+import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
+import '../utils/duration_formatter.dart';
+import '../utils/leg_helper.dart';
+import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/info_chip.dart';
 import 'itinerary_map_screen.dart';
 
 class ItineraryDetailScreen extends StatelessWidget {
@@ -51,12 +54,6 @@ class JourneyOverviewWidget extends StatelessWidget {
 
   const JourneyOverviewWidget({super.key, required this.itinerary});
 
-
-  String _formatTime(DateTime time) {
-    final localTime = time.toLocal();
-    return '${localTime.hour}:${localTime.minute.toString().padLeft(2, '0')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return CustomCard(
@@ -81,7 +78,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _formatTime(itinerary.startTime),
+                      formatTime(itinerary.startTime),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -122,7 +119,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      _formatTime(itinerary.endTime),
+                      formatTime(itinerary.endTime),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -174,9 +171,11 @@ class JourneyOverviewWidget extends StatelessWidget {
               // Map icon button
               GestureDetector(
                 onTap: () {
-                  Navigator.of(context).push(CustomPageRoute(
-                    child: ItineraryMapScreen(itinerary: itinerary),
-                  ));
+                  Navigator.of(context).push(
+                    CustomPageRoute(
+                      child: ItineraryMapScreen(itinerary: itinerary),
+                    ),
+                  );
                 },
                 child: Icon(
                   LucideIcons.map,
@@ -226,11 +225,13 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     final isWalkLeg = widget.leg.mode == 'WALK';
 
     return GestureDetector(
-      onTap: isWalkLeg ? null : () {
-        setState(() {
-          _isExpanded = !_isExpanded;
-        });
-      },
+      onTap: isWalkLeg
+          ? null
+          : () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
       child: CustomCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,9 +242,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                 _buildLegIcon(),
                 const SizedBox(width: 8),
                 // Title with optional route colour styling
-                Expanded(
-                  child: _buildTitleWidget(),
-                ),
+                Expanded(child: _buildTitleWidget()),
                 const SizedBox(width: 8),
                 Text(
                   formatDuration(widget.leg.duration),
@@ -256,7 +255,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                 if (!isWalkLeg) ...[
                   const SizedBox(width: 4),
                   Icon(
-                    _isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
+                    _isExpanded
+                        ? LucideIcons.chevronUp
+                        : LucideIcons.chevronDown,
                     size: 16,
                     color: AppColors.accentOf(context),
                   ),
@@ -282,7 +283,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${_formatTime(widget.leg.startTime)} - ${widget.leg.fromName}',
+                      '${formatTime(widget.leg.startTime)} - ${widget.leg.fromName}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0x80000000),
@@ -300,7 +301,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${_formatTime(widget.leg.endTime)} - ${widget.leg.toName}',
+                      '${formatTime(widget.leg.endTime)} - ${widget.leg.toName}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0x80000000),
@@ -357,44 +358,53 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     final stops = <_TimelineStop>[];
 
     // Add origin
-    stops.add(_TimelineStop(
-      name: widget.leg.fromName,
-      time: widget.leg.startTime,
-      track: widget.leg.fromTrack,
-      scheduledTime: widget.leg.scheduledStartTime,
-      cancelled: widget.leg.cancelled,
-      isFirst: true,
-      isLast: false,
-    ));
+    stops.add(
+      _TimelineStop(
+        name: widget.leg.fromName,
+        time: widget.leg.startTime,
+        track: widget.leg.fromTrack,
+        scheduledTime: widget.leg.scheduledStartTime,
+        cancelled: widget.leg.cancelled,
+        isFirst: true,
+        isLast: false,
+      ),
+    );
 
     // Add intermediate stops
     for (final stop in widget.leg.intermediateStops) {
-      stops.add(_TimelineStop(
-        name: stop.name,
-        time: stop.arrival ?? stop.departure,
-        track: stop.track,
-        scheduledTime: stop.scheduledArrival ?? stop.scheduledDeparture,
-        cancelled: stop.cancelled,
-        isFirst: false,
-        isLast: false,
-      ));
+      stops.add(
+        _TimelineStop(
+          name: stop.name,
+          time: stop.arrival ?? stop.departure,
+          track: stop.track,
+          scheduledTime: stop.scheduledArrival ?? stop.scheduledDeparture,
+          cancelled: stop.cancelled,
+          isFirst: false,
+          isLast: false,
+        ),
+      );
     }
 
     // Add destination
-    stops.add(_TimelineStop(
-      name: widget.leg.toName,
-      time: widget.leg.endTime,
-      track: widget.leg.toTrack,
-      scheduledTime: widget.leg.scheduledEndTime,
-      cancelled: widget.leg.cancelled,
-      isFirst: false,
-      isLast: true,
-    ));
+    stops.add(
+      _TimelineStop(
+        name: widget.leg.toName,
+        time: widget.leg.endTime,
+        track: widget.leg.toTrack,
+        scheduledTime: widget.leg.scheduledEndTime,
+        cancelled: widget.leg.cancelled,
+        isFirst: false,
+        isLast: true,
+      ),
+    );
+
+    final routeColor =
+        parseHexColor(widget.leg.routeColor) ?? AppColors.accentOf(context);
+    final fadedRouteColor = routeColor.withValues(alpha: 0.6);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
         // Alerts
         if (widget.leg.alerts.isNotEmpty) ...[
           const SizedBox(height: 6),
@@ -406,15 +416,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
         FixedTimeline.tileBuilder(
           theme: TimelineThemeData(
             nodePosition: 0,
-            color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
-                : AppColors.accentOf(context),
-            indicatorTheme: const IndicatorThemeData(
-              size: 16,
-            ),
-            connectorTheme: const ConnectorThemeData(
-              thickness: 2.5,
-            ),
+            color: routeColor,
+            indicatorTheme: const IndicatorThemeData(size: 16),
+            connectorTheme: const ConnectorThemeData(thickness: 2.5),
           ),
           builder: TimelineTileBuilder.connected(
             itemCount: stops.length,
@@ -429,26 +433,12 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             indicatorBuilder: (context, index) {
               final stop = stops[index];
               if (stop.isFirst || stop.isLast) {
-                return DotIndicator(
-                  color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor) ?? AppColors.accent
-                : AppColors.accentOf(context),
-                  size: 16
-                );
+                return DotIndicator(color: routeColor, size: 16);
               }
-              return DotIndicator(
-                color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accentOf(context).withValues(alpha: 0.6)
-                : AppColors.accentOf(context).withValues(alpha: 0.6),
-                size: 12,
-              );
+              return DotIndicator(color: fadedRouteColor, size: 12);
             },
             connectorBuilder: (context, index, connectorType) {
-              return SolidLineConnector(
-                color: widget.leg.routeColor != null
-                ? _parseHexColor(widget.leg.routeColor)?.withValues(alpha: 0.6) ?? AppColors.accentOf(context).withValues(alpha: 0.6)
-                : AppColors.accentOf(context).withValues(alpha: 0.6),
-              );
+              return SolidLineConnector(color: fadedRouteColor);
             },
           ),
         ),
@@ -466,72 +456,61 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
     // Cancelled
     if (widget.leg.cancelled) {
-      metadata.add(_buildInfoChip(LucideIcons.circleAlert, 'CANCELLED', color: const Color(0xFFD32F2F)));
+      metadata.add(
+        InfoChip(
+          icon: LucideIcons.circleAlert,
+          label: 'CANCELLED',
+          tint: const Color(0xFFD32F2F),
+        ),
+      );
     }
 
     // Track info integrated here
     if (widget.leg.fromTrack != null) {
-      metadata.add(_buildInfoChip(LucideIcons.trainTrack, 'Track ${widget.leg.fromTrack}'));
+      metadata.add(
+        InfoChip(
+          icon: LucideIcons.trainTrack,
+          label: 'Track ${widget.leg.fromTrack}',
+        ),
+      );
     }
 
     // Real-time indicator
     if (widget.leg.realTime) {
-      metadata.add(_buildInfoChip(LucideIcons.radio, 'Real-time'));
+      metadata.add(const InfoChip(icon: LucideIcons.radio, label: 'Real-time'));
     }
 
     // Distance
     if (widget.leg.distance != null && widget.leg.distance! > 0) {
-      metadata.add(_buildInfoChip(LucideIcons.ruler, '${(widget.leg.distance! / 1000).toStringAsFixed(2)} km'));
+      metadata.add(
+        InfoChip(
+          icon: LucideIcons.ruler,
+          label: '${(widget.leg.distance! / 1000).toStringAsFixed(2)} km',
+        ),
+      );
     }
 
     // Agency and Route
     if (widget.leg.agencyName != null) {
-      metadata.add(_buildInfoChip(LucideIcons.building, widget.leg.agencyName!));
+      metadata.add(
+        InfoChip(icon: LucideIcons.building, label: widget.leg.agencyName!),
+      );
     }
 
-    if (widget.leg.routeLongName != null && widget.leg.routeLongName!.isNotEmpty) {
-      metadata.add(_buildInfoChip(LucideIcons.route, widget.leg.routeLongName!));
+    if (widget.leg.routeLongName != null &&
+        widget.leg.routeLongName!.isNotEmpty) {
+      metadata.add(
+        InfoChip(icon: LucideIcons.route, label: widget.leg.routeLongName!),
+      );
     }
 
     if (widget.leg.interlineWithPreviousLeg) {
-      metadata.add(_buildInfoChip(LucideIcons.link, 'Interlined'));
+      metadata.add(const InfoChip(icon: LucideIcons.link, label: 'Interlined'));
     }
 
     if (metadata.isEmpty) return const SizedBox.shrink();
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: metadata,
-    );
-  }
-
-  Widget _buildInfoChip(IconData icon, String text, {Color? color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: (color ?? AppColors.black).withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color ?? AppColors.black.withValues(alpha: 0.6)),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 12,
-                color: color ?? AppColors.black.withValues(alpha: 0.8),
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-        ],
-      ),
-    );
+    return Wrap(spacing: 8, runSpacing: 8, children: metadata);
   }
 
   Widget _buildStopInfo(_TimelineStop stop) {
@@ -542,14 +521,16 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
           stop.name,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: stop.isFirst || stop.isLast ? FontWeight.w600 : FontWeight.normal,
+            fontWeight: stop.isFirst || stop.isLast
+                ? FontWeight.w600
+                : FontWeight.normal,
             color: AppColors.black,
           ),
         ),
         if (stop.time != null) ...[
           const SizedBox(height: 2),
           Text(
-            _formatTime(stop.time!),
+            formatTime(stop.time),
             style: TextStyle(
               fontSize: 13,
               color: AppColors.black.withValues(alpha: 0.6),
@@ -612,7 +593,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                       color: AppColors.black,
                     ),
                   ),
-                if (alert.descriptionText != null && alert.descriptionText!.isNotEmpty) ...[
+                if (alert.descriptionText != null &&
+                    alert.descriptionText!.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     alert.descriptionText!,
@@ -630,29 +612,15 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     );
   }
 
-  String _formatTime(DateTime time) {
-    final localTime = time.toLocal();
-    return '${localTime.hour}:${localTime.minute.toString().padLeft(2, '0')}';
-  }
-
   Widget _buildLegIcon() {
     return Icon(getLegIcon(widget.leg.mode), size: 24, color: AppColors.black);
-  }
-
-  // Parse a hex colour string like "#FF0000" into a Flutter Color.
-  Color? _parseHexColor(String? hex) {
-    if (hex == null) return null;
-    var cleaned = hex.replaceAll('#', '');
-    if (cleaned.length == 6) cleaned = 'FF' + cleaned;
-    if (cleaned.length != 8) return null;
-    return Color(int.parse('0x$cleaned'));
   }
 
   // Build the title widget, applying background and text colours if provided.
   Widget _buildTitleWidget() {
     if (widget.leg.displayName != null) {
-      final bg = _parseHexColor(widget.leg.routeColor);
-      final txt = _parseHexColor(widget.leg.routeTextColor) ?? AppColors.black;
+      final bg = parseHexColor(widget.leg.routeColor);
+      final txt = parseHexColor(widget.leg.routeTextColor) ?? AppColors.black;
       return Align(
         alignment: Alignment.centerLeft,
         child: Container(
@@ -662,7 +630,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            widget.leg.displayName!.length > 0 ? widget.leg.displayName! : getTransitModeName(widget.leg.mode),
+            widget.leg.displayName!.length > 0
+                ? widget.leg.displayName!
+                : getTransitModeName(widget.leg.mode),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,

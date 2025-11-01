@@ -2,9 +2,12 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
+
 import '../theme/app_colors.dart';
-import '../widgets/custom_app_bar.dart';
+import '../widgets/app_icon_header.dart';
+import '../widgets/app_page_scaffold.dart';
 import '../widgets/pressable_highlight.dart';
+import '../widgets/section_title.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   const LocationSettingsScreen({super.key});
@@ -57,178 +60,90 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            CustomAppBar(
-              title: 'Location',
-              onBackButtonPressed: () => Navigator.of(context).pop(),
-            ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: Text(
-                        'Checking location status...',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0x66000000),
-                        ),
-                      ),
-                    )
-                  : _buildContent(),
-            ),
-          ],
-        ),
-      ),
+    return AppPageScaffold(
+      title: 'Location',
+      scrollable: !_isLoading,
+      padding: _isLoading ? null : const EdgeInsets.all(20),
+      body: _isLoading
+          ? const Center(
+              child: Text(
+                'Checking location status...',
+                style: TextStyle(fontSize: 14, color: Color(0x66000000)),
+              ),
+            )
+          : _buildContent(),
     );
   }
 
   Widget _buildContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Center(
-            child: Column(
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.accentOf(context).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(18),
+    final accent = AppColors.accentOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        AppIconHeader(
+          icon: LucideIcons.mapPin,
+          title: _getStatusTitle(),
+          subtitle: _getStatusDescription(),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 32),
+        const SectionTitle(text: 'Status Details'),
+        const SizedBox(height: 16),
+        _buildStatusCard(
+          'Location Services',
+          _isLocationServiceEnabled ? 'Enabled' : 'Disabled',
+          _isLocationServiceEnabled ? LucideIcons.check : LucideIcons.x,
+          _isLocationServiceEnabled ? accent : const Color(0xFFFF3B30),
+        ),
+        const SizedBox(height: 12),
+        _buildStatusCard(
+          'App Permission',
+          _getPermissionStatusText(),
+          _getPermissionStatusIcon(),
+          _getPermissionStatusColor(),
+        ),
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            PressableHighlight(
+              onPressed: _openAppSettings,
+              enableHaptics: false,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Open settings',
+                    style: TextStyle(fontSize: 16, color: accent),
                   ),
-                  child: Icon(
-                    LucideIcons.mapPin,
-                    size: 36,
-                    color: AppColors.accentOf(context),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _getStatusTitle(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getStatusDescription(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0x66000000),
-                  ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Icon(LucideIcons.settings, size: 20, color: accent),
+                ],
+              ),
             ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Status Details
-          _buildSectionTitle('Status Details'),
-          const SizedBox(height: 16),
-
-          _buildStatusCard(
-            'Location Services',
-            _isLocationServiceEnabled ? 'Enabled' : 'Disabled',
-            _isLocationServiceEnabled
-                ? LucideIcons.check
-                : LucideIcons.x,
-            _isLocationServiceEnabled
-                ? AppColors.accentOf(context)
-                : const Color(0xFFFF3B30),
-          ),
-
-          const SizedBox(height: 12),
-
-          _buildStatusCard(
-            'App Permission',
-            _getPermissionStatusText(),
-            _getPermissionStatusIcon(),
-            _getPermissionStatusColor(),
-          ),
-
-          const SizedBox(height: 32),
-
-          // Actions
-          Container(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                PressableHighlight(
-                  onPressed: _openAppSettings,
-                  enableHaptics: false,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                    Text(
-                "Open settings",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.accentOf(context),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                LucideIcons.settings,
-                size: 20,
-                color: AppColors.accentOf(context),
-              ),
-                    ],
+            Container(height: 20, width: 1, color: const Color(0x1A000000)),
+            PressableHighlight(
+              onPressed: _isLoading ? () {} : _checkLocationStatus,
+              enableHaptics: false,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Refresh status',
+                    style: TextStyle(fontSize: 16, color: accent),
                   ),
-                ),
-                Container(
-                  height: 20,
-                  width: 1,
-                  color: const Color(0x1A000000),
-                ),
-                PressableHighlight(
-                  onPressed: _isLoading ? () {} : _checkLocationStatus,
-                  enableHaptics: false,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                    Text(
-                "Refresh Status",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: AppColors.accentOf(context),
-                ),
+                  const SizedBox(width: 8),
+                  Icon(LucideIcons.refreshCw, size: 20, color: accent),
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                LucideIcons.refreshCw,
-                size: 20,
-                color: AppColors.accentOf(context),
-              ),
-                    ],
-                  ),
-                ),
-              ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: AppColors.black,
-      ),
+          ],
+        ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -261,11 +176,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              size: 24,
-              color: color,
-            ),
+            child: Icon(icon, size: 24, color: color),
           ),
           const SizedBox(width: 16),
           Expanded(

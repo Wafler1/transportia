@@ -34,9 +34,7 @@ class StopTimesService {
       final resp = await http.get(uri, headers: {'accept': 'application/json'});
 
       if (resp.statusCode != 200) {
-        throw StopTimesServiceException(
-          'Unexpected status ${resp.statusCode}',
-        );
+        throw StopTimesServiceException('Unexpected status ${resp.statusCode}');
       }
 
       final body = resp.body;

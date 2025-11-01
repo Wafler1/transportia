@@ -74,4 +74,3 @@ class LoadMoreButton extends StatelessWidget {
     );
   }
 }
-

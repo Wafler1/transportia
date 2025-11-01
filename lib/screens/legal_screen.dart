@@ -1,8 +1,10 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../theme/app_colors.dart';
-import '../widgets/custom_app_bar.dart';
+import '../widgets/app_icon_header.dart';
+import '../widgets/app_page_scaffold.dart';
 import '../widgets/validation_toast.dart';
 
 class LegalScreen extends StatelessWidget {
@@ -21,167 +23,112 @@ class LegalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            CustomAppBar(
-              title: 'Legal',
-              onBackButtonPressed: () => Navigator.of(context).pop(),
+
+    DateTime now = DateTime.now();
+    int year = now.year;
+
+    return AppPageScaffold(
+      title: 'Legal',
+      scrollable: true,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const AppIconHeader(
+            icon: LucideIcons.scale,
+            title: 'Legal Information',
+            subtitle: 'Om nom nom nom 🍪',
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 32),
+          _buildLegalCard(
+            context: context,
+            icon: LucideIcons.fileText,
+            title: 'Terms of Service',
+            description: 'Review our terms and conditions for using Entaria',
+            onTap: () => _openUrl(context, 'https://wafler.one/entaria/terms'),
+          ),
+          const SizedBox(height: 12),
+          _buildLegalCard(
+            context: context,
+            icon: LucideIcons.shieldCheck,
+            title: 'Privacy Policy',
+            description: 'Learn how we collect, use, and protect your data',
+            onTap: () =>
+                _openUrl(context, 'https://wafler.one/entaria/privacy'),
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0x05000000),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0x0A000000)),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Header
-                    Center(
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              color: AppColors.accentOf(context).withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            child: Icon(
-                              LucideIcons.scale,
-                              size: 36,
-                              color: AppColors.accentOf(context),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'Legal Information',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Om nom nom nom 🍪',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0x66000000),
-                            ),
-                          ),
-                        ],
+                    Icon(
+                      LucideIcons.database,
+                      size: 20,
+                      color: AppColors.accentOf(context),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Data We Collect',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.black,
                       ),
                     ),
-
-                    const SizedBox(height: 32),
-
-                    // Terms of Service
-                    _buildLegalCard(
-                      context: context,
-                      icon: LucideIcons.fileText,
-                      title: 'Terms of Service',
-                      description: 'Review our terms and conditions for using Entaria',
-                      url: 'https://wafler.one/entaria/terms',
-                      onTap: () => _openUrl(context, 'https://wafler.one/entaria/terms'),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Privacy Policy
-                    _buildLegalCard(
-                      context: context,
-                      icon: LucideIcons.shieldCheck,
-                      title: 'Privacy Policy',
-                      description: 'Learn how we collect, use, and protect your data',
-                      url: 'https://wafler.one/entaria/privacy',
-                      onTap: () => _openUrl(context, 'https://wafler.one/entaria/privacy'),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Data Usage section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0x05000000),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0x0A000000)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                LucideIcons.database,
-                                size: 20,
-                                color: AppColors.accentOf(context),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Data We Collect',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildDataItem('That\'s the best part, we don\'t!', context),
-                          _buildDataItem('Third-party services may collect data as per their policies', context),
-                          _buildDataItem('For more details, refer to our Privacy Policy', context),
-                          const SizedBox(height: 8),
-                          Text(
-                            'We never sell your data to third parties.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.accentOf(context),
-                            ),
-                          ),
-
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Footer
-                    Center(
-                      child: Column(
-                        children: [
-                          const Text(
-                            'Last updated: January 2025',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0x66000000),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '© 2025 Wafler.one. All rights reserved.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0x66000000),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+                _buildDataItem('That\'s the best part, we don\'t!', context),
+                _buildDataItem(
+                  'Third-party services may collect data as per their policies',
+                  context,
+                ),
+                _buildDataItem(
+                  'For more details, refer to our Privacy Policy',
+                  context,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'We never sell your data to third parties.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentOf(context),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 32),
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  '© ${year} Wafler.one. All rights reserved.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0x66000000),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+            ],
+          )
+        ],
       ),
     );
   }
@@ -191,7 +138,6 @@ class LegalScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required String description,
-    required String url,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -219,11 +165,7 @@ class LegalScreen extends StatelessWidget {
                 color: AppColors.accentOf(context).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: AppColors.accentOf(context),
-              ),
+              child: Icon(icon, size: 24, color: AppColors.accentOf(context)),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -277,10 +219,7 @@ class LegalScreen extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0x80000000),
-              ),
+              style: const TextStyle(fontSize: 14, color: Color(0x80000000)),
             ),
           ),
         ],

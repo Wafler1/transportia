@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/feature_bullet.dart';
 
 class AccountTabScreen extends StatelessWidget {
   const AccountTabScreen({super.key});
@@ -28,7 +29,9 @@ class AccountTabScreen extends StatelessWidget {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.accentOf(context).withValues(alpha: 0.12),
+                          color: AppColors.accentOf(
+                            context,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(25),
                         ),
                         child: Icon(
@@ -77,13 +80,19 @@ class AccountTabScreen extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 16),
-                            _buildFeatureItem(context, 'User profiles and authentication'),
+                            FeatureBullet(
+                              label: 'User profiles and authentication',
+                            ),
                             const SizedBox(height: 12),
-                            _buildFeatureItem(context, 'Travel history and statistics'),
+                            FeatureBullet(
+                              label: 'Travel history and statistics',
+                            ),
                             const SizedBox(height: 12),
-                            _buildFeatureItem(context, 'Sync across devices'),
+                            const FeatureBullet(label: 'Sync across devices'),
                             const SizedBox(height: 12),
-                            _buildFeatureItem(context, 'Personalized recommendations'),
+                            FeatureBullet(
+                              label: 'Personalized recommendations',
+                            ),
                           ],
                         ),
                       ),
@@ -95,29 +104,6 @@ class AccountTabScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildFeatureItem(BuildContext context, String text) {
-    return Row(
-      children: [
-        Icon(
-          LucideIcons.check,
-          size: 18,
-          color: AppColors.accentOf(context),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Color(0x99000000),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

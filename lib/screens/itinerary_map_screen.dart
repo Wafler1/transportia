@@ -2,21 +2,17 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
+
 import '../models/itinerary.dart';
-import '../models/trip_details.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/color_utils.dart';
 import '../widgets/custom_app_bar.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
-  final Itinerary? itinerary;
-  final TripDetailsResponse? tripDetails;
+  final Itinerary itinerary;
 
-  const ItineraryMapScreen({
-    super.key,
-    this.itinerary,
-    this.tripDetails,
-  }) : assert(itinerary != null || tripDetails != null, 'Either itinerary or tripDetails must be provided');
+  const ItineraryMapScreen({super.key, required this.itinerary});
 
   @override
   State<ItineraryMapScreen> createState() => _ItineraryMapScreenState();
@@ -60,15 +56,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   }
 
   CameraPosition _calculateInitialCamera() {
-    if (widget.itinerary != null) {
-      return _calculateCameraFromItinerary();
-    } else {
-      return _calculateCameraFromTripDetails();
-    }
-  }
-
-  CameraPosition _calculateCameraFromItinerary() {
-    final allLegs = widget.itinerary!.legs;
+    final allLegs = widget.itinerary.legs;
     if (allLegs.isEmpty) {
       return const CameraPosition(target: LatLng(50.087, 14.420), zoom: 13.0);
     }
@@ -87,33 +75,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       if (leg.toLat > maxLat) maxLat = leg.toLat;
       if (leg.toLon < minLon) minLon = leg.toLon;
       if (leg.toLon > maxLon) maxLon = leg.toLon;
-    }
-
-    final centerLat = (minLat + maxLat) / 2;
-    final centerLon = (minLon + maxLon) / 2;
-    return CameraPosition(target: LatLng(centerLat, centerLon), zoom: 13.0);
-  }
-
-  CameraPosition _calculateCameraFromTripDetails() {
-    final allLegs = widget.tripDetails!.legs;
-    if (allLegs.isEmpty) {
-      return const CameraPosition(target: LatLng(50.087, 14.420), zoom: 13.0);
-    }
-
-    double minLat = allLegs.first.from.lat;
-    double maxLat = allLegs.first.from.lat;
-    double minLon = allLegs.first.from.lon;
-    double maxLon = allLegs.first.from.lon;
-
-    for (final leg in allLegs) {
-      if (leg.from.lat < minLat) minLat = leg.from.lat;
-      if (leg.from.lat > maxLat) maxLat = leg.from.lat;
-      if (leg.from.lon < minLon) minLon = leg.from.lon;
-      if (leg.from.lon > maxLon) maxLon = leg.from.lon;
-      if (leg.to.lat < minLat) minLat = leg.to.lat;
-      if (leg.to.lat > maxLat) maxLat = leg.to.lat;
-      if (leg.to.lon < minLon) minLon = leg.to.lon;
-      if (leg.to.lon > maxLon) maxLon = leg.to.lon;
     }
 
     final centerLat = (minLat + maxLat) / 2;
@@ -149,16 +110,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     }
     _lines.clear();
 
-    if (widget.itinerary != null) {
-      await _drawItineraryLegs(controller);
-    } else {
-      await _drawTripDetailsLegs(controller);
-    }
-  }
-
-  Future<void> _drawItineraryLegs(MapLibreMapController controller) async {
-    for (int i = 0; i < widget.itinerary!.legs.length; i++) {
-      final leg = widget.itinerary!.legs[i];
+    for (int i = 0; i < widget.itinerary.legs.length; i++) {
+      final leg = widget.itinerary.legs[i];
       final color = _getLegColorFromLeg(leg, i);
 
       List<LatLng> geometry;
@@ -178,47 +131,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         geometry = [
           LatLng(leg.fromLat, leg.fromLon),
           LatLng(leg.toLat, leg.toLon),
-        ];
-      }
-
-      try {
-        final line = await controller.addLine(
-          LineOptions(
-            geometry: geometry,
-            lineColor: _colorToHex(color),
-            lineWidth: leg.mode == 'WALK' ? 3.0 : 5.0,
-            lineOpacity: 0.8,
-          ),
-        );
-        _lines.add(line);
-      } catch (e) {
-        // Handle error silently
-      }
-    }
-  }
-
-  Future<void> _drawTripDetailsLegs(MapLibreMapController controller) async {
-    for (int i = 0; i < widget.tripDetails!.legs.length; i++) {
-      final leg = widget.tripDetails!.legs[i];
-      final color = _getLegColorFromTripLeg(leg, i);
-
-      List<LatLng> geometry;
-      if (leg.legGeometry != null && leg.legGeometry!.points.isNotEmpty) {
-        try {
-          geometry = _decodePolyline(
-            leg.legGeometry!.points,
-            leg.legGeometry!.precision,
-          );
-        } catch (e) {
-          geometry = [
-            LatLng(leg.from.lat, leg.from.lon),
-            LatLng(leg.to.lat, leg.to.lon),
-          ];
-        }
-      } else {
-        geometry = [
-          LatLng(leg.from.lat, leg.from.lon),
-          LatLng(leg.to.lat, leg.to.lon),
         ];
       }
 
@@ -279,18 +191,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   Color _getLegColorFromLeg(Leg leg, int index) {
     if (leg.routeColor != null) {
-      final parsed = _parseHexColor(leg.routeColor);
-      if (parsed != null) return parsed;
-    }
-    if (leg.mode == 'WALK') {
-      return const Color(0xFF666666);
-    }
-    return _getDefaultColor(index);
-  }
-
-  Color _getLegColorFromTripLeg(TripLeg leg, int index) {
-    if (leg.routeColor != null) {
-      final parsed = _parseHexColor(leg.routeColor);
+      final parsed = parseHexColor(leg.routeColor);
       if (parsed != null) return parsed;
     }
     if (leg.mode == 'WALK') {
@@ -312,14 +213,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     );
   }
 
-  Color? _parseHexColor(String? hex) {
-    if (hex == null) return null;
-    var cleaned = hex.replaceAll('#', '');
-    if (cleaned.length == 6) cleaned = 'FF' + cleaned;
-    if (cleaned.length != 8) return null;
-    return Color(int.parse('0x$cleaned'));
-  }
-
   String _colorToHex(Color color) {
     final r = (color.r * 255.0).round();
     final g = (color.g * 255.0).round();
@@ -331,15 +224,11 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final controller = _controller;
     if (controller == null || !_isMapReady) return;
 
-    if (widget.itinerary != null) {
-      await _fitCameraToItinerary(controller);
-    } else {
-      await _fitCameraToTripDetails(controller);
-    }
+    await _fitCameraToItinerary(controller);
   }
 
   Future<void> _fitCameraToItinerary(MapLibreMapController controller) async {
-    final allLegs = widget.itinerary!.legs;
+    final allLegs = widget.itinerary.legs;
     if (allLegs.isEmpty) return;
 
     double minLat = allLegs.first.fromLat;
@@ -365,53 +254,20 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
     try {
       await controller.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, left: 48, top: 48, right: 48, bottom: 48),
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          left: 48,
+          top: 48,
+          right: 48,
+          bottom: 48,
+        ),
       );
     } catch (_) {
       await controller.animateCamera(
-        CameraUpdate.newLatLng(LatLng(allLegs.first.fromLat, allLegs.first.fromLon)),
+        CameraUpdate.newLatLng(
+          LatLng(allLegs.first.fromLat, allLegs.first.fromLon),
+        ),
       );
     }
-  }
-
-  Future<void> _fitCameraToTripDetails(MapLibreMapController controller) async {
-    final allLegs = widget.tripDetails!.legs;
-    if (allLegs.isEmpty) return;
-
-    double minLat = allLegs.first.from.lat;
-    double maxLat = allLegs.first.from.lat;
-    double minLon = allLegs.first.from.lon;
-    double maxLon = allLegs.first.from.lon;
-
-    for (final leg in allLegs) {
-      if (leg.from.lat < minLat) minLat = leg.from.lat;
-      if (leg.from.lat > maxLat) maxLat = leg.from.lat;
-      if (leg.from.lon < minLon) minLon = leg.from.lon;
-      if (leg.from.lon > maxLon) maxLon = leg.from.lon;
-      if (leg.to.lat < minLat) minLat = leg.to.lat;
-      if (leg.to.lat > maxLat) maxLat = leg.to.lat;
-      if (leg.to.lon < minLon) minLon = leg.to.lon;
-      if (leg.to.lon > maxLon) maxLon = leg.to.lon;
-    }
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(minLat, minLon),
-      northeast: LatLng(maxLat, maxLon),
-    );
-
-    try {
-      await controller.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, left: 48, top: 48, right: 48, bottom: 48),
-      );
-    } catch (_) {
-      await controller.animateCamera(
-        CameraUpdate.newLatLng(LatLng(allLegs.first.from.lat, allLegs.first.from.lon)),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
   }
 }

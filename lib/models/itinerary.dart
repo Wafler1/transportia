@@ -2,10 +2,7 @@ class FareInfo {
   final double amount;
   final String currency;
 
-  FareInfo({
-    required this.amount,
-    required this.currency,
-  });
+  FareInfo({required this.amount, required this.currency});
 
   factory FareInfo.fromJson(Map<String, dynamic> json) {
     return FareInfo(
@@ -86,15 +83,21 @@ class IntermediateStop {
       lat: json['lat']?.toDouble() ?? 0.0,
       lon: json['lon']?.toDouble() ?? 0.0,
       arrival: json['arrival'] != null ? DateTime.parse(json['arrival']) : null,
-      departure: json['departure'] != null ? DateTime.parse(json['departure']) : null,
-      scheduledArrival: json['scheduledArrival'] != null ? DateTime.parse(json['scheduledArrival']) : null,
-      scheduledDeparture: json['scheduledDeparture'] != null ? DateTime.parse(json['scheduledDeparture']) : null,
+      departure: json['departure'] != null
+          ? DateTime.parse(json['departure'])
+          : null,
+      scheduledArrival: json['scheduledArrival'] != null
+          ? DateTime.parse(json['scheduledArrival'])
+          : null,
+      scheduledDeparture: json['scheduledDeparture'] != null
+          ? DateTime.parse(json['scheduledDeparture'])
+          : null,
       track: json['track'],
       scheduledTrack: json['scheduledTrack'],
       cancelled: json['cancelled'] ?? false,
       alerts: json['alerts'] != null
-        ? (json['alerts'] as List).map((a) => Alert.fromJson(a)).toList()
-        : [],
+          ? (json['alerts'] as List).map((a) => Alert.fromJson(a)).toList()
+          : [],
     );
   }
 }
@@ -168,14 +171,20 @@ class Itinerary {
     return count;
   }
 
-  factory Itinerary.fromJson(Map<String, dynamic> json, {bool isDirect = false}) {
+  factory Itinerary.fromJson(
+    Map<String, dynamic> json, {
+    bool isDirect = false,
+  }) {
     // Extract fare from fareTransfers if available
     FareInfo? fare;
-    if (json['fareTransfers'] != null && (json['fareTransfers'] as List).isNotEmpty) {
+    if (json['fareTransfers'] != null &&
+        (json['fareTransfers'] as List).isNotEmpty) {
       final fareTransfer = (json['fareTransfers'] as List).first;
       if (fareTransfer['transferProducts'] != null &&
           (fareTransfer['transferProducts'] as List).isNotEmpty) {
-        fare = FareInfo.fromJson((fareTransfer['transferProducts'] as List).first);
+        fare = FareInfo.fromJson(
+          (fareTransfer['transferProducts'] as List).first,
+        );
       }
     }
 
@@ -272,7 +281,9 @@ class Leg {
       final from = json['from'];
       final to = json['to'];
 
-      final Map<String, dynamic> fromMap = from is Map<String, dynamic> ? from : {};
+      final Map<String, dynamic> fromMap = from is Map<String, dynamic>
+          ? from
+          : {};
       final Map<String, dynamic> toMap = to is Map<String, dynamic> ? to : {};
 
       // Parse intermediate stops safely
@@ -312,7 +323,8 @@ class Leg {
       // Parse leg geometry safely
       EncodedPolyline? legGeometry;
       try {
-        if (json['legGeometry'] is Map && (json['legGeometry'] as Map).isNotEmpty) {
+        if (json['legGeometry'] is Map &&
+            (json['legGeometry'] as Map).isNotEmpty) {
           legGeometry = EncodedPolyline.fromJson(json['legGeometry']);
         }
       } catch (e) {

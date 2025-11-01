@@ -377,7 +377,8 @@ class _MapScreenState extends State<MapScreen>
 
   void _notifyOverlayVisibility() {
     // Check if any overlay is currently visible
-    final overlaysVisible = _showTimeSelectionOverlay || _activeSuggestionField != null;
+    final overlaysVisible =
+        _showTimeSelectionOverlay || _activeSuggestionField != null;
     widget.onOverlayVisibilityChanged?.call(overlaysVisible);
   }
 
@@ -397,7 +398,11 @@ class _MapScreenState extends State<MapScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_fromFocus.hasFocus && !_toFocus.hasFocus && !_isSheetCollapsed && !_showTimeSelectionOverlay,
+      canPop:
+          !_fromFocus.hasFocus &&
+          !_toFocus.hasFocus &&
+          !_isSheetCollapsed &&
+          !_showTimeSelectionOverlay,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           if (_showTimeSelectionOverlay) {
@@ -748,24 +753,28 @@ class _MapScreenState extends State<MapScreen>
       // Silently fail if history save fails
     }
 
-    Navigator.of(context).push(CupertinoPageRoute(
-      builder: (_) => ItineraryListScreen(
-        fromLat: fromLat!,
-        fromLon: fromLon!,
-        toLat: toLat!,
-        toLon: toLon!,
-        timeSelection: timeSelection,
-        fromSelection: _fromSelection,
-        toSelection: _toSelection,
-      ),
-    )).then((_) {
-      _unfocusInputs();
-      setState(() {
-        _tripsRefreshKey++;
-        _isSearching = false;
-      });
-      unawaited(_loadRecentTrips());
-    });
+    Navigator.of(context)
+        .push(
+          CupertinoPageRoute(
+            builder: (_) => ItineraryListScreen(
+              fromLat: fromLat!,
+              fromLon: fromLon!,
+              toLat: toLat!,
+              toLon: toLon!,
+              timeSelection: timeSelection,
+              fromSelection: _fromSelection,
+              toSelection: _toSelection,
+            ),
+          ),
+        )
+        .then((_) {
+          _unfocusInputs();
+          setState(() {
+            _tripsRefreshKey++;
+            _isSearching = false;
+          });
+          unawaited(_loadRecentTrips());
+        });
   }
 
   Future<void> _centerToUserKeepZoom() async {
@@ -1402,7 +1411,10 @@ class _MapScreenState extends State<MapScreen>
 
   void _onFavoriteTap(FavoritePlace favorite) {
     if (!_hasLocationPermission) {
-      showValidationToast(context, "Location permission required to use favourites");
+      showValidationToast(
+        context,
+        "Location permission required to use favourites",
+      );
       return;
     }
 
@@ -1509,11 +1521,7 @@ class _MapControlChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = _ChipContent(
-      leading: leading,
-      label: label,
-    );
-
+    Widget content = _ChipContent(leading: leading, label: label);
 
     return PillButton(
       onTap: onTap,
@@ -1863,7 +1871,11 @@ class _LongPressModalCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(LucideIcons.x, size: 18, color: AppColors.accentOf(context)),
+                    Icon(
+                      LucideIcons.x,
+                      size: 18,
+                      color: AppColors.accentOf(context),
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Dismiss',
