@@ -19,6 +19,11 @@
   "glyphs": "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf",
   "layers": [
     {
+      "id": "background",
+      "type": "background",
+      "paint": {"background-color": "rgb(242,243,240)"}
+    },
+    {
       "id": "park",
       "type": "fill",
       "source": "openmaptiles",

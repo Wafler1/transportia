@@ -307,82 +307,37 @@ class _BottomCardState extends State<BottomCard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Favourites section
-                              GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: widget.onUnfocus,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    SizedBox(height: 12),
-                                    Text(
-                                      'Favourites',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.black,
-                                      ),
-                                    ),
-                                    SizedBox(height: 16),
-                                    Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          vertical: 16,
-                                        ),
-                                        child: Text(
-                                          'No favourites yet',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            color: Color(0x66000000),
-                                          ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.translucent,
+                                  onTap: widget.onUnfocus,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Favourites',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.black,
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              // Favourites section
-                              if (widget.favorites.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.translucent,
-                                    onTap: widget.onUnfocus,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Text(
-                                          'Favourites',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.black,
-                                          ),
+                                      const SizedBox(height: 12),
+                                      if (widget.favorites.isEmpty)
+                                        const _FavoritesEmptyMessage()
+                                      else
+                                        _FavoritesQuickActions(
+                                          favorites: widget.favorites,
+                                          onFavoriteTap: widget.onFavoriteTap,
+                                          hasLocationPermission:
+                                              widget.hasLocationPermission,
                                         ),
-                                        const SizedBox(height: 12),
-                                        ...widget.favorites
-                                            .take(3)
-                                            .map(
-                                              (favorite) => Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 12,
-                                                ),
-                                                child: _FavoriteTile(
-                                                  favorite: favorite,
-                                                  hasLocationPermission: widget
-                                                      .hasLocationPermission,
-                                                  onTap: () => widget
-                                                      .onFavoriteTap(favorite),
-                                                ),
-                                              ),
-                                            ),
-                                      ],
-                                    ),
+                                    ],
                                   ),
                                 ),
+                              ),
 
                               // Recent trips section
                               if (widget.recentTrips.isNotEmpty)
@@ -632,90 +587,146 @@ class _RecentTripTileState extends State<_RecentTripTile> {
   }
 }
 
-class _FavoriteTile extends StatelessWidget {
-  const _FavoriteTile({
-    required this.favorite,
+class _FavoritesQuickActions extends StatelessWidget {
+  const _FavoritesQuickActions({
+    required this.favorites,
+    required this.onFavoriteTap,
     required this.hasLocationPermission,
+  });
+
+  final List<FavoritePlace> favorites;
+  final ValueChanged<FavoritePlace> onFavoriteTap;
+  final bool hasLocationPermission;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          for (final favorite in favorites) ...[
+            _FavoriteShortcut(
+              favorite: favorite,
+              enabled: hasLocationPermission,
+              onTap: () => onFavoriteTap(favorite),
+            ),
+            const SizedBox(width: 12),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FavoriteShortcut extends StatelessWidget {
+  const _FavoriteShortcut({
+    required this.favorite,
+    required this.enabled,
     required this.onTap,
   });
 
   final FavoritePlace favorite;
-  final bool hasLocationPermission;
+  final bool enabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Row(
+    final accent = AppColors.accentOf(context);
+    final textColor = enabled ? AppColors.black : const Color(0x99000000);
+
+    return Opacity(
+      opacity: enabled ? 1.0 : 0.6,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 96,
+          height: 96,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0x11000000)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: enabled ? 0.12 : 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  LucideIcons.star,
+                  size: 22,
+                  color: enabled ? accent : accent.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                favorite.name,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: textColor,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FavoritesEmptyMessage extends StatelessWidget {
+  const _FavoritesEmptyMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppColors.accentOf(context).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppColors.accentOf(context).withValues(alpha: 0.2),
-              ),
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
             ),
             alignment: Alignment.center,
-            child: Icon(
-              LucideIcons.heart,
-              size: 18,
-              color: AppColors.accentOf(context),
+            child: Icon(LucideIcons.heart, size: 24, color: accent),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'No favourites yet',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  favorite.name,
-                  style: const TextStyle(
-                    color: AppColors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Icon(
-                      LucideIcons.mapPin,
-                      size: 14,
-                      color: AppColors.accentOf(context).withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        '${favorite.lat.toStringAsFixed(4)}, ${favorite.lon.toStringAsFixed(4)}',
-                        style: const TextStyle(
-                          color: Color(0x99000000),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          const SizedBox(height: 4),
+          const Text(
+            'Add your go-to destinations for quick routing.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0x66000000),
             ),
-          ),
-          Icon(
-            hasLocationPermission
-                ? LucideIcons.chevronRight
-                : LucideIcons.mapPinOff,
-            size: 20,
-            color: hasLocationPermission
-                ? const Color(0x99000000)
-                : const Color(0xFFFF3B30),
           ),
         ],
       ),

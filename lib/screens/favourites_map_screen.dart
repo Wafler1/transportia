@@ -3,9 +3,11 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import '../providers/theme_provider.dart';
 import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/validation_toast.dart';
@@ -21,6 +23,8 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
   LatLng? _selectedLocation;
   String? _selectedLocationName;
   bool _isLoadingName = false;
+  MapLibreMapController? _controller;
+  bool _didInitialCenter = false;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +71,10 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     );
   }
 
-  void _onMapCreated(MapLibreMapController controller) {}
+  void _onMapCreated(MapLibreMapController controller) async {
+    _controller = controller;
+    await _centerOnUserIfPossible();
+  }
 
   void _onMapLongClick(math.Point<double> point, LatLng coordinates) {
     setState(() {
@@ -104,6 +111,69 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     }
   }
 
+  Future<void> _centerOnUserIfPossible() async {
+    if (_didInitialCenter) return;
+    final controller = _controller;
+    if (controller == null) return;
+    _didInitialCenter = true;
+
+    LatLng? target;
+    bool shouldPersist = false;
+
+    try {
+      target = await LocationService.loadLastLatLng();
+    } catch (_) {}
+
+    bool hasPermission = false;
+    try {
+      hasPermission = await LocationService.ensurePermission();
+    } catch (_) {
+      hasPermission = false;
+    }
+
+    if (hasPermission) {
+      target ??= await _lastKnownLatLng();
+      if (target == null) {
+        final current = await _currentLatLng();
+        if (current != null) {
+          target = current;
+          shouldPersist = true;
+        }
+      }
+    }
+
+    target ??= const LatLng(50.087, 14.420);
+
+    await controller.moveCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(target: target, zoom: 14.0),
+      ),
+    );
+
+    if (shouldPersist && mounted) {
+      await LocationService.saveLastLatLng(target);
+    }
+  }
+
+  Future<LatLng?> _lastKnownLatLng() async {
+    try {
+      final pos = await LocationService.lastKnownPosition();
+      if (pos == null) return null;
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<LatLng?> _currentLatLng() async {
+    try {
+      final pos = await LocationService.currentPosition();
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _saveFavourite() async {
     if (_selectedLocation == null) return;
 
@@ -122,7 +192,6 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     try {
       await FavoritesService.saveFavorite(favorite);
       if (mounted) {
-        showValidationToast(context, "Added to favourites");
         Navigator.of(context).pop(true); // Return true to indicate success
       }
     } catch (e) {
@@ -181,12 +250,17 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                     ),
                     const SizedBox(height: 4),
                     _isLoadingName
-                        ? const Text(
-                            'Loading...',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.black,
+                        ? Shimmer.fromColors(
+                            baseColor: const Color(0xFFE2E7EC),
+                            highlightColor: const Color(0xFFF7F9FC),
+                            period: const Duration(milliseconds: 1100),
+                            child: Container(
+                              width: double.infinity,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE2E7EC),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
                           )
                         : Text(
@@ -241,17 +315,6 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                           ? const Color(0x1A000000)
                           : AppColors.accentOf(context),
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: _isLoadingName
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: AppColors.accentOf(
-                                  context,
-                                ).withValues(alpha: 0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
                     ),
                     child: const Center(
                       child: Text(

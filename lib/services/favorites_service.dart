@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FavoritePlace {
@@ -39,39 +40,26 @@ class FavoritePlace {
 
 class FavoritesService {
   static const String _favoritesKey = 'favorite_places';
+  static final ValueNotifier<List<FavoritePlace>> favoritesListenable =
+      ValueNotifier<List<FavoritePlace>>(<FavoritePlace>[]);
 
   static Future<List<FavoritePlace>> getFavorites() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? jsonString = prefs.getString(_favoritesKey);
-
-      if (jsonString == null || jsonString.isEmpty) {
-        return [];
-      }
-
-      final List<dynamic> jsonList = json.decode(jsonString) as List<dynamic>;
-      return jsonList
-          .map((item) => FavoritePlace.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      return [];
-    }
+    final favourites = await _readFavorites();
+    favoritesListenable.value = List.unmodifiable(favourites);
+    return favourites;
   }
 
   static Future<void> saveFavorite(FavoritePlace place) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final favorites = await getFavorites();
-
-      // Check if already exists
-      final existingIndex = favorites.indexWhere((f) => f.id == place.id);
-      if (existingIndex != -1) {
-        return; // Already exists
-      }
+      final favorites = await _readFavorites(prefs: prefs);
+      final exists = favorites.any((f) => f.id == place.id);
+      if (exists) return;
 
       favorites.add(place);
-      final jsonString = json.encode(favorites.map((f) => f.toJson()).toList());
-      await prefs.setString(_favoritesKey, jsonString);
+      favorites.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+      await _persistFavorites(prefs, favorites);
+      favoritesListenable.value = List.unmodifiable(favorites);
     } catch (e) {
       rethrow;
     }
@@ -80,12 +68,10 @@ class FavoritesService {
   static Future<void> removeFavorite(String id) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final favorites = await getFavorites();
-
+      final favorites = await _readFavorites(prefs: prefs);
       favorites.removeWhere((f) => f.id == id);
-
-      final jsonString = json.encode(favorites.map((f) => f.toJson()).toList());
-      await prefs.setString(_favoritesKey, jsonString);
+      await _persistFavorites(prefs, favorites);
+      favoritesListenable.value = List.unmodifiable(favorites);
     } catch (e) {
       rethrow;
     }
@@ -93,10 +79,41 @@ class FavoritesService {
 
   static Future<bool> isFavorite(String id) async {
     try {
-      final favorites = await getFavorites();
+      final favorites = await _readFavorites();
       return favorites.any((f) => f.id == id);
     } catch (e) {
       return false;
     }
+  }
+
+  static Future<List<FavoritePlace>> _readFavorites({
+    SharedPreferences? prefs,
+  }) async {
+    try {
+      final storage = prefs ?? await SharedPreferences.getInstance();
+      final String? jsonString = storage.getString(_favoritesKey);
+      if (jsonString == null || jsonString.isEmpty) {
+        return <FavoritePlace>[];
+      }
+
+      final List<dynamic> jsonList = json.decode(jsonString) as List<dynamic>;
+      final favourites = jsonList
+          .map((item) => FavoritePlace.fromJson(item as Map<String, dynamic>))
+          .toList();
+      favourites.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+      return favourites;
+    } catch (e) {
+      return <FavoritePlace>[];
+    }
+  }
+
+  static Future<void> _persistFavorites(
+    SharedPreferences prefs,
+    List<FavoritePlace> favorites,
+  ) async {
+    final encoded = json.encode(
+      favorites.map((f) => f.toJson()).toList(growable: false),
+    );
+    await prefs.setString(_favoritesKey, encoded);
   }
 }

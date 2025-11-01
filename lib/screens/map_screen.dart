@@ -121,6 +121,8 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
+    _favorites = FavoritesService.favoritesListenable.value;
     if (!widget.deferInit) {
       _ensureLocationReady();
       _didInitLocation = true;
@@ -169,11 +171,12 @@ class _MapScreenState extends State<MapScreen>
     _fromCtrl.addListener(_handleFromTextChanged);
     _toCtrl.addListener(_handleToTextChanged);
     unawaited(_loadRecentTrips());
-    unawaited(_loadFavorites());
+    unawaited(FavoritesService.getFavorites());
   }
 
   @override
   void dispose() {
+    FavoritesService.favoritesListenable.removeListener(_onFavoritesChanged);
     _posSub?.cancel();
     _fromCtrl.removeListener(_handleFromTextChanged);
     _toCtrl.removeListener(_handleToTextChanged);
@@ -188,6 +191,13 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_removeRouteSymbols());
     super.dispose();
     _snapCtrl.dispose();
+  }
+
+  void _onFavoritesChanged() {
+    if (!mounted) return;
+    setState(() {
+      _favorites = FavoritesService.favoritesListenable.value;
+    });
   }
 
   void _maybeAttachActivateListener() {
@@ -1399,14 +1409,6 @@ class _MapScreenState extends State<MapScreen>
 
     // Trigger search with current time (no time parameters)
     _search(TimeSelection.now());
-  }
-
-  Future<void> _loadFavorites() async {
-    final favorites = await FavoritesService.getFavorites();
-    if (!mounted) return;
-    setState(() {
-      _favorites = favorites;
-    });
   }
 
   void _onFavoriteTap(FavoritePlace favorite) {

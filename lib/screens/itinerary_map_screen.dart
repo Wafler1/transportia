@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 
@@ -7,12 +9,20 @@ import '../models/itinerary.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
+import '../utils/duration_formatter.dart';
+import '../utils/leg_helper.dart';
+import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
   final Itinerary itinerary;
+  final bool showCarousel;
 
-  const ItineraryMapScreen({super.key, required this.itinerary});
+  const ItineraryMapScreen({
+    super.key,
+    required this.itinerary,
+    this.showCarousel = true,
+  });
 
   @override
   State<ItineraryMapScreen> createState() => _ItineraryMapScreenState();
@@ -22,6 +32,23 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   MapLibreMapController? _controller;
   final List<Line> _lines = [];
   bool _isMapReady = false;
+  late final PageController _pageController;
+  int _currentPage = 0;
+  List<List<LatLng>> _legGeometries = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(
+      viewportFraction: widget.showCarousel ? 0.86 : 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,10 +76,137 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
                 ),
               ],
             ),
+            if (widget.showCarousel)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 24,
+                child: _buildJourneyCarousel(),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildJourneyCarousel() {
+    if (!widget.showCarousel) {
+      return const SizedBox.shrink();
+    }
+
+    final totalItems = widget.itinerary.legs.length + 1;
+    if (totalItems == 0) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: 124,
+          child: PageView.builder(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            onPageChanged: _handlePageChanged,
+            clipBehavior: Clip.none,
+            padEnds: true,
+            itemCount: totalItems,
+            itemBuilder: (context, index) {
+              return _buildCarouselItem(index, totalItems);
+            },
+          ),
+        ),
+        if (totalItems > 1) ...[
+          const SizedBox(height: 12),
+          _CarouselIndicator(itemCount: totalItems, activeIndex: _currentPage),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCarouselItem(int index, int totalItems) {
+    final padding = const EdgeInsets.symmetric(horizontal: 12);
+
+    final Widget child;
+    if (index == 0) {
+      child = _JourneySummaryCard(itinerary: widget.itinerary);
+    } else {
+      final legIndex = index - 1;
+      final leg = widget.itinerary.legs[legIndex];
+      child = _LegCarouselCard(
+        leg: leg,
+        legIndex: legIndex,
+        accentColor: _getLegColorFromLeg(leg, legIndex),
+      );
+    }
+
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: Alignment.center,
+        child: SizedBox(width: double.infinity, child: child),
+      ),
+    );
+  }
+
+  void _handlePageChanged(int index) {
+    if (_currentPage == index) return;
+    setState(() => _currentPage = index);
+    if (!_isMapReady) return;
+    if (index == 0) {
+      unawaited(_fitCameraToBounds());
+    } else {
+      unawaited(_focusLeg(index - 1));
+    }
+  }
+
+  Future<void> _focusLeg(int legIndex) async {
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    if (legIndex < 0 || legIndex >= _legGeometries.length) return;
+
+    final geometry = _legGeometries[legIndex];
+    if (geometry.isEmpty) return;
+
+    if (geometry.length == 1) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(geometry.first, 15.0),
+      );
+      return;
+    }
+
+    double minLat = geometry.first.latitude;
+    double maxLat = geometry.first.latitude;
+    double minLon = geometry.first.longitude;
+    double maxLon = geometry.first.longitude;
+
+    for (final point in geometry) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLon) minLon = point.longitude;
+      if (point.longitude > maxLon) maxLon = point.longitude;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLon),
+      northeast: LatLng(maxLat, maxLon),
+    );
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          left: 48,
+          top: 64,
+          right: 48,
+          bottom: 220,
+        ),
+      );
+    } catch (_) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(geometry.first, 15.0),
+      );
+    }
   }
 
   CameraPosition _calculateInitialCamera() {
@@ -94,6 +248,9 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
     // Fit the camera to show all legs
     await _fitCameraToBounds();
+    if (_currentPage > 0) {
+      await _focusLeg(_currentPage - 1);
+    }
   }
 
   Future<void> _drawJourneyLegs() async {
@@ -109,6 +266,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       } catch (_) {}
     }
     _lines.clear();
+    final geometries = <List<LatLng>>[];
 
     for (int i = 0; i < widget.itinerary.legs.length; i++) {
       final leg = widget.itinerary.legs[i];
@@ -133,11 +291,13 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           LatLng(leg.toLat, leg.toLon),
         ];
       }
+      final storedGeometry = List<LatLng>.from(geometry);
+      geometries.add(storedGeometry);
 
       try {
         final line = await controller.addLine(
           LineOptions(
-            geometry: geometry,
+            geometry: storedGeometry,
             lineColor: _colorToHex(color),
             lineWidth: leg.mode == 'WALK' ? 3.0 : 5.0,
             lineOpacity: 0.8,
@@ -148,6 +308,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         // Handle error silently
       }
     }
+    _legGeometries = geometries;
   }
 
   /// Decode an encoded polyline string to a list of LatLng coordinates
@@ -259,7 +420,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           left: 48,
           top: 48,
           right: 48,
-          bottom: 48,
+          bottom: 220,
         ),
       );
     } catch (_) {
@@ -269,5 +430,323 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         ),
       );
     }
+  }
+}
+
+class _CarouselCard extends StatelessWidget {
+  const _CarouselCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0x11000000)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x14000000),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JourneySummaryCard extends StatelessWidget {
+  const _JourneySummaryCard({required this.itinerary});
+
+  final Itinerary itinerary;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return _CarouselCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Journey overview',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _JourneyTimeTile(
+                  label: 'Departure',
+                  time: formatTime(itinerary.startTime),
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Icon(LucideIcons.clock, size: 20, color: accent),
+                    const SizedBox(height: 4),
+                    Text(
+                      formatDuration(itinerary.duration),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: _JourneyTimeTile(
+                    label: 'Arrival',
+                    time: formatTime(itinerary.endTime),
+                    alignEnd: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegCarouselCard extends StatelessWidget {
+  const _LegCarouselCard({
+    required this.leg,
+    required this.legIndex,
+    required this.accentColor,
+  });
+
+  final Leg leg;
+  final int legIndex;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final headline = _resolveHeadline(leg);
+    final subtitle = _resolveSubtitle(leg);
+
+    return _CarouselCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Text(
+            headline,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.black,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0x66000000),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _LegStopRow(
+            icon: LucideIcons.circleDot,
+            time: formatTime(leg.startTime),
+            label: leg.fromName,
+          ),
+          const SizedBox(height: 6),
+          _LegStopRow(
+            icon: LucideIcons.flag,
+            time: formatTime(leg.endTime),
+            label: leg.toName,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _resolveHeadline(Leg leg) {
+    if (leg.displayName != null && leg.displayName!.isNotEmpty) {
+      return leg.displayName!;
+    }
+    if (leg.routeShortName != null && leg.routeShortName!.isNotEmpty) {
+      if (leg.headsign != null && leg.headsign!.isNotEmpty) {
+        return '${leg.routeShortName} • ${leg.headsign}';
+      }
+      return leg.routeShortName!;
+    }
+    if (leg.routeLongName != null && leg.routeLongName!.isNotEmpty) {
+      return leg.routeLongName!;
+    }
+    if (leg.headsign != null && leg.headsign!.isNotEmpty) {
+      return leg.headsign!;
+    }
+    return getTransitModeName(leg.mode);
+  }
+
+  String _resolveSubtitle(Leg leg) {
+    final mode = getTransitModeName(leg.mode);
+    if (leg.headsign != null && leg.headsign!.isNotEmpty) {
+      return '$mode • ${leg.headsign}';
+    }
+    if (leg.routeLongName != null && leg.routeLongName!.isNotEmpty) {
+      return '$mode • ${leg.routeLongName}';
+    }
+    if (leg.routeShortName != null && leg.routeShortName!.isNotEmpty) {
+      return '$mode • ${leg.routeShortName}';
+    }
+    return mode;
+  }
+}
+
+class _JourneyTimeTile extends StatelessWidget {
+  const _JourneyTimeTile({
+    required this.label,
+    required this.time,
+    this.alignEnd = false,
+  });
+
+  final String label;
+  final String time;
+  final bool alignEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Color(0x66000000),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          time,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: AppColors.black,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LegStopRow extends StatelessWidget {
+  const _LegStopRow({
+    required this.icon,
+    required this.time,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String time;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0x66000000)),
+        const SizedBox(width: 8),
+        Text(
+          time,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.black,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Color(0x99000000),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CarouselIndicator extends StatelessWidget {
+  const _CarouselIndicator({
+    required this.itemCount,
+    required this.activeIndex,
+  });
+
+  final int itemCount;
+  final int activeIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (int i = 0; i < itemCount; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  height: 6,
+                  width: i == activeIndex ? 16 : 6,
+                  decoration: BoxDecoration(
+                    color: i == activeIndex
+                        ? accent
+                        : accent.withValues(alpha: 0.25),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

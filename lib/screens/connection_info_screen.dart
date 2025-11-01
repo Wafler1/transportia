@@ -341,7 +341,10 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       onTap: () {
                         Navigator.of(context).push(
                           CustomPageRoute(
-                            child: ItineraryMapScreen(itinerary: _itinerary!),
+                            child: ItineraryMapScreen(
+                              itinerary: _itinerary!,
+                              showCarousel: false,
+                            ),
                           ),
                         );
                       },
