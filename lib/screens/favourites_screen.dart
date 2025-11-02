@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../utils/custom_page_route.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/app_icon_header.dart';
+import '../widgets/edit_favorite_overlay.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -49,6 +50,19 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
     }
   }
 
+  Future<void> _editFavorite(FavoritePlace favorite) async {
+    await showCupertinoDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => EditFavoriteOverlay(
+        favorite: favorite,
+        onSaved: () {
+          setState(() {}); // Trigger rebuild to show updated data
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold(
@@ -80,7 +94,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text(
-                      'Tap a saved place to fill in your route instantly.',
+                      'Tap a saved place to edit its name and icon.',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -91,7 +105,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     for (var i = 0; i < favorites.length; i++) ...[
                       _FavouriteListEntry(
                         favorite: favorites[i],
-                        onSelect: () => Navigator.of(context).pop(favorites[i]),
+                        onSelect: () => _editFavorite(favorites[i]),
                         onRemove: () => _removeFavorite(favorites[i].id),
                       ),
                       if (i != favorites.length - 1) const SizedBox(height: 12),
@@ -187,10 +201,29 @@ class _FavouriteListEntry extends StatelessWidget {
   final VoidCallback onSelect;
   final VoidCallback onRemove;
 
+  IconData _getIconData(String iconName) {
+    const iconMap = {
+      'mapPin': LucideIcons.mapPin,
+      'home': LucideIcons.house,
+      'briefcase': LucideIcons.briefcase,
+      'school': LucideIcons.school,
+      'shoppingBag': LucideIcons.shoppingBag,
+      'coffee': LucideIcons.coffee,
+      'utensils': LucideIcons.utensils,
+      'dumbbell': LucideIcons.dumbbell,
+      'heart': LucideIcons.heart,
+      'star': LucideIcons.star,
+      'music': LucideIcons.music,
+      'plane': LucideIcons.plane,
+    };
+    return iconMap[iconName] ?? LucideIcons.mapPin;
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
     return GestureDetector(
+      onTap: onSelect,
       behavior: HitTestBehavior.opaque,
       child: Container(
         decoration: BoxDecoration(
@@ -207,7 +240,7 @@ class _FavouriteListEntry extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(16),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: 48,
@@ -217,7 +250,7 @@ class _FavouriteListEntry extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               alignment: Alignment.center,
-              child: Icon(LucideIcons.mapPin, size: 24, color: accent),
+              child: Icon(_getIconData(favorite.iconName), size: 24, color: accent),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -249,11 +282,6 @@ class _FavouriteListEntry extends StatelessWidget {
               onTap: onRemove,
               behavior: HitTestBehavior.opaque,
               child: Container(
-                padding: const EdgeInsets.all(8.0),
-                decoration: BoxDecoration(
-                  color: const Color(0x10FF3B30),
-                  borderRadius: BorderRadius.circular(12),
-                ),
                 child: const Icon(
                   LucideIcons.trash2,
                   size: 18,

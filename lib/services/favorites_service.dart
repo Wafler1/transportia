@@ -8,6 +8,7 @@ class FavoritePlace {
   final double lat;
   final double lon;
   final DateTime addedAt;
+  final String iconName;
 
   const FavoritePlace({
     required this.id,
@@ -15,7 +16,26 @@ class FavoritePlace {
     required this.lat,
     required this.lon,
     required this.addedAt,
+    this.iconName = 'mapPin',
   });
+
+  FavoritePlace copyWith({
+    String? id,
+    String? name,
+    double? lat,
+    double? lon,
+    DateTime? addedAt,
+    String? iconName,
+  }) {
+    return FavoritePlace(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      lat: lat ?? this.lat,
+      lon: lon ?? this.lon,
+      addedAt: addedAt ?? this.addedAt,
+      iconName: iconName ?? this.iconName,
+    );
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -24,6 +44,7 @@ class FavoritePlace {
       'lat': lat,
       'lon': lon,
       'addedAt': addedAt.toIso8601String(),
+      'iconName': iconName,
     };
   }
 
@@ -34,6 +55,7 @@ class FavoritePlace {
       lat: (json['lat'] as num).toDouble(),
       lon: (json['lon'] as num).toDouble(),
       addedAt: DateTime.parse(json['addedAt'] as String),
+      iconName: json['iconName'] as String? ?? 'mapPin',
     );
   }
 }
@@ -72,6 +94,21 @@ class FavoritesService {
       favorites.removeWhere((f) => f.id == id);
       await _persistFavorites(prefs, favorites);
       favoritesListenable.value = List.unmodifiable(favorites);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  static Future<void> updateFavorite(FavoritePlace updatedPlace) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favorites = await _readFavorites(prefs: prefs);
+      final index = favorites.indexWhere((f) => f.id == updatedPlace.id);
+      if (index != -1) {
+        favorites[index] = updatedPlace;
+        await _persistFavorites(prefs, favorites);
+        favoritesListenable.value = List.unmodifiable(favorites);
+      }
     } catch (e) {
       rethrow;
     }

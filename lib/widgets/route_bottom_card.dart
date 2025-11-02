@@ -631,6 +631,24 @@ class _FavoriteShortcut extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
+  IconData _getIconData(String iconName) {
+    const iconMap = {
+      'mapPin': LucideIcons.mapPin,
+      'home': LucideIcons.house,
+      'briefcase': LucideIcons.briefcase,
+      'school': LucideIcons.school,
+      'shoppingBag': LucideIcons.shoppingBag,
+      'coffee': LucideIcons.coffee,
+      'utensils': LucideIcons.utensils,
+      'dumbbell': LucideIcons.dumbbell,
+      'heart': LucideIcons.heart,
+      'star': LucideIcons.star,
+      'music': LucideIcons.music,
+      'plane': LucideIcons.plane,
+    };
+    return iconMap[iconName] ?? LucideIcons.mapPin;
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
@@ -662,7 +680,7 @@ class _FavoriteShortcut extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  LucideIcons.star,
+                  _getIconData(favorite.iconName),
                   size: 22,
                   color: enabled ? accent : accent.withValues(alpha: 0.6),
                 ),

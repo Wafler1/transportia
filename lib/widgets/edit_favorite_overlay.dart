@@ -1,0 +1,259 @@
+import 'package:flutter/cupertino.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+
+import '../services/favorites_service.dart';
+import '../theme/app_colors.dart';
+
+class EditFavoriteOverlay extends StatefulWidget {
+  final FavoritePlace favorite;
+  final VoidCallback onSaved;
+
+  const EditFavoriteOverlay({
+    super.key,
+    required this.favorite,
+    required this.onSaved,
+  });
+
+  @override
+  State<EditFavoriteOverlay> createState() => _EditFavoriteOverlayState();
+}
+
+class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
+  late TextEditingController _nameController;
+  late String _selectedIcon;
+
+  // Available icons for favorites
+  final List<Map<String, dynamic>> _availableIcons = [
+    {'name': 'mapPin', 'icon': LucideIcons.mapPin},
+    {'name': 'home', 'icon': LucideIcons.house},
+    {'name': 'briefcase', 'icon': LucideIcons.briefcase},
+    {'name': 'school', 'icon': LucideIcons.school},
+    {'name': 'shoppingBag', 'icon': LucideIcons.shoppingBag},
+    {'name': 'coffee', 'icon': LucideIcons.coffee},
+    {'name': 'utensils', 'icon': LucideIcons.utensils},
+    {'name': 'dumbbell', 'icon': LucideIcons.dumbbell},
+    {'name': 'heart', 'icon': LucideIcons.heart},
+    {'name': 'star', 'icon': LucideIcons.star},
+    {'name': 'music', 'icon': LucideIcons.music},
+    {'name': 'plane', 'icon': LucideIcons.plane},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.favorite.name);
+    _selectedIcon = widget.favorite.iconName;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveFavorite() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+
+    final updatedFavorite = widget.favorite.copyWith(
+      name: name,
+      iconName: _selectedIcon,
+    );
+
+    await FavoritesService.updateFavorite(updatedFavorite);
+    widget.onSaved();
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Container(
+        color: const Color(0x80000000),
+        child: Center(
+          child: GestureDetector(
+            onTap: () {}, // Prevent closing when tapping the card
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    blurRadius: 24,
+                    offset: Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.accentOf(context).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          LucideIcons.pen,
+                          size: 24,
+                          color: AppColors.accentOf(context),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        child: Text(
+                          'Edit Favourite',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Name',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  CupertinoTextField(
+                    controller: _nameController,
+                    placeholder: 'Enter name',
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0x08000000),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0x1A000000)),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Icon',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: _availableIcons.map((iconData) {
+                      final iconName = iconData['name'] as String;
+                      final icon = iconData['icon'] as IconData;
+                      final isSelected = _selectedIcon == iconName;
+
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedIcon = iconName;
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.accentOf(context)
+                                : const Color(0x08000000),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.accentOf(context)
+                                  : const Color(0x1A000000),
+                              width: isSelected ? 2 : 1,
+                            ),
+                          ),
+                          child: Icon(
+                            icon,
+                            size: 24,
+                            color: isSelected
+                                ? AppColors.white
+                                : AppColors.black.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(context).pop(),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: const Color(0x08000000),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0x1A000000)),
+                            ),
+                            child: const Text(
+                              'Cancel',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _saveFavorite,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.accentOf(context),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              'Save',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
