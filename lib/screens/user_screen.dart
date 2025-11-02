@@ -268,7 +268,7 @@ class AccountScreen extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/branding/icon-filled.png',
+                        'assets/branding/icon-filled-min.png',
                         width: 56,
                         height: 56,
                         fit: BoxFit.cover,

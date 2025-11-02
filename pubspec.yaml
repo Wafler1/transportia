@@ -42,7 +42,7 @@ flutter:
 
   assets:
     - assets/images/welcome-image.png
-    - assets/branding/icon-filled.png
+    - assets/branding/icon-filled-min.png
     - assets/styles/dark.json
     - assets/styles/light.json
 
