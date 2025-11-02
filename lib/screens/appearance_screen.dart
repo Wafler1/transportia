@@ -19,7 +19,7 @@ class AppearanceScreen extends StatefulWidget {
 class _AppearanceScreenState extends State<AppearanceScreen> {
   // Predefined accent colors
   final List<Color> _accentColors = [
-    const Color.fromARGB(255, 0, 113, 133), // Default - Teal
+    const Color.fromARGB(255, 0, 113, 133), // Teal
     const Color(0xFF007AFF), // Blue
     const Color(0xFF34C759), // Green
     const Color(0xFFFF9500), // Orange
@@ -73,69 +73,44 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
             'Choose your preferred accent color',
             style: TextStyle(fontSize: 14, color: Color(0x66000000)),
           ),
-          const SizedBox(height: 20),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1,
-            ),
-            itemCount: _accentColors.length,
-            itemBuilder: (context, index) {
-              final color = _accentColors[index];
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: _accentColors.map((color) {
               final isSelected = selectedAccentColor == color;
               return GestureDetector(
                 onTap: () => _saveAccentColor(color),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeOutCubic,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    color: color,
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isSelected ? color : const Color(0x1A000000),
-                      width: isSelected ? 3 : 1,
+                      color: isSelected ? AppColors.white : color,
+                      width: isSelected ? 3 : 0,
                     ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.4),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : const [
-                            BoxShadow(
-                              color: Color(0x0A000000),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: isSelected ? 0.4 : 0.25),
+                        blurRadius: isSelected ? 12 : 6,
+                        offset: const Offset(0, 3),
                       ),
-                      child: isSelected
-                          ? const Center(
-                              child: Icon(
-                                LucideIcons.check,
-                                color: AppColors.white,
-                                size: 28,
-                              ),
-                            )
-                          : null,
-                    ),
+                    ],
                   ),
+                  child: isSelected
+                      ? const Icon(
+                          LucideIcons.check,
+                          color: AppColors.white,
+                          size: 24,
+                        )
+                      : null,
                 ),
               );
-            },
+            }).toList(),
           ),
           const SizedBox(height: 16),
           Center(

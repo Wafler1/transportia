@@ -265,17 +265,13 @@ class AccountScreen extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: const Color(0x0A000000),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        LucideIcons.trainFront,
-                        size: 24,
-                        color: Color(0x33000000),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.asset(
+                        'assets/branding/icon-filled.png',
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(height: 12),

@@ -130,7 +130,6 @@ class _NavBarItemState extends State<_NavBarItem> {
                       : const Color(0x66000000),
                 ),
               ),
-              const SizedBox(height: 4),
             ],
           ),
         ),

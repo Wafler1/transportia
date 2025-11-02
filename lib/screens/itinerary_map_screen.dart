@@ -473,7 +473,6 @@ class _JourneySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accentOf(context);
     return _CarouselCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -498,14 +497,13 @@ class _JourneySummaryCard extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    Icon(LucideIcons.clock, size: 20, color: accent),
+                    Icon(LucideIcons.clock, size: 20),
                     const SizedBox(height: 4),
                     Text(
                       formatDuration(itinerary.duration),
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: accent,
                       ),
                     ),
                   ],
