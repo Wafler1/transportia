@@ -12,6 +12,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
 import '../widgets/settings_section.dart';
+import '../utils/app_version.dart';
 import '../widgets/settings_tile.dart';
 
 class AccountScreen extends StatelessWidget {
@@ -284,9 +285,9 @@ class AccountScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Version 1.0.1',
-                      style: TextStyle(
+                    Text(
+                      'Version ${AppVersion.current}',
+                      style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: Color(0x66000000),

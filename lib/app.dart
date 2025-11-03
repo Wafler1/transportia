@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'services/version_service.dart';
+import 'utils/app_version.dart';
+import 'utils/version_utils.dart';
+import 'widgets/update_prompt_overlay.dart';
 
 class EntariaApp extends StatelessWidget {
   const EntariaApp({super.key});
@@ -49,19 +53,71 @@ class _RootGate extends StatefulWidget {
 
 class _RootGateState extends State<_RootGate> {
   static const _kWelcomeSeenKey = 'welcome_seen_v1';
+  static const _kIgnoredUpdateKey = 'ignored_update_version';
   bool? _seen;
+  String? _ignoredUpdateVersion;
+  String? _availableUpdateVersion;
+  SharedPreferences? _prefs;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _init();
   }
 
-  Future<void> _load() async {
+  Future<void> _init() async {
     final prefs = await SharedPreferences.getInstance();
-    final v = prefs.getBool(_kWelcomeSeenKey) ?? false;
+    final seen = prefs.getBool(_kWelcomeSeenKey) ?? false;
+    final ignored = prefs.getString(_kIgnoredUpdateKey);
+    _prefs = prefs;
     if (!mounted) return;
-    setState(() => _seen = v);
+    setState(() {
+      _seen = seen;
+      _ignoredUpdateVersion = ignored;
+    });
+    _checkForUpdates(ignored);
+  }
+
+  Future<void> _checkForUpdates(String? ignoredVersion) async {
+    final remoteVersion = await VersionService.fetchLatestVersion();
+    if (!mounted || remoteVersion == null) return;
+    if (!_shouldShowUpdate(remoteVersion, ignoredVersion)) return;
+    setState(() => _availableUpdateVersion = remoteVersion);
+  }
+
+  bool _shouldShowUpdate(String remoteVersion, String? ignoredVersion) {
+    if (!isVersionGreater(remoteVersion, AppVersion.current)) {
+      return false;
+    }
+    if (ignoredVersion != null && ignoredVersion == remoteVersion) {
+      return false;
+    }
+    return true;
+  }
+
+  void _handleWelcomeFinished() {
+    if (!mounted) return;
+    setState(() => _seen = true);
+  }
+
+  void _dismissUpdateOverlay() {
+    if (!mounted) return;
+    setState(() => _availableUpdateVersion = null);
+  }
+
+  Future<void> _skipCurrentVersion() async {
+    final version = _availableUpdateVersion;
+    if (version == null) {
+      _dismissUpdateOverlay();
+      return;
+    }
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setString(_kIgnoredUpdateKey, version);
+    if (!mounted) return;
+    setState(() {
+      _ignoredUpdateVersion = version;
+      _availableUpdateVersion = null;
+    });
   }
 
   @override
@@ -70,6 +126,23 @@ class _RootGateState extends State<_RootGate> {
       // Simple placeholder while loading preference.
       return const SizedBox.expand();
     }
-    return _seen! ? const MainNavigationScreen() : const WelcomeScreen();
+    final mainChild = _seen!
+        ? const MainNavigationScreen()
+        : WelcomeScreen(onFinished: _handleWelcomeFinished);
+
+    return Stack(
+      children: [
+        mainChild,
+        if (_availableUpdateVersion != null)
+          UpdatePromptOverlay(
+            remoteVersion: _availableUpdateVersion!,
+            localVersion: AppVersion.current,
+            onDismiss: _dismissUpdateOverlay,
+            onSkipVersion: () {
+              _skipCurrentVersion();
+            },
+          ),
+      ],
+    );
   }
 }

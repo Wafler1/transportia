@@ -7,9 +7,10 @@ import '../theme/app_colors.dart';
 import 'map_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+  const WelcomeScreen({super.key, this.onFinished});
 
   static const _kWelcomeSeenKey = 'welcome_seen_v1';
+  final VoidCallback? onFinished;
 
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -56,6 +57,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 // Activate the map's deferred init once the overlay is gone.
                 _activateMap.value = true;
                 setState(() => _overlayGone = true);
+                widget.onFinished?.call();
               }
             },
             child: AnimatedScale(
