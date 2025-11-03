@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:entaria_app/services/transitous_geocode_service.dart';
 import 'package:entaria_app/utils/custom_page_route.dart';
 import 'package:entaria_app/utils/leg_helper.dart';
@@ -18,8 +20,8 @@ import '../widgets/load_more_button.dart';
 // Pagination response model imported via RoutingService; no direct reference needed.
 
 class ItineraryListScreen extends StatefulWidget {
-  final double fromLat;
-  final double fromLon;
+  final FutureOr<double> fromLat;
+  final FutureOr<double> fromLon;
   final double toLat;
   final double toLon;
   final TimeSelection timeSelection;
@@ -46,6 +48,8 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _nextPageCursor;
+  double? _fromLat;
+  double? _fromLon;
 
   @override
   void initState() {
@@ -56,14 +60,18 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   Future<void> _loadInitial() async {
     setState(() => _isLoading = true);
     try {
+      final fromLat = await Future<double>.value(widget.fromLat);
+      final fromLon = await Future<double>.value(widget.fromLon);
       final response = await RoutingService.findRoutesPaginated(
-        fromLat: widget.fromLat,
-        fromLon: widget.fromLon,
+        fromLat: fromLat,
+        fromLon: fromLon,
         toLat: widget.toLat,
         toLon: widget.toLon,
         timeSelection: widget.timeSelection,
       );
       setState(() {
+        _fromLat = fromLat;
+        _fromLon = fromLon;
         _itineraries = response.itineraries;
         _nextPageCursor = response.nextPageCursor;
         _isLoading = false;
@@ -77,15 +85,19 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
     if (_isLoadingMore || _nextPageCursor == null) return;
     setState(() => _isLoadingMore = true);
     try {
+      final fromLat = _fromLat ?? await Future<double>.value(widget.fromLat);
+      final fromLon = _fromLon ?? await Future<double>.value(widget.fromLon);
       final response = await RoutingService.findRoutesPaginated(
-        fromLat: widget.fromLat,
-        fromLon: widget.fromLon,
+        fromLat: fromLat,
+        fromLon: fromLon,
         toLat: widget.toLat,
         toLon: widget.toLon,
         timeSelection: widget.timeSelection,
         pageCursor: _nextPageCursor,
       );
       setState(() {
+        _fromLat = fromLat;
+        _fromLon = fromLon;
         _itineraries.addAll(response.itineraries);
         _nextPageCursor = response.nextPageCursor;
         _isLoadingMore = false;

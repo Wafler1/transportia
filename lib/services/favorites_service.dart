@@ -78,8 +78,7 @@ class FavoritesService {
       final exists = favorites.any((f) => f.id == place.id);
       if (exists) return;
 
-      favorites.add(place);
-      favorites.sort((a, b) => b.addedAt.compareTo(a.addedAt));
+      favorites.insert(0, place);
       await _persistFavorites(prefs, favorites);
       favoritesListenable.value = List.unmodifiable(favorites);
     } catch (e) {
@@ -114,6 +113,17 @@ class FavoritesService {
     }
   }
 
+  static Future<void> reorderFavorites(List<FavoritePlace> reordered) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final favorites = List<FavoritePlace>.from(reordered);
+      await _persistFavorites(prefs, favorites);
+      favoritesListenable.value = List.unmodifiable(favorites);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   static Future<bool> isFavorite(String id) async {
     try {
       final favorites = await _readFavorites();
@@ -134,11 +144,9 @@ class FavoritesService {
       }
 
       final List<dynamic> jsonList = json.decode(jsonString) as List<dynamic>;
-      final favourites = jsonList
+      return jsonList
           .map((item) => FavoritePlace.fromJson(item as Map<String, dynamic>))
           .toList();
-      favourites.sort((a, b) => b.addedAt.compareTo(a.addedAt));
-      return favourites;
     } catch (e) {
       return <FavoritePlace>[];
     }

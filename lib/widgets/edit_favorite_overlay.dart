@@ -158,46 +158,67 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: _availableIcons.map((iconData) {
-                      final iconName = iconData['name'] as String;
-                      final icon = iconData['icon'] as IconData;
-                      final isSelected = _selectedIcon == iconName;
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      const double itemExtent = 56;
+                      const double spacing = 12;
+                      final availableWidth = constraints.maxWidth;
+                      int crossAxisCount =
+                          (availableWidth / (itemExtent + spacing)).floor();
+                      if (crossAxisCount < 1) {
+                        crossAxisCount = 1;
+                      } else if (crossAxisCount > _availableIcons.length) {
+                        crossAxisCount = _availableIcons.length;
+                      }
 
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedIcon = iconName;
-                          });
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.accentOf(context)
-                                : const Color(0x08000000),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: isSelected
-                                  ? AppColors.accentOf(context)
-                                  : const Color(0x1A000000),
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          child: Icon(
-                            icon,
-                            size: 24,
-                            color: isSelected
-                                ? AppColors.white
-                                : AppColors.black.withValues(alpha: 0.6),
-                          ),
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _availableIcons.length,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                          childAspectRatio: 1,
                         ),
+                        itemBuilder: (context, index) {
+                          final iconData = _availableIcons[index];
+                          final iconName = iconData['name'] as String;
+                          final icon = iconData['icon'] as IconData;
+                          final isSelected = _selectedIcon == iconName;
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedIcon = iconName;
+                              });
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.accentOf(context)
+                                    : const Color(0x08000000),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? AppColors.accentOf(context)
+                                      : const Color(0x1A000000),
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Icon(
+                                icon,
+                                size: 24,
+                                color: isSelected
+                                    ? AppColors.white
+                                    : AppColors.black.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    }).toList(),
+                    },
                   ),
                   const SizedBox(height: 24),
                   Row(

@@ -108,10 +108,11 @@ class _MapScreenState extends State<MapScreen>
   int _markerRefreshToken = 0;
   bool _didAddMarkerImages = false;
   LatLng? _longPressLatLng;
-  bool _isLongPressClosing = false;
   final Map<RouteFieldKind, String> _pendingReverseGeocodeKeys = {};
   final Set<RouteFieldKind> _reverseGeocodeLoading = <RouteFieldKind>{};
   bool _showTimeSelectionOverlay = false;
+  bool _isLongPressClosing = false;
+  bool _suppressTimeSelectionReopen = false;
   TimeSelection _timeSelection = TimeSelection.now();
   int _tripsRefreshKey = 0;
   List<TripHistoryItem> _recentTrips = [];
@@ -392,17 +393,48 @@ class _MapScreenState extends State<MapScreen>
     widget.onOverlayVisibilityChanged?.call(overlaysVisible);
   }
 
-  void _toggleTimeSelectionOverlay() {
-    // Only unfocus inputs when opening the time selection overlay
-    // This closes the suggestions overlay smoothly without flickering
-    if (!_showTimeSelectionOverlay) {
-      _unfocusInputs();
-    }
+  void _openTimeSelectionOverlay() {
+    if (_showTimeSelectionOverlay) return;
+    _unfocusInputs();
     setState(() {
-      _showTimeSelectionOverlay = !_showTimeSelectionOverlay;
+      _showTimeSelectionOverlay = true;
     });
-    // Notify overlay visibility change
     _notifyOverlayVisibility();
+  }
+
+  void _closeTimeSelectionOverlay() {
+    if (!_showTimeSelectionOverlay) return;
+    setState(() {
+      _showTimeSelectionOverlay = false;
+    });
+    _notifyOverlayVisibility();
+  }
+
+  void _toggleTimeSelectionOverlay() {
+    if (_showTimeSelectionOverlay) {
+      _closeTimeSelectionOverlay();
+    } else {
+      _openTimeSelectionOverlay();
+    }
+  }
+
+  void _handleTimeSelectionTapDown() {
+    if (_showTimeSelectionOverlay) {
+      _suppressTimeSelectionReopen = true;
+      _closeTimeSelectionOverlay();
+    }
+  }
+
+  void _handleTimeSelectionTapCancel() {
+    _suppressTimeSelectionReopen = false;
+  }
+
+  void _handleTimeSelectionTap() {
+    if (_suppressTimeSelectionReopen) {
+      _suppressTimeSelectionReopen = false;
+      return;
+    }
+    _toggleTimeSelectionOverlay();
   }
 
   @override
@@ -416,7 +448,7 @@ class _MapScreenState extends State<MapScreen>
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           if (_showTimeSelectionOverlay) {
-            _toggleTimeSelectionOverlay();
+            _closeTimeSelectionOverlay();
           } else if (_fromFocus.hasFocus || _toFocus.hasFocus) {
             _unfocusInputs();
           } else {
@@ -465,8 +497,7 @@ class _MapScreenState extends State<MapScreen>
           final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
           final showOverlay = _activeSuggestionField != null;
           final showLongPressOverlay =
-              (_longPressLatLng != null && _isSheetCollapsed) ||
-              (_isLongPressClosing && _longPressLatLng != null);
+              _longPressLatLng != null || _isLongPressClosing;
           const double pillRevealStart = 0.7;
           final double pillProgress =
               ((progress - pillRevealStart) / (1 - pillRevealStart)).clamp(
@@ -523,31 +554,20 @@ class _MapScreenState extends State<MapScreen>
                   ),
                 ),
 
-              Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !showLongPressOverlay,
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: !showLongPressOverlay
-                        ? const SizedBox.shrink()
-                        : SizedBox.expand(
-                            child: _LongPressSelectionModal(
-                              key: ValueKey(_longPressLatLng),
-                              latLng: _longPressLatLng!,
-                              isClosing: _isLongPressClosing,
-                              onSelectFrom: () =>
-                                  _onLongPressChoice(RouteFieldKind.from),
-                              onSelectTo: () =>
-                                  _onLongPressChoice(RouteFieldKind.to),
-                              onDismissRequested: _dismissLongPressOverlay,
-                              onClosed: _handleLongPressOverlayClosed,
-                            ),
-                          ),
+              if (showLongPressOverlay && _longPressLatLng != null)
+                Positioned.fill(
+                  child: _LongPressSelectionModal(
+                    key: ValueKey(_longPressLatLng),
+                    latLng: _longPressLatLng!,
+                    isClosing: _isLongPressClosing,
+                    onSelectFrom: () =>
+                        _onLongPressChoice(RouteFieldKind.from),
+                    onSelectTo: () =>
+                        _onLongPressChoice(RouteFieldKind.to),
+                    onDismissRequested: () => _dismissLongPressOverlay(),
+                    onClosed: _handleLongPressOverlayClosed,
                   ),
                 ),
-              ),
 
               // Draggable white card anchored to bottom
               // The bottom card; position changes on drag. Snaps animate via controller above.
@@ -617,7 +637,11 @@ class _MapScreenState extends State<MapScreen>
                         toSelection: _toSelection,
                         onSearch: _search,
                         timeSelectionLayerLink: _timeSelectionLayerLink,
-                        onTimeSelectionTap: _toggleTimeSelectionOverlay,
+                        onTimeSelectionTap: _handleTimeSelectionTap,
+                        onTimeSelectionTapDown:
+                            _handleTimeSelectionTapDown,
+                        onTimeSelectionTapCancel:
+                            _handleTimeSelectionTapCancel,
                         timeSelection: _timeSelection,
                         recentTrips: _recentTrips,
                         onRecentTripTap: _onRecentTripTap,
@@ -695,7 +719,7 @@ class _MapScreenState extends State<MapScreen>
                                   width: overlayWidth,
                                   currentSelection: _timeSelection,
                                   onSelectionChanged: _onTimeSelectionChanged,
-                                  onDismiss: _toggleTimeSelectionOverlay,
+                                  onDismiss: _closeTimeSelectionOverlay,
                                   showDepartArriveToggle: true,
                                 ),
                         ),
@@ -731,46 +755,47 @@ class _MapScreenState extends State<MapScreen>
     setState(() => _isSearching = true);
     Haptics.mediumTick();
 
-    double? fromLat, fromLon, toLat, toLon;
+    Future<Position>? positionFuture;
+    FutureOr<double> fromLatSource;
+    FutureOr<double> fromLonSource;
+    double? fromLatHistory;
+    double? fromLonHistory;
 
     if (_fromSelection != null) {
-      fromLat = _fromSelection!.lat;
-      fromLon = _fromSelection!.lon;
+      fromLatHistory = _fromSelection!.lat;
+      fromLonHistory = _fromSelection!.lon;
+    } else if (_lastUserLatLng != null) {
+      fromLatHistory = _lastUserLatLng!.latitude;
+      fromLonHistory = _lastUserLatLng!.longitude;
     } else {
-      final location = await LocationService.currentPosition();
-      fromLat = location.latitude;
-      fromLon = location.longitude;
+      positionFuture = LocationService.currentPosition();
     }
 
-    if (_toSelection != null) {
-      toLat = _toSelection!.lat;
-      toLon = _toSelection!.lon;
-    } else {
+    if (_toSelection == null) {
       showValidationToast(context, 'Please select a destination');
+      setState(() => _isSearching = false);
       return;
     }
 
-    // Save trip to history
-    try {
-      final trip = TripHistoryItem.fromSelections(
-        from: _fromSelection,
-        to: _toSelection!,
-        userLat: fromLat,
-        userLon: fromLon,
-      );
-      await RecentTripsService.saveTrip(trip);
-    } catch (_) {
-      // Silently fail if history save fails
+    final toLat = _toSelection!.lat;
+    final toLon = _toSelection!.lon;
+
+    if (positionFuture != null) {
+      fromLatSource = positionFuture.then((position) => position.latitude);
+      fromLonSource = positionFuture.then((position) => position.longitude);
+    } else {
+      fromLatSource = fromLatHistory!;
+      fromLonSource = fromLonHistory!;
     }
 
     Navigator.of(context)
         .push(
           CupertinoPageRoute(
             builder: (_) => ItineraryListScreen(
-              fromLat: fromLat!,
-              fromLon: fromLon!,
-              toLat: toLat!,
-              toLon: toLon!,
+              fromLat: fromLatSource,
+              fromLon: fromLonSource,
+              toLat: toLat,
+              toLon: toLon,
               timeSelection: timeSelection,
               fromSelection: _fromSelection,
               toSelection: _toSelection,
@@ -785,6 +810,30 @@ class _MapScreenState extends State<MapScreen>
           });
           unawaited(_loadRecentTrips());
         });
+
+    // Save trip to history without delaying navigation
+    try {
+      double resolvedFromLat;
+      double resolvedFromLon;
+      if (positionFuture != null) {
+        final position = await positionFuture;
+        resolvedFromLat = position.latitude;
+        resolvedFromLon = position.longitude;
+      } else {
+        resolvedFromLat = fromLatHistory!;
+        resolvedFromLon = fromLonHistory!;
+      }
+
+      final trip = TripHistoryItem.fromSelections(
+        from: _fromSelection,
+        to: _toSelection!,
+        userLat: resolvedFromLat,
+        userLon: resolvedFromLon,
+      );
+      await RecentTripsService.saveTrip(trip);
+    } catch (_) {
+      // Silently fail if history save fails
+    }
   }
 
   Future<void> _centerToUserKeepZoom() async {
@@ -1205,7 +1254,10 @@ class _MapScreenState extends State<MapScreen>
   void _dismissLongPressOverlay({bool animated = true}) {
     if (_longPressLatLng == null) return;
     if (!animated) {
-      _handleLongPressOverlayClosed();
+      setState(() {
+        _longPressLatLng = null;
+        _isLongPressClosing = false;
+      });
       return;
     }
     if (_isLongPressClosing) return;
@@ -1213,10 +1265,9 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleLongPressOverlayClosed() {
-    if (_longPressLatLng == null && !_isLongPressClosing) return;
     setState(() {
-      _longPressLatLng = null;
       _isLongPressClosing = false;
+      _longPressLatLng = null;
     });
   }
 
@@ -1363,7 +1414,7 @@ class _MapScreenState extends State<MapScreen>
   void _unfocusInputs() {
     _unfocusDebounceTimer?.cancel();
     _unfocusDebounceTimer = null;
-    FocusScope.of(context).unfocus();
+    FocusScope.of(context).unfocus(disposition: UnfocusDisposition.scope);
     _dismissLongPressOverlay();
     _clearSuggestions();
   }
@@ -1585,23 +1636,28 @@ class _LongPressSelectionModal extends StatefulWidget {
 class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  bool _hasShown = false;
+  late final CurvedAnimation _curve;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _backdropOpacity;
 
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 220),
-        )..addStatusListener((status) {
-          if (status == AnimationStatus.completed) {
-            _hasShown = true;
-          }
-          if (status == AnimationStatus.dismissed && _hasShown) {
-            widget.onClosed();
-          }
-        });
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.dismissed) {
+          widget.onClosed();
+        }
+      });
+    _curve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.linearToEaseOut,
+      reverseCurve: Curves.easeInToLinear,
+    );
+    _scaleAnim = Tween<double>(begin: 1.1, end: 1.0).animate(_curve);
+    _backdropOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(_curve);
     _controller.forward();
   }
 
@@ -1609,9 +1665,12 @@ class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
   void didUpdateWidget(covariant _LongPressSelectionModal oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!oldWidget.isClosing && widget.isClosing) {
-      _controller.reverse();
+      if (_controller.value == 0.0) {
+        widget.onClosed();
+      } else {
+        _controller.reverse();
+      }
     } else if (oldWidget.latLng != widget.latLng && !widget.isClosing) {
-      _hasShown = false;
       _controller.forward(from: 0.0);
     }
   }
@@ -1624,45 +1683,30 @@ class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
 
   @override
   Widget build(BuildContext context) {
-    final animation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
-    );
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, child) {
-        final double value = animation.value;
-        final double slide = (1 - value) * 24.0;
-        final double scale = 0.94 + (value * 0.06);
-        final double backdropOpacity = value * 0.6;
-        return Stack(
-          children: [
-            Opacity(
-              opacity: backdropOpacity,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: widget.onDismissRequested,
-                child: Container(color: const Color(0xBF000000)),
+    return FadeTransition(
+      opacity: _backdropOpacity,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onDismissRequested,
+        child: Container(
+          color: const Color(0xBF000000),
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () {},
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: ScaleTransition(
+                  scale: _scaleAnim,
+                  child: _LongPressModalCard(
+                    latLng: widget.latLng,
+                    onSelectFrom: widget.onSelectFrom,
+                    onSelectTo: widget.onSelectTo,
+                    onDismiss: widget.onDismissRequested,
+                  ),
               ),
             ),
-            Align(
-              child: Opacity(
-                opacity: value,
-                child: Transform.translate(
-                  offset: Offset(0, slide),
-                  child: Transform.scale(scale: scale, child: child),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-      child: _LongPressModalCard(
-        latLng: widget.latLng,
-        onSelectFrom: widget.onSelectFrom,
-        onSelectTo: widget.onSelectTo,
-        onDismiss: widget.onDismissRequested,
+          ),
+        ),
       ),
     );
   }

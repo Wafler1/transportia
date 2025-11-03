@@ -285,7 +285,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Version 1.0.0',
+                      'Version 1.0.1',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

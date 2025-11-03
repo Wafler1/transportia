@@ -74,43 +74,66 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
             style: TextStyle(fontSize: 14, color: Color(0x66000000)),
           ),
           const SizedBox(height: 16),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: _accentColors.map((color) {
-              final isSelected = selectedAccentColor == color;
-              return GestureDetector(
-                onTap: () => _saveAccentColor(color),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: isSelected ? AppColors.white : color,
-                      width: isSelected ? 3 : 0,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withValues(alpha: isSelected ? 0.4 : 0.25),
-                        blurRadius: isSelected ? 12 : 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: isSelected
-                      ? const Icon(
-                          LucideIcons.check,
-                          color: AppColors.white,
-                          size: 24,
-                        )
-                      : null,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const double itemExtent = 56;
+              const double spacing = 12;
+              final availableWidth = constraints.maxWidth;
+              int crossAxisCount =
+                  (availableWidth / (itemExtent + spacing)).floor();
+              if (crossAxisCount < 1) {
+                crossAxisCount = 1;
+              } else if (crossAxisCount > _accentColors.length) {
+                crossAxisCount = _accentColors.length;
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _accentColors.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: 1,
                 ),
+                itemBuilder: (context, index) {
+                  final color = _accentColors[index];
+                  final isSelected = selectedAccentColor == color;
+                  return GestureDetector(
+                    onTap: () => _saveAccentColor(color),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOutCubic,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? AppColors.white : color,
+                          width: isSelected ? 3 : 0,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(
+                              alpha: isSelected ? 0.4 : 0.25,
+                            ),
+                            blurRadius: isSelected ? 12 : 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: isSelected
+                          ? const Icon(
+                              LucideIcons.check,
+                              color: AppColors.white,
+                              size: 24,
+                            )
+                          : null,
+                    ),
+                  );
+                },
               );
-            }).toList(),
+            },
           ),
           const SizedBox(height: 16),
           Center(

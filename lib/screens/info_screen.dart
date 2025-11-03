@@ -12,6 +12,7 @@ class InfoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return AppPageScaffold(
       title: 'About Entaria',
       scrollable: true,
@@ -22,7 +23,7 @@ class InfoScreen extends StatelessWidget {
           const AppIconHeader(
             icon: LucideIcons.info,
             title: 'Entaria',
-            subtitle: 'Version 1.0.0',
+            subtitle: 'Version 1.0.1',
             iconSize: 40,
           ),
           Column(

@@ -32,6 +32,8 @@ class BottomCard extends StatefulWidget {
     required this.onSearch,
     required this.timeSelectionLayerLink,
     required this.onTimeSelectionTap,
+    this.onTimeSelectionTapDown,
+    this.onTimeSelectionTapCancel,
     required this.timeSelection,
     required this.recentTrips,
     required this.onRecentTripTap,
@@ -62,6 +64,8 @@ class BottomCard extends StatefulWidget {
   final ValueChanged<TimeSelection> onSearch;
   final LayerLink timeSelectionLayerLink;
   final VoidCallback onTimeSelectionTap;
+  final VoidCallback? onTimeSelectionTapDown;
+  final VoidCallback? onTimeSelectionTapCancel;
   final TimeSelection timeSelection;
   final List<TripHistoryItem> recentTrips;
   final ValueChanged<TripHistoryItem> onRecentTripTap;
@@ -241,6 +245,10 @@ class _BottomCardState extends State<BottomCard> {
                                       link: widget.timeSelectionLayerLink,
                                       child: PillButton(
                                         onTap: widget.onTimeSelectionTap,
+                                        onTapDown:
+                                            widget.onTimeSelectionTapDown,
+                                        onTapCancel:
+                                            widget.onTimeSelectionTapCancel,
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
@@ -398,6 +406,9 @@ class PillButton extends StatefulWidget {
     super.key,
     required this.onTap,
     required this.child,
+    this.onTapDown,
+    this.onTapUp,
+    this.onTapCancel,
     this.restingColor = const Color(0x0F000000),
     this.pressedColor = const Color(0x14000000),
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
@@ -405,6 +416,9 @@ class PillButton extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
   });
   final VoidCallback onTap;
+  final VoidCallback? onTapDown;
+  final VoidCallback? onTapUp;
+  final VoidCallback? onTapCancel;
   final Widget child;
   final Color restingColor;
   final Color pressedColor;
@@ -422,9 +436,18 @@ class _PillButtonState extends State<PillButton> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
+      onTapDown: (_) {
+        widget.onTapDown?.call();
+        setState(() => _pressed = true);
+      },
+      onTapUp: (_) {
+        widget.onTapUp?.call();
+        setState(() => _pressed = false);
+      },
+      onTapCancel: () {
+        widget.onTapCancel?.call();
+        setState(() => _pressed = false);
+      },
       child: AnimatedScale(
         duration: const Duration(milliseconds: 90),
         scale: _pressed ? 0.97 : 1.0,

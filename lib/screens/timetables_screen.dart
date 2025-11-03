@@ -34,6 +34,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
   TimeSelection _timeSelection = TimeSelection.now();
   bool _showTimeSelectionOverlay = false;
+  bool _suppressTimeSelectionReopen = false;
   List<TransitousLocationSuggestion> _suggestions = [];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
@@ -92,12 +93,45 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   }
 
   void _toggleTimeSelectionOverlay() {
-    if (!_showTimeSelectionOverlay) {
-      _searchFocus.unfocus();
+    if (_showTimeSelectionOverlay) {
+      _closeTimeSelectionOverlay();
+    } else {
+      _openTimeSelectionOverlay();
     }
+  }
+
+  void _openTimeSelectionOverlay() {
+    if (_showTimeSelectionOverlay) return;
+    _searchFocus.unfocus();
     setState(() {
-      _showTimeSelectionOverlay = !_showTimeSelectionOverlay;
+      _showTimeSelectionOverlay = true;
     });
+  }
+
+  void _closeTimeSelectionOverlay() {
+    if (!_showTimeSelectionOverlay) return;
+    setState(() {
+      _showTimeSelectionOverlay = false;
+    });
+  }
+
+  void _handleTimeButtonTapDown() {
+    if (_showTimeSelectionOverlay) {
+      _suppressTimeSelectionReopen = true;
+      _closeTimeSelectionOverlay();
+    }
+  }
+
+  void _handleTimeButtonTapCancel() {
+    _suppressTimeSelectionReopen = false;
+  }
+
+  void _handleTimeButtonTap() {
+    if (_suppressTimeSelectionReopen) {
+      _suppressTimeSelectionReopen = false;
+      return;
+    }
+    _toggleTimeSelectionOverlay();
   }
 
   void _onSearchTextChanged() {
@@ -299,7 +333,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           if (_showTimeSelectionOverlay) {
-            _toggleTimeSelectionOverlay();
+            _closeTimeSelectionOverlay();
           } else if (_searchFocus.hasFocus) {
             _searchFocus.unfocus();
           }
@@ -456,10 +490,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 link: _timeSelectionLayerLink,
                                 child: _TimeButton(
                                   timeSelection: _timeSelection,
-                                  onTap: () {
-                                    _searchFocus.unfocus();
-                                    _toggleTimeSelectionOverlay();
-                                  },
+                                  onTapDown: _handleTimeButtonTapDown,
+                                  onTapCancel: _handleTimeButtonTapCancel,
+                                  onTap: _handleTimeButtonTap,
                                 ),
                               ),
                               const Spacer(),
@@ -633,7 +666,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                             width: MediaQuery.of(context).size.width - 40,
                             currentSelection: _timeSelection,
                             onSelectionChanged: _onTimeSelectionChanged,
-                            onDismiss: _toggleTimeSelectionOverlay,
+                            onDismiss: _closeTimeSelectionOverlay,
                             showDepartArriveToggle: false,
                           ),
                   ),
@@ -648,10 +681,17 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 }
 
 class _TimeButton extends StatefulWidget {
-  const _TimeButton({required this.timeSelection, required this.onTap});
+  const _TimeButton({
+    required this.timeSelection,
+    required this.onTap,
+    this.onTapDown,
+    this.onTapCancel,
+  });
 
   final TimeSelection timeSelection;
   final VoidCallback onTap;
+  final VoidCallback? onTapDown;
+  final VoidCallback? onTapCancel;
 
   @override
   State<_TimeButton> createState() => _TimeButtonState();
@@ -665,9 +705,15 @@ class _TimeButtonState extends State<_TimeButton> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
+      onTapDown: (_) {
+        widget.onTapDown?.call();
+        setState(() => _pressed = true);
+      },
       onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
+      onTapCancel: () {
+        widget.onTapCancel?.call();
+        setState(() => _pressed = false);
+      },
       child: AnimatedScale(
         duration: const Duration(milliseconds: 90),
         scale: _pressed ? 0.97 : 1.0,
