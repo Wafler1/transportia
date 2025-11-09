@@ -48,13 +48,25 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _nextPageCursor;
+  String? _previousPageCursor;
+  bool _isLoadingPrevious = false;
   double? _fromLat;
   double? _fromLon;
+  late final ScrollController _scrollController;
+  bool _appliedInitialPreviousOffset = false;
+  static const double _seePreviousScrollOffset = 40.0;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
     _loadInitial();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadInitial() async {
@@ -74,8 +86,10 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         _fromLon = fromLon;
         _itineraries = response.itineraries;
         _nextPageCursor = response.nextPageCursor;
+        _previousPageCursor = response.previousPageCursor;
         _isLoading = false;
       });
+      _maybeApplyInitialPreviousOffset();
     } catch (_) {
       setState(() => _isLoading = false);
     }
@@ -100,11 +114,54 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         _fromLon = fromLon;
         _itineraries.addAll(response.itineraries);
         _nextPageCursor = response.nextPageCursor;
+        _previousPageCursor =
+            response.previousPageCursor ?? _previousPageCursor;
         _isLoadingMore = false;
       });
     } catch (_) {
       setState(() => _isLoadingMore = false);
     }
+  }
+
+  Future<void> _loadPrevious() async {
+    if (_isLoadingPrevious || _previousPageCursor == null) return;
+    setState(() => _isLoadingPrevious = true);
+    try {
+      final fromLat = _fromLat ?? await Future<double>.value(widget.fromLat);
+      final fromLon = _fromLon ?? await Future<double>.value(widget.fromLon);
+      final response = await RoutingService.findRoutesPaginated(
+        fromLat: fromLat,
+        fromLon: fromLon,
+        toLat: widget.toLat,
+        toLon: widget.toLon,
+        timeSelection: widget.timeSelection,
+        pageCursor: _previousPageCursor,
+      );
+      setState(() {
+        _fromLat = fromLat;
+        _fromLon = fromLon;
+        _itineraries = [...response.itineraries, ..._itineraries];
+        _previousPageCursor = response.previousPageCursor;
+      });
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(0);
+      }
+    } catch (_) {
+      // Ignore network errors for now; button remains visible for retry.
+    } finally {
+      setState(() => _isLoadingPrevious = false);
+    }
+  }
+
+  void _maybeApplyInitialPreviousOffset() {
+    if (_appliedInitialPreviousOffset) return;
+    if (_previousPageCursor == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_scrollController.hasClients) return;
+      _scrollController.jumpTo(_seePreviousScrollOffset);
+      _appliedInitialPreviousOffset = true;
+    });
   }
 
   @override
@@ -136,29 +193,58 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                     ? _buildLoadingSkeleton()
                     : _itineraries.isEmpty
                     ? const Center(child: Text('No routes found.'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        itemCount:
-                            _itineraries.length +
-                            (_nextPageCursor != null ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _itineraries.length) {
-                            // Load more button
-                            return LoadMoreButton(
-                              onTap: _loadMore,
-                              isLoading: _isLoadingMore,
-                            );
-                          }
-                          final itin = _itineraries[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                CustomPageRoute(
-                                  child: ItineraryDetailScreen(itinerary: itin),
-                                ),
-                              );
+                    : Builder(
+                        builder: (context) {
+                          final hasPreviousSlot = _previousPageCursor != null;
+                          final hasNextSlot = _nextPageCursor != null;
+                          final topSlotCount = hasPreviousSlot ? 1 : 0;
+                          final bottomSlotCount = hasNextSlot ? 1 : 0;
+                          final totalItems =
+                              _itineraries.length +
+                              topSlotCount +
+                              bottomSlotCount;
+
+                          return ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.only(bottom: 16),
+                            itemCount: totalItems,
+                            itemBuilder: (context, index) {
+                              if (hasPreviousSlot && index == 0) {
+                                return LoadMoreButton(
+                                  onTap: _loadPrevious,
+                                  isLoading: _isLoadingPrevious,
+                                  label: 'See previous',
+                                  icon: LucideIcons.chevronUp,
+                                );
+                              }
+
+                              final adjustedIndex = index - topSlotCount;
+                              if (adjustedIndex < _itineraries.length) {
+                                final itin = _itineraries[adjustedIndex];
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      CustomPageRoute(
+                                        child: ItineraryDetailScreen(
+                                          itinerary: itin,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: ItineraryCard(itinerary: itin),
+                                );
+                              }
+
+                              if (hasNextSlot &&
+                                  adjustedIndex == _itineraries.length) {
+                                return LoadMoreButton(
+                                  onTap: _loadMore,
+                                  isLoading: _isLoadingMore,
+                                );
+                              }
+
+                              return const SizedBox.shrink();
                             },
-                            child: ItineraryCard(itinerary: itin),
                           );
                         },
                       ),

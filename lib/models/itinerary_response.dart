@@ -8,8 +8,13 @@ import 'itinerary.dart';
 class ItineraryResponse {
   final List<Itinerary> itineraries;
   final String? nextPageCursor;
+  final String? previousPageCursor;
 
-  const ItineraryResponse({required this.itineraries, this.nextPageCursor});
+  const ItineraryResponse({
+    required this.itineraries,
+    this.nextPageCursor,
+    this.previousPageCursor,
+  });
 
   factory ItineraryResponse.fromJson(Map<String, dynamic> json) {
     final direct = json['direct'] as List? ?? [];
@@ -31,6 +36,7 @@ class ItineraryResponse {
     return ItineraryResponse(
       itineraries: result,
       nextPageCursor: json['nextPageCursor'] as String?,
+      previousPageCursor: json['previousPageCursor'] as String?,
     );
   }
 }

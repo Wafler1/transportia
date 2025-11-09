@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/duration_formatter.dart';
+import '../utils/itinerary_leg_utils.dart';
 import '../utils/leg_helper.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
@@ -21,6 +22,8 @@ class ItineraryDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayLegs = buildDisplayLegs(itinerary.legs);
+
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -33,14 +36,27 @@ class ItineraryDetailScreen extends StatelessWidget {
             ),
             JourneyOverviewWidget(itinerary: itinerary),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 16),
-                itemCount: itinerary.legs.length,
-                itemBuilder: (context, index) {
-                  final leg = itinerary.legs[index];
-                  return LegDetailsWidget(leg: leg);
-                },
-              ),
+              child: displayLegs.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No additional steps required for this journey.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0x66000000),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      itemCount: displayLegs.length,
+                      itemBuilder: (context, index) {
+                        final entry = displayLegs[index];
+                        if (entry.isTransfer) {
+                          return TransferLegCard(leg: entry.leg);
+                        }
+                        return LegDetailsWidget(leg: entry.leg);
+                      },
+                    ),
             ),
           ],
         ),
@@ -654,6 +670,71 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       ),
       overflow: TextOverflow.ellipsis,
       maxLines: 1,
+    );
+  }
+}
+
+class TransferLegCard extends StatelessWidget {
+  final Leg leg;
+
+  const TransferLegCard({super.key, required this.leg});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(LucideIcons.arrowLeftRight, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Transfer',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatDuration(leg.duration),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+                children: [
+                  const Icon(LucideIcons.arrowRight, size: 16),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      '${formatTime(leg.startTime)} - ${leg.fromName}',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0x80000000),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                ],
+              ),
+          if (leg.distance != null && leg.distance! > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
+              style: const TextStyle(fontSize: 13, color: Color(0x99000000)),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

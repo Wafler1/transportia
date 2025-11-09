@@ -10,6 +10,8 @@ import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
 import '../utils/duration_formatter.dart';
+import '../utils/geo_utils.dart';
+import '../utils/itinerary_leg_utils.dart';
 import '../utils/leg_helper.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
@@ -35,10 +37,28 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   late final PageController _pageController;
   int _currentPage = 0;
   List<List<LatLng>> _legGeometries = [];
+  late final List<DisplayLegInfo> _displayLegs;
+
+  static const double _transferZoomLevel = 16.5;
+  static const double _transferDistanceThresholdMeters = 80.0;
+
+  List<DisplayLegInfo> get _mapLegs {
+    if (_displayLegs.isNotEmpty) return _displayLegs;
+    return List<DisplayLegInfo>.generate(
+      widget.itinerary.legs.length,
+      (index) => DisplayLegInfo(
+        leg: widget.itinerary.legs[index],
+        originalIndex: index,
+      ),
+    );
+  }
+
+  List<Leg> _cameraLegs() => _mapLegs.map((entry) => entry.leg).toList();
 
   @override
   void initState() {
     super.initState();
+    _displayLegs = buildDisplayLegs(widget.itinerary.legs);
     _pageController = PageController(
       viewportFraction: widget.showCarousel ? 0.86 : 1.0,
     );
@@ -94,7 +114,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       return const SizedBox.shrink();
     }
 
-    final totalItems = widget.itinerary.legs.length + 1;
+    final totalItems = _displayLegs.length + 1;
     if (totalItems == 0) {
       return const SizedBox.shrink();
     }
@@ -132,12 +152,16 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       child = _JourneySummaryCard(itinerary: widget.itinerary);
     } else {
       final legIndex = index - 1;
-      final leg = widget.itinerary.legs[legIndex];
-      child = _LegCarouselCard(
-        leg: leg,
-        legIndex: legIndex,
-        accentColor: _getLegColorFromLeg(leg, legIndex),
-      );
+      final entry = _displayLegs[legIndex];
+      final leg = entry.leg;
+      final accentColor = _getLegColorFromLeg(leg, entry.originalIndex);
+      child = entry.isTransfer
+          ? _TransferCarouselCard(leg: leg)
+          : _LegCarouselCard(
+              leg: leg,
+              legIndex: legIndex,
+              accentColor: accentColor,
+            );
     }
 
     return Padding(
@@ -170,10 +194,13 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
     if (geometry.length == 1) {
       await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(geometry.first, 15.0),
+        CameraUpdate.newLatLngZoom(geometry.first, _transferZoomLevel),
       );
       return;
     }
+
+    final isTransfer =
+        legIndex < _displayLegs.length && _displayLegs[legIndex].isTransfer;
 
     double minLat = geometry.first.latitude;
     double maxLat = geometry.first.latitude;
@@ -185,6 +212,23 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       if (point.latitude > maxLat) maxLat = point.latitude;
       if (point.longitude < minLon) minLon = point.longitude;
       if (point.longitude > maxLon) maxLon = point.longitude;
+    }
+
+    final approxDistance = coordinateDistanceInMeters(
+      geometry.first.latitude,
+      geometry.first.longitude,
+      geometry.last.latitude,
+      geometry.last.longitude,
+    );
+    final shouldClampZoom =
+        isTransfer || approxDistance <= _transferDistanceThresholdMeters;
+    final center = LatLng((minLat + maxLat) / 2, (minLon + maxLon) / 2);
+
+    if (shouldClampZoom) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(center, _transferZoomLevel),
+      );
+      return;
     }
 
     final bounds = LatLngBounds(
@@ -204,23 +248,23 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       );
     } catch (_) {
       await controller.animateCamera(
-        CameraUpdate.newLatLngZoom(geometry.first, 15.0),
+        CameraUpdate.newLatLngZoom(geometry.first, _transferZoomLevel),
       );
     }
   }
 
   CameraPosition _calculateInitialCamera() {
-    final allLegs = widget.itinerary.legs;
-    if (allLegs.isEmpty) {
+    final legs = _cameraLegs();
+    if (legs.isEmpty) {
       return const CameraPosition(target: LatLng(50.087, 14.420), zoom: 13.0);
     }
 
-    double minLat = allLegs.first.fromLat;
-    double maxLat = allLegs.first.fromLat;
-    double minLon = allLegs.first.fromLon;
-    double maxLon = allLegs.first.fromLon;
+    double minLat = legs.first.fromLat;
+    double maxLat = legs.first.fromLat;
+    double minLon = legs.first.fromLon;
+    double maxLon = legs.first.fromLon;
 
-    for (final leg in allLegs) {
+    for (final leg in legs) {
       if (leg.fromLat < minLat) minLat = leg.fromLat;
       if (leg.fromLat > maxLat) maxLat = leg.fromLat;
       if (leg.fromLon < minLon) minLon = leg.fromLon;
@@ -266,11 +310,14 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       } catch (_) {}
     }
     _lines.clear();
+    final displayLegs = _mapLegs;
+    if (displayLegs.isEmpty) return;
+
     final geometries = <List<LatLng>>[];
 
-    for (int i = 0; i < widget.itinerary.legs.length; i++) {
-      final leg = widget.itinerary.legs[i];
-      final color = _getLegColorFromLeg(leg, i);
+    for (int i = 0; i < displayLegs.length; i++) {
+      final leg = displayLegs[i].leg;
+      final color = _getLegColorFromLeg(leg, displayLegs[i].originalIndex);
 
       List<LatLng> geometry;
       if (leg.legGeometry != null && leg.legGeometry!.points.isNotEmpty) {
@@ -389,15 +436,15 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   }
 
   Future<void> _fitCameraToItinerary(MapLibreMapController controller) async {
-    final allLegs = widget.itinerary.legs;
-    if (allLegs.isEmpty) return;
+    final legs = _cameraLegs();
+    if (legs.isEmpty) return;
 
-    double minLat = allLegs.first.fromLat;
-    double maxLat = allLegs.first.fromLat;
-    double minLon = allLegs.first.fromLon;
-    double maxLon = allLegs.first.fromLon;
+    double minLat = legs.first.fromLat;
+    double maxLat = legs.first.fromLat;
+    double minLon = legs.first.fromLon;
+    double maxLon = legs.first.fromLon;
 
-    for (final leg in allLegs) {
+    for (final leg in legs) {
       if (leg.fromLat < minLat) minLat = leg.fromLat;
       if (leg.fromLat > maxLat) maxLat = leg.fromLat;
       if (leg.fromLon < minLon) minLon = leg.fromLon;
@@ -425,9 +472,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       );
     } catch (_) {
       await controller.animateCamera(
-        CameraUpdate.newLatLng(
-          LatLng(allLegs.first.fromLat, allLegs.first.fromLon),
-        ),
+        CameraUpdate.newLatLng(LatLng(legs.first.fromLat, legs.first.fromLon)),
       );
     }
   }
@@ -617,6 +662,71 @@ class _LegCarouselCard extends StatelessWidget {
       return '$mode • ${leg.routeShortName}';
     }
     return mode;
+  }
+}
+
+class _TransferCarouselCard extends StatelessWidget {
+  const _TransferCarouselCard({required this.leg});
+
+  final Leg leg;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CarouselCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(LucideIcons.arrowLeftRight, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Transfer',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatDuration(leg.duration),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(LucideIcons.arrowRight, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${formatTime(leg.startTime)} - ${leg.fromName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0x80000000),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (leg.distance != null && leg.distance! > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
+              style: const TextStyle(fontSize: 12, color: Color(0x99000000)),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
 

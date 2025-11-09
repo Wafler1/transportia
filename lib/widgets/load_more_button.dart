@@ -13,11 +13,15 @@ class LoadMoreButton extends StatelessWidget {
   const LoadMoreButton({
     required this.onTap,
     required this.isLoading,
+    this.label = 'Load more',
+    this.icon = LucideIcons.chevronDown,
     super.key,
   });
 
   final VoidCallback onTap;
   final bool isLoading;
+  final String label;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -55,18 +59,14 @@ class LoadMoreButton extends StatelessWidget {
               ),
             ] else ...[
               Text(
-                "Load more",
+                label,
                 style: TextStyle(
                   fontSize: 16,
                   color: AppColors.accentOf(context),
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                LucideIcons.chevronDown,
-                size: 20,
-                color: AppColors.accentOf(context),
-              ),
+              Icon(icon, size: 20, color: AppColors.accentOf(context)),
             ],
           ],
         ),

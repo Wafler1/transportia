@@ -17,7 +17,12 @@ IconData getLegIcon(String mode) {
       return LucideIcons.parkingMeter;
     case 'ODM':
       return LucideIcons.carTaxiFront;
-    // TODO: FLEX and TRANSIT
+    case 'FLEX':
+      return LucideIcons.route;
+    case 'TRANSIT':
+      return LucideIcons.network;
+    case 'OTHER':
+      return LucideIcons.circle;
     case 'TRAM':
       return LucideIcons.tramFront;
     case 'SUBWAY':
@@ -77,6 +82,10 @@ String getTransitModeName(String mode) {
       return 'Car Drop-off';
     case 'ODM':
       return 'On-Demand';
+    case 'FLEX':
+      return 'Flexible Service';
+    case 'TRANSIT':
+      return 'Transit';
     case 'TRAM':
       return 'Tram';
     case 'SUBWAY':
@@ -113,6 +122,8 @@ String getTransitModeName(String mode) {
       return 'Areal Lift';
     case 'METRO':
       return 'Metro';
+    case 'OTHER':
+      return 'Other';
     default:
       return mode; // fallback to raw mode string
   }

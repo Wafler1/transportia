@@ -5,6 +5,7 @@ import 'package:entaria_app/screens/info_screen.dart';
 import 'package:entaria_app/screens/legal_screen.dart';
 import 'package:entaria_app/screens/location_settings_screen.dart';
 import 'package:entaria_app/utils/custom_page_route.dart';
+import 'package:entaria_app/screens/transit_options_screen.dart';
 import 'package:entaria_app/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -227,6 +228,16 @@ class AccountScreen extends StatelessWidget {
                       Navigator.of(
                         context,
                       ).push(CustomPageRoute(child: const AppearanceScreen()));
+                    },
+                  ),
+                  SettingsTile(
+                    icon: LucideIcons.settings2,
+                    title: 'Transit options',
+                    subtitle: 'Modes, walking speed & transfers',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        CustomPageRoute(child: const TransitOptionsScreen()),
+                      );
                     },
                   ),
                 ],
