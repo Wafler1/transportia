@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:entaria_app/providers/theme_provider.dart';
 import 'package:flutter/cupertino.dart';
@@ -96,7 +97,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           AppIconHeader(
-            icon: LucideIcons.slidersHorizontal,
+            icon: LucideIcons.settings2,
             title: 'Tune your defaults',
             subtitle: 'Improve the default routing settings.',
             iconColor: selectedAccentColor,
@@ -203,15 +204,17 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _ValueSpinner(
-                value: _walkingIndexFromValue(_walkingSpeed),
-                minValue: 0,
-                maxValue: _walkingMaxIndex,
+              _StepperSelector(
+                value: _walkingSpeed,
+                minValue: _walkingMin,
+                maxValue: _walkingMax,
+                step: _walkingStep,
                 label: 'km/h',
-                displayBuilder: (idx) =>
-                    _walkingValueFromIndex(idx).toStringAsFixed(1),
-                onChanged: (idx) {
-                  setState(() => _walkingSpeed = _walkingValueFromIndex(idx));
+                displayBuilder: (val) => val.toStringAsFixed(1),
+                onChanged: (val) {
+                  setState(() {
+                    _walkingSpeed = double.parse(val.toStringAsFixed(1));
+                  });
                 },
               ),
             ],
@@ -273,14 +276,15 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-              _ValueSpinner(
-                value: _transferBuffer,
-                minValue: _transferMin,
-                maxValue: _transferMax,
+              _StepperSelector(
+                value: _transferBuffer.toDouble(),
+                minValue: _transferMin.toDouble(),
+                maxValue: _transferMax.toDouble(),
+                step: 1,
                 label: 'min',
-                displayBuilder: (val) => val.toString(),
+                displayBuilder: (val) => val.round().toString(),
                 onChanged: (val) {
-                  setState(() => _transferBuffer = val);
+                  setState(() => _transferBuffer = val.round());
                 },
               ),
             ],
@@ -349,21 +353,6 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
         ),
       ],
     );
-  }
-
-  int get _walkingMaxIndex =>
-      ((_walkingMax - _walkingMin) / _walkingStep).round();
-
-  int _walkingIndexFromValue(double value) {
-    final index = ((value - _walkingMin) / _walkingStep).round();
-    return index.clamp(0, _walkingMaxIndex);
-  }
-
-  double _walkingValueFromIndex(int index) {
-    final value = _walkingMin + index * _walkingStep;
-    if (value < _walkingMin) return _walkingMin;
-    if (value > _walkingMax) return _walkingMax;
-    return double.parse(value.toStringAsFixed(1));
   }
 
   bool _isGroupFullySelected(_ModeGroup group) {
@@ -541,167 +530,205 @@ class _QuickValueCard extends StatelessWidget {
   }
 }
 
-class _ValueSpinner extends StatefulWidget {
-  final int value;
-  final int minValue;
-  final int maxValue;
+class _StepperSelector extends StatefulWidget {
+  final double value;
+  final double minValue;
+  final double maxValue;
+  final double step;
   final String label;
-  final ValueChanged<int> onChanged;
-  final String Function(int) displayBuilder;
+  final String Function(double) displayBuilder;
+  final ValueChanged<double> onChanged;
 
-  const _ValueSpinner({
+  const _StepperSelector({
     required this.value,
     required this.minValue,
     required this.maxValue,
+    required this.step,
     required this.label,
     required this.displayBuilder,
     required this.onChanged,
   });
 
   @override
-  State<_ValueSpinner> createState() => _ValueSpinnerState();
+  State<_StepperSelector> createState() => _StepperSelectorState();
 }
 
-class _ValueSpinnerState extends State<_ValueSpinner> {
+class _StepperSelectorState extends State<_StepperSelector> {
   double _dragOffset = 0;
-  Timer? _autoScrollTimer;
-  int _autoDirection = 0;
+  Timer? _repeatTimer;
+  int _holdDirection = 0;
 
-  @override
-  void dispose() {
-    _autoScrollTimer?.cancel();
-    super.dispose();
+  bool get _canIncrement => widget.value < widget.maxValue - widget.step / 2;
+
+  bool get _canDecrement => widget.value > widget.minValue + widget.step / 2;
+
+  int get _stepDecimals {
+    final stepString = widget.step.toString();
+    if (stepString.contains('.')) {
+      return stepString.split('.').last.length;
+    }
+    return 0;
   }
 
-  void _increment() {
-    if (widget.value < widget.maxValue) {
-      widget.onChanged(widget.value + 1);
+  double _normalize(double value) {
+    final decimals = _stepDecimals;
+    if (decimals == 0) return value.roundToDouble();
+    final factor = math.pow(10, decimals).toDouble();
+    return (value * factor).round() / factor;
+  }
+
+  void _change(double delta) {
+    double newValue = widget.value + delta;
+    newValue = newValue.clamp(widget.minValue, widget.maxValue);
+    newValue = _normalize(newValue);
+    if ((newValue - widget.value).abs() >= 0.0001) {
+      widget.onChanged(newValue);
     }
   }
 
-  void _decrement() {
-    if (widget.value > widget.minValue) {
-      widget.onChanged(widget.value - 1);
+  void _startHold(int direction) {
+    if ((direction > 0 && !_canIncrement) ||
+        (direction < 0 && !_canDecrement)) {
+      return;
     }
-  }
-
-  void _startAutoScroll(int direction) {
-    if (_autoDirection == direction) return;
-    _autoDirection = direction;
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
-      if (_autoDirection == 1) {
-        _increment();
-      } else if (_autoDirection == -1) {
-        _decrement();
-      }
+    if (_holdDirection == direction) return;
+    _holdDirection = direction;
+    _change(direction * widget.step);
+    _repeatTimer?.cancel();
+    _repeatTimer = Timer(const Duration(milliseconds: 420), () {
+      _repeatTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
+        if ((_holdDirection > 0 && !_canIncrement) ||
+            (_holdDirection < 0 && !_canDecrement)) {
+          _stopHold();
+        } else {
+          _change(_holdDirection * widget.step);
+        }
+      });
     });
   }
 
-  void _stopAutoScroll() {
-    _autoDirection = 0;
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = null;
+  void _stopHold() {
+    _holdDirection = 0;
+    _repeatTimer?.cancel();
+    _repeatTimer = null;
   }
 
   void _handleDragStart(DragStartDetails details) {
     _dragOffset = 0;
-    _stopAutoScroll();
+    _stopHold();
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
-    _dragOffset += details.delta.dy;
-
-    if (_dragOffset <= -12) {
-      _startAutoScroll(1);
-    } else if (_dragOffset >= 12) {
-      _startAutoScroll(-1);
-    }
-
-    if (_dragOffset.abs() >= 28) {
-      if (_dragOffset < 0) {
-        _increment();
-      } else {
-        _decrement();
-      }
+    _dragOffset += details.delta.dx;
+    if (_dragOffset >= 14) {
+      _startHold(1);
+      _dragOffset = 0;
+    } else if (_dragOffset <= -14) {
+      _startHold(-1);
       _dragOffset = 0;
     }
   }
 
   void _handleDragEnd(DragEndDetails details) {
     _dragOffset = 0;
-    _stopAutoScroll();
+    _stopHold();
+  }
+
+  @override
+  void dispose() {
+    _repeatTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0x0F000000),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x14000000)),
-      ),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onVerticalDragStart: _handleDragStart,
-        onVerticalDragUpdate: _handleDragUpdate,
-        onVerticalDragEnd: _handleDragEnd,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: _handleDragStart,
+      onHorizontalDragUpdate: _handleDragUpdate,
+      onHorizontalDragEnd: _handleDragEnd,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0x0F000000),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0x11000000)),
+        ),
+        child: Row(
           children: [
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _increment,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Icon(
-                  LucideIcons.chevronUp,
-                  size: 18,
-                  color: widget.value < widget.maxValue
-                      ? accent
-                      : accent.withValues(alpha: 0.3),
-                ),
-              ),
+            _StepperArrow(
+              icon: LucideIcons.chevronLeft,
+              enabled: _canDecrement,
+              color: accent,
+              onTapDown: () => _startHold(-1),
+              onTapUp: _stopHold,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     widget.displayBuilder(widget.value),
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppColors.black,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     widget.label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.black.withValues(alpha: 0.5),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0x80000000),
                     ),
                   ),
                 ],
               ),
             ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _decrement,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Icon(
-                  LucideIcons.chevronDown,
-                  size: 18,
-                  color: widget.value > widget.minValue
-                      ? accent
-                      : accent.withValues(alpha: 0.3),
-                ),
-              ),
+            _StepperArrow(
+              icon: LucideIcons.chevronRight,
+              enabled: _canIncrement,
+              color: accent,
+              onTapDown: () => _startHold(1),
+              onTapUp: _stopHold,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepperArrow extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final Color color;
+  final VoidCallback onTapDown;
+  final VoidCallback onTapUp;
+
+  const _StepperArrow({
+    required this.icon,
+    required this.enabled,
+    required this.color,
+    required this.onTapDown,
+    required this.onTapUp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: enabled ? (_) => onTapDown() : null,
+      onTapUp: (_) => onTapUp(),
+      onTapCancel: onTapUp,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Icon(
+          icon,
+          size: 20,
+          color: enabled ? color : color.withValues(alpha: 0.25),
         ),
       ),
     );
