@@ -1,4 +1,8 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
@@ -58,11 +62,39 @@ class _RootGateState extends State<_RootGate> {
   String? _ignoredUpdateVersion;
   String? _availableUpdateVersion;
   SharedPreferences? _prefs;
+  StreamSubscription<Uri?>? _appLinkSubscription;
 
   @override
   void initState() {
     super.initState();
+    _initDeepLinks();
     _init();
+  }
+
+  Future<void> _initDeepLinks() async {
+    try {
+      final appLinks = AppLinks();
+
+      final initialLink = await appLinks.getInitialLink();
+      if (initialLink != null) {
+        _handleIncomingDeepLink(initialLink);
+      }
+
+      _appLinkSubscription = appLinks.uriLinkStream.listen(
+        (uri) {
+          if (uri != null) {
+            _handleIncomingDeepLink(uri);
+          }
+        },
+        onError: (Object error, StackTrace stackTrace) {
+          debugPrint('Failed to process incoming app link: $error');
+          debugPrint('$stackTrace');
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Unable to initialize deep link handling: $error');
+      debugPrint('$stackTrace');
+    }
   }
 
   Future<void> _init() async {
@@ -120,6 +152,14 @@ class _RootGateState extends State<_RootGate> {
     });
   }
 
+  void _handleIncomingDeepLink(Uri uri) {
+    if (uri.scheme != 'entaria' || uri.host != 'trip') {
+      return;
+    }
+    debugPrint('Received Entaria trip link: ${uri.toString()}');
+    // Trip link payload will be handled in a future iteration.
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_seen == null) {
@@ -144,5 +184,11 @@ class _RootGateState extends State<_RootGate> {
           ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _appLinkSubscription?.cancel();
+    super.dispose();
   }
 }

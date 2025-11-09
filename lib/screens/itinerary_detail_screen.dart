@@ -1,5 +1,9 @@
+import 'dart:convert';
+
+import 'package:entaria_app/widgets/load_more_button.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 
 import '../models/itinerary.dart';
@@ -15,14 +19,21 @@ import '../widgets/custom_card.dart';
 import '../widgets/info_chip.dart';
 import 'itinerary_map_screen.dart';
 
-class ItineraryDetailScreen extends StatelessWidget {
+class ItineraryDetailScreen extends StatefulWidget {
   final Itinerary itinerary;
 
   const ItineraryDetailScreen({super.key, required this.itinerary});
 
   @override
+  State<ItineraryDetailScreen> createState() => _ItineraryDetailScreenState();
+}
+
+class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
+  bool _isSharing = false;
+
+  @override
   Widget build(BuildContext context) {
-    final displayLegs = buildDisplayLegs(itinerary.legs);
+    final displayLegs = buildDisplayLegs(widget.itinerary.legs);
 
     return Container(
       color: AppColors.white,
@@ -34,7 +45,7 @@ class ItineraryDetailScreen extends StatelessWidget {
               title: 'Itinerary Details',
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
-            JourneyOverviewWidget(itinerary: itinerary),
+            JourneyOverviewWidget(itinerary: widget.itinerary),
             Expanded(
               child: displayLegs.isEmpty
                   ? const Center(
@@ -48,8 +59,16 @@ class ItineraryDetailScreen extends StatelessWidget {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.only(bottom: 16),
-                      itemCount: displayLegs.length,
+                      itemCount: displayLegs.length + 1,
                       itemBuilder: (context, index) {
+                        if (index == displayLegs.length) {
+                          return LoadMoreButton(
+                            onTap: _shareItinerary,
+                            isLoading: _isSharing,
+                            label: 'Share this trip',
+                            icon: LucideIcons.share2,
+                          );
+                        }
                         final entry = displayLegs[index];
                         if (entry.isTransfer) {
                           return TransferLegCard(leg: entry.leg);
@@ -62,6 +81,47 @@ class ItineraryDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _shareItinerary() async {
+    if (_isSharing) return;
+
+    final legs = widget.itinerary.legs;
+    if (legs.isEmpty) {
+      debugPrint('Cannot share itinerary without any legs.');
+      return;
+    }
+
+    setState(() => _isSharing = true);
+
+    try {
+      final firstLeg = legs.first;
+      final lastLeg = legs.last;
+
+      final payload = jsonEncode({
+        'from': {
+          'lat': firstLeg.fromLat,
+          'lon': firstLeg.fromLon,
+        },
+        'to': {
+          'lat': lastLeg.toLat,
+          'lon': lastLeg.toLon,
+        },
+        'time': widget.itinerary.startTime.toIso8601String(),
+      });
+
+      final encoded = base64Url.encode(utf8.encode(payload));
+      final shareUrl = 'https://link.entaria.net/trip/$encoded';
+
+      await Share.share(shareUrl);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to share itinerary: $error');
+      debugPrint('$stackTrace');
+    } finally {
+      if (mounted) {
+        setState(() => _isSharing = false);
+      }
+    }
   }
 }
 
