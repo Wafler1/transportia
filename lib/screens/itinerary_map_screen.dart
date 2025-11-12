@@ -518,6 +518,8 @@ class _JourneySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final firstLeg = itinerary.legs.isNotEmpty ? itinerary.legs.first : null;
+    final lastLeg = itinerary.legs.isNotEmpty ? itinerary.legs.last : null;
     return _CarouselCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -536,7 +538,8 @@ class _JourneySummaryCard extends StatelessWidget {
               Expanded(
                 child: _JourneyTimeTile(
                   label: 'Departure',
-                  time: formatTime(itinerary.startTime),
+                  actualTime: firstLeg?.startTime ?? itinerary.startTime,
+                  scheduledTime: firstLeg?.scheduledStartTime,
                 ),
               ),
               Expanded(
@@ -559,7 +562,8 @@ class _JourneySummaryCard extends StatelessWidget {
                   alignment: Alignment.centerRight,
                   child: _JourneyTimeTile(
                     label: 'Arrival',
-                    time: formatTime(itinerary.endTime),
+                    actualTime: lastLeg?.endTime ?? itinerary.endTime,
+                    scheduledTime: lastLeg?.scheduledEndTime,
                     alignEnd: true,
                   ),
                 ),
@@ -617,13 +621,15 @@ class _LegCarouselCard extends StatelessWidget {
           const SizedBox(height: 12),
           _LegStopRow(
             icon: LucideIcons.circleDot,
-            time: formatTime(leg.startTime),
+            actualTime: leg.startTime,
+            scheduledTime: leg.scheduledStartTime,
             label: leg.fromName,
           ),
           const SizedBox(height: 6),
           _LegStopRow(
             icon: LucideIcons.flag,
-            time: formatTime(leg.endTime),
+            actualTime: leg.endTime,
+            scheduledTime: leg.scheduledEndTime,
             label: leg.toName,
           ),
         ],
@@ -672,6 +678,10 @@ class _TransferCarouselCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final depDelay = computeDelay(leg.scheduledStartTime, leg.startTime);
+    final arrDelay = computeDelay(leg.scheduledEndTime, leg.endTime);
+    final depTime = formatTime(leg.scheduledStartTime ?? leg.startTime);
+    final arrTime = formatTime(leg.scheduledEndTime ?? leg.endTime);
     return _CarouselCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -705,14 +715,39 @@ class _TransferCarouselCard extends StatelessWidget {
               const Icon(LucideIcons.arrowRight, size: 16),
               const SizedBox(width: 4),
               Expanded(
-                child: Text(
-                  '${formatTime(leg.startTime)} - ${leg.fromName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0x80000000),
-                  ),
+                child: Row(
+                  children: [
+                    Text(
+                      depTime,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0x80000000),
+                      ),
+                    ),
+                    if (depDelay != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        formatDelay(depDelay),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _delayColor(depDelay),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        leg.fromName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0x99000000),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -724,6 +759,49 @@ class _TransferCarouselCard extends StatelessWidget {
               style: const TextStyle(fontSize: 12, color: Color(0x99000000)),
             ),
           ],
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(LucideIcons.arrowDown, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Row(
+                  children: [
+                    Text(
+                      arrTime,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0x80000000),
+                      ),
+                    ),
+                    if (arrDelay != null) ...[
+                      const SizedBox(width: 6),
+                      Text(
+                        formatDelay(arrDelay),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: _delayColor(arrDelay),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        leg.toName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0x99000000),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -733,16 +811,20 @@ class _TransferCarouselCard extends StatelessWidget {
 class _JourneyTimeTile extends StatelessWidget {
   const _JourneyTimeTile({
     required this.label,
-    required this.time,
+    required this.actualTime,
+    this.scheduledTime,
     this.alignEnd = false,
   });
 
   final String label;
-  final String time;
+  final DateTime actualTime;
+  final DateTime? scheduledTime;
   final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
+    final displayTime = formatTime(scheduledTime ?? actualTime);
+    final delay = computeDelay(scheduledTime, actualTime);
     return Column(
       crossAxisAlignment: alignEnd
           ? CrossAxisAlignment.end
@@ -757,13 +839,29 @@ class _JourneyTimeTile extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          time,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: AppColors.black,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              displayTime,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            if (delay != null) ...[
+              const SizedBox(width: 6),
+              Text(
+                formatDelay(delay),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: _delayColor(delay),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -773,26 +871,45 @@ class _JourneyTimeTile extends StatelessWidget {
 class _LegStopRow extends StatelessWidget {
   const _LegStopRow({
     required this.icon,
-    required this.time,
+    required this.actualTime,
     required this.label,
+    this.scheduledTime,
   });
 
   final IconData icon;
-  final String time;
+  final DateTime actualTime;
+  final DateTime? scheduledTime;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final displayTime = formatTime(scheduledTime ?? actualTime);
+    final delay = computeDelay(scheduledTime, actualTime);
     return Row(
       children: [
         Icon(icon, size: 16, color: const Color(0x66000000)),
         const SizedBox(width: 8),
-        Text(
-          time,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.black,
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: displayTime,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+              ),
+              if (delay != null)
+                TextSpan(
+                  text: ' ${formatDelay(delay)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: _delayColor(delay),
+                  ),
+                ),
+            ],
           ),
         ),
         const SizedBox(width: 12),
@@ -858,3 +975,6 @@ class _CarouselIndicator extends StatelessWidget {
     );
   }
 }
+
+Color _delayColor(Duration delay) =>
+    delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);

@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
@@ -17,12 +18,14 @@ import '../models/route_field_kind.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../screens/itinerary_list_screen.dart';
+import '../screens/location_settings_screen.dart';
 import '../services/favorites_service.dart';
 import '../services/location_service.dart';
 import '../services/recent_trips_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/haptics.dart';
+import '../utils/custom_page_route.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
@@ -323,7 +326,16 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _centerOnUser2D() async {
     _didAutoCenter = true;
     final ok = await _ensurePermissionOnDemand();
-    if (!ok) return;
+    if (!ok) {
+      final status = await Permission.locationWhenInUse.status;
+      if (!mounted) return;
+      if (status.isPermanentlyDenied) {
+        Navigator.of(
+          context,
+        ).push(CustomPageRoute(child: const LocationSettingsScreen()));
+      }
+      return;
+    }
     LatLng target = _lastUserLatLng ?? _startCam.target;
     if (_lastUserLatLng == null) {
       final pos = await LocationService.currentPosition(
@@ -560,10 +572,8 @@ class _MapScreenState extends State<MapScreen>
                     key: ValueKey(_longPressLatLng),
                     latLng: _longPressLatLng!,
                     isClosing: _isLongPressClosing,
-                    onSelectFrom: () =>
-                        _onLongPressChoice(RouteFieldKind.from),
-                    onSelectTo: () =>
-                        _onLongPressChoice(RouteFieldKind.to),
+                    onSelectFrom: () => _onLongPressChoice(RouteFieldKind.from),
+                    onSelectTo: () => _onLongPressChoice(RouteFieldKind.to),
                     onDismissRequested: () => _dismissLongPressOverlay(),
                     onClosed: _handleLongPressOverlayClosed,
                   ),
@@ -638,10 +648,8 @@ class _MapScreenState extends State<MapScreen>
                         onSearch: _search,
                         timeSelectionLayerLink: _timeSelectionLayerLink,
                         onTimeSelectionTap: _handleTimeSelectionTap,
-                        onTimeSelectionTapDown:
-                            _handleTimeSelectionTapDown,
-                        onTimeSelectionTapCancel:
-                            _handleTimeSelectionTapCancel,
+                        onTimeSelectionTapDown: _handleTimeSelectionTapDown,
+                        onTimeSelectionTapCancel: _handleTimeSelectionTapCancel,
                         timeSelection: _timeSelection,
                         recentTrips: _recentTrips,
                         onRecentTripTap: _onRecentTripTap,
@@ -1196,7 +1204,7 @@ class _MapScreenState extends State<MapScreen>
       await addMarker(
         _kFromMarkerId,
         const Color(0xFF0B8F96),
-        LucideIcons.navigation2,
+        LucideIcons.mapPin,
       );
       await addMarker(_kToMarkerId, const Color(0xFFD04E37), LucideIcons.flag);
       _didAddMarkerImages = true;
@@ -1206,37 +1214,64 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<Uint8List> _buildMarkerImage(Color color, IconData icon) async {
-    const double size = 96;
+    const double width = 72;
+    const double height = 96;
+    const double pointerHeight = 18;
+    const double bubbleRadius = 22;
+
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    final center = Offset(size / 2, size / 2);
-    final bubblePaint = Paint()..color = color;
+
+    final bubbleCenter = Offset(
+      width / 2,
+      height - pointerHeight - bubbleRadius,
+    );
+
     final shadowPaint = Paint()
       ..color = const Color(0x33000000)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawCircle(center, size / 2 - 6, shadowPaint);
-    canvas.drawCircle(center, size / 2 - 8, bubblePaint);
-    final inner = Paint()..color = const Color(0xFFFFFFFF);
-    canvas.drawCircle(center, size / 2 - 32, inner);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(
+      bubbleCenter + const Offset(0, 2),
+      bubbleRadius + 3,
+      shadowPaint,
+    );
 
-    final textPainter = TextPainter(
+    final bodyPaint = Paint()..color = color;
+    canvas.drawCircle(bubbleCenter, bubbleRadius, bodyPaint);
+
+    final pointerPath = Path()
+      ..moveTo(width / 2, height)
+      ..lineTo(width / 2 - 10, height - pointerHeight)
+      ..lineTo(width / 2 + 10, height - pointerHeight)
+      ..close();
+    canvas.drawPath(pointerPath, bodyPaint);
+
+    final borderPaint = Paint()
+      ..color = AppColors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(bubbleCenter, bubbleRadius - 1, borderPaint);
+
+    final iconPainter = TextPainter(
       textDirection: TextDirection.ltr,
       text: TextSpan(
         text: String.fromCharCode(icon.codePoint),
         style: TextStyle(
-          fontSize: 44,
+          fontSize: 28,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
-          color: color,
+          color: AppColors.white,
         ),
       ),
     )..layout();
-    textPainter.paint(
+
+    iconPainter.paint(
       canvas,
-      center - Offset(textPainter.width / 2, textPainter.height / 2),
+      bubbleCenter - Offset(iconPainter.width / 2, iconPainter.height / 2),
     );
+
     final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
+    final image = await picture.toImage(width.toInt(), height.toInt());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return byteData!.buffer.asUint8List();
   }
@@ -1643,14 +1678,15 @@ class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 280),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.dismissed) {
-          widget.onClosed();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 280),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.dismissed) {
+            widget.onClosed();
+          }
+        });
     _curve = CurvedAnimation(
       parent: _controller,
       curve: Curves.linearToEaseOut,
@@ -1695,14 +1731,14 @@ class _LongPressSelectionModalState extends State<_LongPressSelectionModal>
             onTap: () {},
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: ScaleTransition(
-                  scale: _scaleAnim,
-                  child: _LongPressModalCard(
-                    latLng: widget.latLng,
-                    onSelectFrom: widget.onSelectFrom,
-                    onSelectTo: widget.onSelectTo,
-                    onDismiss: widget.onDismissRequested,
-                  ),
+              child: ScaleTransition(
+                scale: _scaleAnim,
+                child: _LongPressModalCard(
+                  latLng: widget.latLng,
+                  onSelectFrom: widget.onSelectFrom,
+                  onSelectTo: widget.onSelectTo,
+                  onDismiss: widget.onDismissRequested,
+                ),
               ),
             ),
           ),

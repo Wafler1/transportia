@@ -289,6 +289,7 @@ class ItineraryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final delaySummary = _delaySummaryLabel();
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,6 +378,22 @@ class ItineraryCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                   ],
+                  if (delaySummary != null) ...[
+                    const Icon(
+                      LucideIcons.clock,
+                      size: 16,
+                      color: Color(0x80000000),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      delaySummary,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppColors.black.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   // Alerts (only show if there are alerts)
                   if (itinerary.alertsCount > 0) ...[
                     Icon(
@@ -420,6 +437,26 @@ class ItineraryCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String? _delaySummaryLabel() {
+    int affected = 0;
+    bool hasPositive(Duration? d) => d != null && d.inMinutes > 0;
+    bool hasNegative(Duration? d) => d != null && d.inMinutes < 0;
+
+    for (final leg in itinerary.legs) {
+      final depDelay = computeDelay(leg.scheduledStartTime, leg.startTime);
+      final arrDelay = computeDelay(leg.scheduledEndTime, leg.endTime);
+      if (hasPositive(depDelay) ||
+          hasPositive(arrDelay) ||
+          hasNegative(depDelay) ||
+          hasNegative(arrDelay)) {
+        affected++;
+      }
+    }
+
+    if (affected == 0) return null;
+    return '$affected';
   }
 }
 

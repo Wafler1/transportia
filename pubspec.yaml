@@ -2,7 +2,7 @@ name: "entaria_app"
 description: "A public transportation app for Europe and beyond."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.1+1
+version: 1.0.2+1
 
 environment:
   sdk: ^3.9.2

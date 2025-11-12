@@ -82,10 +82,8 @@ class _RootGateState extends State<_RootGate> {
 
       _appLinkSubscription = appLinks.uriLinkStream.listen(
         (uri) {
-          if (uri != null) {
-            _handleIncomingDeepLink(uri);
-          }
-        },
+          _handleIncomingDeepLink(uri);
+                },
         onError: (Object error, StackTrace stackTrace) {
           debugPrint('Failed to process incoming app link: $error');
           debugPrint('$stackTrace');

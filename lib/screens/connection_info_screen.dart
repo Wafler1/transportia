@@ -384,6 +384,13 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                   ),
                   const SizedBox(height: 12),
                   ...allAlerts.values.map((alert) {
+                    final hasTitle =
+                        alert.headerText != null &&
+                        alert.headerText!.isNotEmpty;
+                    final hasBody =
+                        alert.descriptionText != null &&
+                        alert.descriptionText!.isNotEmpty;
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Container(
@@ -396,34 +403,40 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
+                            const Icon(
                               LucideIcons.triangleAlert,
                               size: 16,
-                              color: Color(0xFFFFC107),
+                              color: Color(0xFFF57C00),
                             ),
-                            const SizedBox(width: 4),
-                            if (alert.headerText != null &&
-                                alert.headerText!.isNotEmpty)
-                              Text(
-                                alert.headerText!,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.black,
-                                ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (hasTitle)
+                                    Text(
+                                      alert.headerText!,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.black,
+                                      ),
+                                    ),
+                                  if (hasBody) ...[
+                                    if (hasTitle) const SizedBox(height: 2),
+                                    Text(
+                                      alert.descriptionText!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
-                            if (alert.descriptionText != null &&
-                                alert.descriptionText!.isNotEmpty) ...[
-                              if (alert.headerText != null)
-                                const SizedBox(height: 4),
-                              Text(
-                                alert.descriptionText!,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppColors.black.withValues(alpha: 0.8),
-                                ),
-                              ),
-                            ],
+                            ),
                           ],
                         ),
                       ),
@@ -530,6 +543,19 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       final isPassed = stopIndex <= currentStopIndex;
                       final isUpcoming = stopIndex == upcomingStopIndex;
 
+                      final arrRow = _buildStopScheduleRow(
+                        'Arr',
+                        stop.scheduledArrival,
+                        stop.arrival,
+                        isPassed,
+                      );
+                      final depRow = _buildStopScheduleRow(
+                        'Dep',
+                        stop.scheduledDeparture,
+                        stop.departure,
+                        isPassed,
+                      );
+
                       return Padding(
                         padding: const EdgeInsets.only(left: 12, bottom: 16),
                         child: Column(
@@ -579,18 +605,13 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                                 ],
                               ],
                             ),
-                            if (stop.departure != null ||
-                                stop.arrival != null) ...[
+                            if (arrRow != null || depRow != null) ...[
                               const SizedBox(height: 2),
-                              Text(
-                                'Arr: ${formatTime(stop.arrival)}  Dep: ${formatTime(stop.departure)}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: isPassed
-                                      ? AppColors.black.withValues(alpha: 0.4)
-                                      : AppColors.black.withValues(alpha: 0.6),
-                                ),
-                              ),
+                              if (arrRow != null) arrRow,
+                              if (depRow != null) ...[
+                                if (arrRow != null) const SizedBox(height: 2),
+                                depRow,
+                              ],
                             ],
                             if (stop.track != null) ...[
                               const SizedBox(height: 2),
@@ -792,6 +813,44 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
     return stops;
   }
+
+  Widget? _buildStopScheduleRow(
+    String label,
+    DateTime? scheduled,
+    DateTime? actual,
+    bool isPassed,
+  ) {
+    if (scheduled == null && actual == null) return null;
+    final display = formatTime(scheduled ?? actual);
+    final delay = (scheduled != null && actual != null)
+        ? computeDelay(scheduled!, actual!)
+        : null;
+    final baseColor = isPassed
+        ? AppColors.black.withValues(alpha: 0.4)
+        : AppColors.black.withValues(alpha: 0.6);
+    return Row(
+      children: [
+        Text(
+          '$label $display',
+          style: TextStyle(fontSize: 13, color: baseColor),
+        ),
+        if (delay != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            formatDelay(delay),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _delayColor(delay),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Color _delayColor(Duration delay) =>
+      delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
 
   @override
   void dispose() {

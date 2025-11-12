@@ -44,10 +44,26 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   bool _isLoadingStopTimes = false;
   String? _nextPageCursor;
   bool _isLoadingMore = false;
+  String? _previousPageCursor;
+  bool _isLoadingPrevious = false;
+  late final ScrollController _resultsScrollController;
+  bool _appliedInitialPreviousOffset = false;
+  static const double _seePreviousScrollOffset = 40.0;
+
+  bool get _hasPreviousPage => _previousPageCursor?.isNotEmpty ?? false;
+  bool get _hasNextPage => _nextPageCursor?.isNotEmpty ?? false;
+  DateTime? get _startTimeParam =>
+      _timeSelection.isNow ? null : _timeSelection.dateTime;
+
+  String? _normalizeCursor(String? cursor) {
+    if (cursor == null || cursor.isEmpty) return null;
+    return cursor;
+  }
 
   @override
   void initState() {
     super.initState();
+    _resultsScrollController = ScrollController();
     _searchController.addListener(_onSearchTextChanged);
     _searchFocus.addListener(_onFocusChanged);
     _checkLocationPermission();
@@ -57,6 +73,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   void dispose() {
     _searchController.dispose();
     _searchFocus.dispose();
+    _resultsScrollController.dispose();
     super.dispose();
   }
 
@@ -232,26 +249,39 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       _isLoadingStopTimes = true;
       _stopTimes = null;
       _nextPageCursor = null;
+      _previousPageCursor = null;
+      _isLoadingMore = false;
+      _isLoadingPrevious = false;
+      _appliedInitialPreviousOffset = false;
     });
+    if (_resultsScrollController.hasClients) {
+      _resultsScrollController.jumpTo(0);
+    }
 
     try {
       final response = await StopTimesService.fetchStopTimes(
         stopId: _selectedStop?.id ?? '',
         n: 20,
+        startTime: _startTimeParam,
+        arriveBy: _timeSelection.isArriveBy,
       );
 
       if (!mounted) return;
 
       setState(() {
         _stopTimes = _deduplicateStopTimes(response.stopTimes);
-        _nextPageCursor = response.nextPageCursor;
+        _nextPageCursor = _normalizeCursor(response.nextPageCursor);
+        _previousPageCursor = _normalizeCursor(response.previousPageCursor);
         _isLoadingStopTimes = false;
       });
+      _maybeApplyInitialPreviousOffset();
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
         _isLoadingStopTimes = false;
+        _previousPageCursor = null;
+        _isLoadingPrevious = false;
       });
 
       showValidationToast(context, 'Failed to load stop times');
@@ -274,6 +304,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
         stopId: _selectedStop?.id ?? '',
         n: 25,
         pageCursor: _nextPageCursor,
+        startTime: _startTimeParam,
+        arriveBy: _timeSelection.isArriveBy,
       );
 
       if (!mounted) return;
@@ -284,7 +316,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
           ...?_stopTimes,
           ...response.stopTimes,
         ]);
-        _nextPageCursor = response.nextPageCursor;
+        _nextPageCursor = _normalizeCursor(response.nextPageCursor);
+        _previousPageCursor = _normalizeCursor(
+          response.previousPageCursor ?? _previousPageCursor,
+        );
         _isLoadingMore = false;
       });
     } catch (e) {
@@ -296,6 +331,61 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
       showValidationToast(context, 'Failed to load more stop times');
     }
+  }
+
+  Future<void> _loadPrevious() async {
+    if (_isLoadingPrevious || !_hasPreviousPage || _selectedStop?.id == null) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingPrevious = true;
+    });
+
+    try {
+      final response = await StopTimesService.fetchStopTimes(
+        stopId: _selectedStop?.id ?? '',
+        n: 25,
+        pageCursor: _previousPageCursor,
+        startTime: _startTimeParam,
+        arriveBy: _timeSelection.isArriveBy,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _stopTimes = _deduplicateStopTimes([
+          ...response.stopTimes,
+          ...?_stopTimes,
+        ]);
+        _previousPageCursor = _normalizeCursor(response.previousPageCursor);
+        _isLoadingPrevious = false;
+      });
+
+      if (_resultsScrollController.hasClients) {
+        _resultsScrollController.jumpTo(0);
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingPrevious = false;
+      });
+
+      showValidationToast(context, 'Failed to load previous stop times');
+    }
+  }
+
+  void _maybeApplyInitialPreviousOffset() {
+    if (_appliedInitialPreviousOffset) return;
+    if (!_hasPreviousPage) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (!_resultsScrollController.hasClients) return;
+      _resultsScrollController.jumpTo(_seePreviousScrollOffset);
+      _appliedInitialPreviousOffset = true;
+    });
   }
 
   Widget _buildLoadingSkeleton() {
@@ -508,36 +598,66 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                       child: _isLoadingStopTimes
                           ? _buildLoadingSkeleton()
                           : _stopTimes != null
-                          ? ListView.builder(
-                              padding: const EdgeInsets.only(
-                                left: 20,
-                                right: 20,
-                                top: 12,
-                                bottom: 96, // Padding for navbar
-                              ),
-                              itemCount:
-                                  _stopTimes!.length +
-                                  (_nextPageCursor != null ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index == _stopTimes!.length) {
-                                  // Load more button
-                                  return LoadMoreButton(
-                                    onTap: _loadMore,
-                                    isLoading: _isLoadingMore,
-                                  );
-                                }
-                                final stopTime = _stopTimes![index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      CustomPageRoute(
-                                        child: ConnectionInfoScreen(
-                                          tripId: stopTime.tripId,
+                          ? Builder(
+                              builder: (context) {
+                                final hasPreviousSlot = _hasPreviousPage;
+                                final hasNextSlot = _hasNextPage;
+                                final totalItems =
+                                    _stopTimes!.length +
+                                    (hasPreviousSlot ? 1 : 0) +
+                                    (hasNextSlot ? 1 : 0);
+
+                                return ListView.builder(
+                                  controller: _resultsScrollController,
+                                  padding: const EdgeInsets.only(
+                                    left: 20,
+                                    right: 20,
+                                    top: 0,
+                                    bottom: 96, // Padding for navbar
+                                  ),
+                                  itemCount: totalItems,
+                                  itemBuilder: (context, index) {
+                                    if (hasPreviousSlot && index == 0) {
+                                      return LoadMoreButton(
+                                        onTap: _loadPrevious,
+                                        isLoading: _isLoadingPrevious,
+                                        label: 'See previous',
+                                        icon: LucideIcons.chevronUp,
+                                      );
+                                    }
+
+                                    final adjustedIndex =
+                                        index - (hasPreviousSlot ? 1 : 0);
+
+                                    if (adjustedIndex < _stopTimes!.length) {
+                                      final stopTime =
+                                          _stopTimes![adjustedIndex];
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.of(context).push(
+                                            CustomPageRoute(
+                                              child: ConnectionInfoScreen(
+                                                tripId: stopTime.tripId,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                        child: _StopTimeCard(
+                                          stopTime: stopTime,
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
+
+                                    if (hasNextSlot &&
+                                        adjustedIndex == _stopTimes!.length) {
+                                      return LoadMoreButton(
+                                        onTap: _loadMore,
+                                        isLoading: _isLoadingMore,
+                                      );
+                                    }
+
+                                    return const SizedBox.shrink();
                                   },
-                                  child: _StopTimeCard(stopTime: stopTime),
                                 );
                               },
                             )
@@ -879,22 +999,17 @@ class _StopTimeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  'Arr ${formatTime(stopTime.place.arrival, nullPlaceholder: '--:--')}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.black,
-                  ),
+                _TimeWithDelayText(
+                  label: 'Arr',
+                  scheduled: stopTime.place.scheduledArrival,
+                  actual: stopTime.place.arrival,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Dep ${formatTime(stopTime.place.departure, nullPlaceholder: '--:--')}',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0x99000000),
-                  ),
+                _TimeWithDelayText(
+                  label: 'Dep',
+                  scheduled: stopTime.place.scheduledDeparture,
+                  actual: stopTime.place.departure,
+                  subdued: true,
                 ),
               ],
             ),
@@ -904,5 +1019,56 @@ class _StopTimeCard extends StatelessWidget {
     );
   }
 }
+
+class _TimeWithDelayText extends StatelessWidget {
+  const _TimeWithDelayText({
+    required this.label,
+    required this.scheduled,
+    required this.actual,
+    this.subdued = false,
+  });
+
+  final String label;
+  final DateTime? scheduled;
+  final DateTime? actual;
+  final bool subdued;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = formatTime(scheduled ?? actual, nullPlaceholder: '--:--');
+    final delay = (scheduled != null && actual != null)
+        ? computeDelay(scheduled!, actual!)
+        : null;
+    final baseColor = subdued ? const Color(0x99000000) : AppColors.black;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '$label $display',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: subdued ? FontWeight.w500 : FontWeight.w600,
+            color: baseColor,
+          ),
+        ),
+        if (delay != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            formatDelay(delay),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _delayColor(delay),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+Color _delayColor(Duration delay) =>
+    delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
 
 // LoadMoreButton widget has been moved to lib/widgets/load_more_button.dart

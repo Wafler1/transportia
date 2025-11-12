@@ -57,23 +57,47 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                         ),
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      itemCount: displayLegs.length + 1,
-                      itemBuilder: (context, index) {
-                        if (index == displayLegs.length) {
-                          return LoadMoreButton(
-                            onTap: _shareItinerary,
-                            isLoading: _isSharing,
-                            label: 'Share this trip',
-                            icon: LucideIcons.share2,
-                          );
-                        }
-                        final entry = displayLegs[index];
-                        if (entry.isTransfer) {
-                          return TransferLegCard(leg: entry.leg);
-                        }
-                        return LegDetailsWidget(leg: entry.leg);
+                  : Builder(
+                      builder: (context) {
+                        final hasFinishCard = widget.itinerary.legs.isNotEmpty;
+                        final finishInsertIndex = displayLegs.length;
+                        final shareIndex =
+                            finishInsertIndex + (hasFinishCard ? 1 : 0);
+                        final totalItems = shareIndex + 1;
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          itemCount: totalItems,
+                          itemBuilder: (context, index) {
+                            if (index < displayLegs.length) {
+                              final entry = displayLegs[index];
+                              if (entry.isTransfer) {
+                                return TransferLegCard(leg: entry.leg);
+                              }
+                              return LegDetailsWidget(leg: entry.leg);
+                            }
+
+                            if (hasFinishCard && index == finishInsertIndex) {
+                              final finishLeg = widget.itinerary.legs.last;
+                              return FinishLegCard(
+                                leg: finishLeg,
+                                arrivalTime: widget.itinerary.endTime,
+                                totalDuration: widget.itinerary.duration,
+                              );
+                            }
+
+                            if (index == shareIndex) {
+                              return LoadMoreButton(
+                                onTap: _shareItinerary,
+                                isLoading: _isSharing,
+                                label: 'Share this trip',
+                                icon: LucideIcons.share2,
+                              );
+                            }
+
+                            return const SizedBox.shrink();
+                          },
+                        );
                       },
                     ),
             ),
@@ -99,14 +123,8 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       final lastLeg = legs.last;
 
       final payload = jsonEncode({
-        'from': {
-          'lat': firstLeg.fromLat,
-          'lon': firstLeg.fromLon,
-        },
-        'to': {
-          'lat': lastLeg.toLat,
-          'lon': lastLeg.toLon,
-        },
+        'from': {'lat': firstLeg.fromLat, 'lon': firstLeg.fromLon},
+        'to': {'lat': lastLeg.toLat, 'lon': lastLeg.toLon},
         'time': widget.itinerary.startTime.toIso8601String(),
       });
 
@@ -299,6 +317,11 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   @override
   Widget build(BuildContext context) {
     final isWalkLeg = widget.leg.mode == 'WALK';
+    final scheduledStart =
+        widget.leg.scheduledStartTime ?? widget.leg.startTime;
+    final scheduledEnd = widget.leg.scheduledEndTime ?? widget.leg.endTime;
+    final departureDelay = _departureDelay;
+    final arrivalDelay = _arrivalDelay;
 
     return GestureDetector(
       onTap: isWalkLeg
@@ -320,13 +343,27 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                 // Title with optional route colour styling
                 Expanded(child: _buildTitleWidget()),
                 const SizedBox(width: 8),
-                Text(
-                  formatDuration(widget.leg.duration),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.black,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.leg.alerts.isNotEmpty)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(
+                          LucideIcons.triangleAlert,
+                          size: 16,
+                          color: Color(0xFFFF8A00),
+                        ),
+                      ),
+                    Text(
+                      formatDuration(widget.leg.duration),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black,
+                      ),
+                    ),
+                  ],
                 ),
                 if (!isWalkLeg) ...[
                   const SizedBox(width: 4),
@@ -359,7 +396,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${formatTime(widget.leg.startTime)} - ${widget.leg.fromName}',
+                      '${formatTime(scheduledStart)} - ${widget.leg.fromName}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0x80000000),
@@ -368,6 +405,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                       maxLines: 1,
                     ),
                   ),
+                  if (departureDelay != null)
+                    _DelayChip(label: formatDelay(departureDelay)),
                 ],
               ),
               const SizedBox(height: 4),
@@ -377,7 +416,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      '${formatTime(widget.leg.endTime)} - ${widget.leg.toName}',
+                      '${formatTime(scheduledEnd)} - ${widget.leg.toName}',
                       style: const TextStyle(
                         fontSize: 14,
                         color: Color(0x80000000),
@@ -386,6 +425,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                       maxLines: 1,
                     ),
                   ),
+                  if (arrivalDelay != null)
+                    _DelayChip(label: formatDelay(arrivalDelay)),
                 ],
               ),
             ],
@@ -529,6 +570,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
   Widget _buildMetadataSection() {
     final metadata = <Widget>[];
+    final departureDelay = _departureDelay;
+    final arrivalDelay = _arrivalDelay;
 
     // Cancelled
     if (widget.leg.cancelled) {
@@ -580,6 +623,33 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
 
+    final hasDelay =
+        (departureDelay != null && !departureDelay.isNegative) ||
+        (arrivalDelay != null && !arrivalDelay.isNegative);
+    final hasAhead =
+        (departureDelay != null && departureDelay.isNegative) ||
+        (arrivalDelay != null && arrivalDelay.isNegative);
+
+    if (hasDelay) {
+      metadata.add(
+        const InfoChip(
+          icon: LucideIcons.circleAlert,
+          label: 'Delayed',
+          tint: Color(0xFFB26A00),
+        ),
+      );
+    }
+
+    if (!hasDelay && hasAhead) {
+      metadata.add(
+        const InfoChip(
+          icon: LucideIcons.check,
+          label: 'Ahead',
+          tint: Color(0xFF2E7D32),
+        ),
+      );
+    }
+
     if (widget.leg.interlineWithPreviousLeg) {
       metadata.add(const InfoChip(icon: LucideIcons.link, label: 'Interlined'));
     }
@@ -590,6 +660,11 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   Widget _buildStopInfo(_TimelineStop stop) {
+    final scheduledTime = stop.scheduledTime ?? stop.time;
+    final actualTime = stop.time;
+    final delay = (scheduledTime != null && actualTime != null)
+        ? computeDelay(scheduledTime, actualTime)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -603,14 +678,29 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             color: AppColors.black,
           ),
         ),
-        if (stop.time != null) ...[
+        if (scheduledTime != null) ...[
           const SizedBox(height: 2),
-          Text(
-            formatTime(stop.time),
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.black.withValues(alpha: 0.6),
-            ),
+          Row(
+            children: [
+              Text(
+                formatTime(scheduledTime),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.black.withValues(alpha: 0.6),
+                ),
+              ),
+              if (delay != null) ...[
+                const SizedBox(width: 6),
+                Text(
+                  formatDelay(delay),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _delayColor(delay),
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
         if (stop.track != null && !stop.isFirst) ...[
@@ -687,6 +777,15 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       ),
     );
   }
+
+  Duration? get _departureDelay =>
+      computeDelay(widget.leg.scheduledStartTime, widget.leg.startTime);
+
+  Duration? get _arrivalDelay =>
+      computeDelay(widget.leg.scheduledEndTime, widget.leg.endTime);
+
+  Color _delayColor(Duration delay) =>
+      delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
 
   Widget _buildLegIcon() {
     return Icon(getLegIcon(widget.leg.mode), size: 24, color: AppColors.black);
@@ -770,22 +869,22 @@ class TransferLegCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Row(
-                children: [
-                  const Icon(LucideIcons.arrowRight, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${formatTime(leg.startTime)} - ${leg.fromName}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0x80000000),
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
+            children: [
+              const Icon(LucideIcons.arrowRight, size: 16),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${formatTime(leg.startTime)} - ${leg.fromName}',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0x80000000),
                   ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
               ),
+            ],
+          ),
           if (leg.distance != null && leg.distance! > 0) ...[
             const SizedBox(height: 4),
             Text(
@@ -793,6 +892,81 @@ class TransferLegCard extends StatelessWidget {
               style: const TextStyle(fontSize: 13, color: Color(0x99000000)),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DelayChip extends StatelessWidget {
+  const _DelayChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAhead = label.startsWith('-');
+    final color = isAhead ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isAhead ? const Color(0xFFE8F5E9) : const Color(0xFFFFF1E0),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class FinishLegCard extends StatelessWidget {
+  final Leg leg;
+  final DateTime arrivalTime;
+  final int totalDuration;
+
+  const FinishLegCard({
+    super.key,
+    required this.leg,
+    required this.arrivalTime,
+    required this.totalDuration,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(LucideIcons.flag, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Finish',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatTime(arrivalTime),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

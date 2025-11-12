@@ -17,6 +17,8 @@ class StopTimesService {
     required String stopId,
     int n = 25,
     String? pageCursor,
+    DateTime? startTime,
+    bool arriveBy = false,
   }) async {
     final params = <String, String>{
       'stopId': stopId,
@@ -26,6 +28,14 @@ class StopTimesService {
 
     if (pageCursor != null) {
       params['pageCursor'] = pageCursor;
+    }
+
+    if (startTime != null) {
+      params['time'] = startTime.toUtc().toIso8601String();
+    }
+
+    if (arriveBy) {
+      params['arriveBy'] = 'true';
     }
 
     final uri = Uri.https(_host, _path, params);
