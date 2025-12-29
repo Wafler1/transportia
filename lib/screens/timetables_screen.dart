@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../models/time_selection.dart';
 import '../models/route_field_kind.dart';
@@ -416,6 +418,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     final showSuggestions = _searchFocus.hasFocus;
 
     return PopScope(
@@ -465,7 +468,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 ),
                               ),
                               const SizedBox(width: 16),
-                              const Column(
+                              Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
@@ -483,7 +486,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
-                                      color: Color(0x66000000),
+                                      color: AppColors.black.withValues(alpha: 0.4),
                                     ),
                                   ),
                                 ],
@@ -501,10 +504,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               },
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFFFFF),
+                                  color: AppColors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: const Color(0x1A000000),
+                                    color: AppColors.black.withValues(alpha: 0.1),
                                   ),
                                   boxShadow: const [
                                     BoxShadow(
@@ -520,10 +523,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
+                                    Icon(
                                       LucideIcons.search,
                                       size: 20,
-                                      color: Color(0x66000000),
+                                      color: AppColors.black.withValues(alpha: 0.4),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -531,11 +534,11 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                         controller: _searchController,
                                         focusNode: _searchFocus,
                                         placeholder: 'Search for a stop...',
-                                        placeholderStyle: const TextStyle(
-                                          color: Color(0x66000000),
+                                        placeholderStyle: TextStyle(
+                                          color: AppColors.black.withValues(alpha: 0.4),
                                           fontSize: 16,
                                         ),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           color: AppColors.black,
                                           fontSize: 16,
                                         ),
@@ -556,12 +559,12 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                         onTap: () {
                                           _searchController.clear();
                                         },
-                                        child: const Padding(
-                                          padding: EdgeInsets.only(left: 8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(left: 8),
                                           child: Icon(
                                             LucideIcons.x,
                                             size: 20,
-                                            color: Color(0x66000000),
+                                            color: AppColors.black.withValues(alpha: 0.4),
                                           ),
                                         ),
                                       ),
@@ -671,17 +674,17 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       width: 80,
                                       height: 80,
                                       decoration: BoxDecoration(
-                                        color: const Color(0x0A000000),
+                                        color: AppColors.black.withValues(alpha: 0.04),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         LucideIcons.trainFront,
                                         size: 40,
-                                        color: Color(0x33000000),
+                                        color: AppColors.black.withValues(alpha: 0.2),
                                       ),
                                     ),
                                     const SizedBox(height: 24),
-                                    const Text(
+                                    Text(
                                       'Search for a stop',
                                       style: TextStyle(
                                         fontSize: 20,
@@ -690,13 +693,13 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       ),
                                     ),
                                     const SizedBox(height: 8),
-                                    const Text(
+                                    Text(
                                       'Enter a stop name above to view\ndepartures and arrivals',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w500,
-                                        color: Color(0x66000000),
+                                        color: AppColors.black.withValues(alpha: 0.4),
                                         height: 1.4,
                                       ),
                                     ),
@@ -841,19 +844,23 @@ class _TimeButtonState extends State<_TimeButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
-            color: _pressed ? const Color(0x14000000) : const Color(0x0F000000),
-            border: Border.all(color: const Color(0x11000000)),
+            color: _pressed
+                ? AppColors.black.withValues(alpha: 0.08)
+                : AppColors.black.withValues(alpha: 0.06),
+            border: Border.all(
+              color: AppColors.black.withValues(alpha: 0.07),
+            ),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(LucideIcons.clock, size: 16, color: AppColors.black),
+              Icon(LucideIcons.clock, size: 16, color: AppColors.black),
               const SizedBox(width: 8),
               Text(
                 widget.timeSelection.toDisplayString(),
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
@@ -903,7 +910,7 @@ class _SearchButtonState extends State<_SearchButton> {
           child: const Text(
             'Search',
             style: TextStyle(
-              color: AppColors.white,
+              color: AppColors.solidWhite,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -923,7 +930,7 @@ class _StopTimeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final routeColor = parseHexColorOrAccent(context, stopTime.routeColor);
     final routeTextColor =
-        parseHexColor(stopTime.routeTextColor) ?? AppColors.white;
+        parseHexColor(stopTime.routeTextColor) ?? AppColors.solidWhite;
 
     final modeIcon = getLegIcon(stopTime.mode);
 
@@ -932,7 +939,7 @@ class _StopTimeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0x1A000000)),
+        border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x0A000000),
@@ -947,7 +954,11 @@ class _StopTimeCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Mode icon (not in color badge)
-            Icon(modeIcon, size: 24, color: const Color(0x66000000)),
+            Icon(
+              modeIcon,
+              size: 24,
+              color: AppColors.black.withValues(alpha: 0.4),
+            ),
             const SizedBox(width: 12),
             // Route badge and destination in a column
             Expanded(
@@ -982,7 +993,7 @@ class _StopTimeCard extends StatelessWidget {
                   // Destination
                   Text(
                     stopTime.headsign,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.black,
@@ -1039,7 +1050,8 @@ class _TimeWithDelayText extends StatelessWidget {
     final delay = (scheduled != null && actual != null)
         ? computeDelay(scheduled!, actual!)
         : null;
-    final baseColor = subdued ? const Color(0x99000000) : AppColors.black;
+    final baseColor =
+        subdued ? AppColors.black.withValues(alpha: 0.6) : AppColors.black;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

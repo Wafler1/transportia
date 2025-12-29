@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../providers/theme_provider.dart';
 import '../services/version_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_version.dart';
@@ -52,6 +54,7 @@ class _InfoScreenState extends State<InfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return AppPageScaffold(
       title: 'About Transportia',
       scrollable: true,
@@ -76,7 +79,7 @@ class _InfoScreenState extends State<InfoScreen> {
               const SectionTitle(text: 'Our Purpose'),
               const SizedBox(height: 12),
               _buildCard(
-                child: const Text(
+                child: Text(
                   'Transportia is a modern travel companion designed to make public transportation easier and more accessible. Transportia aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.',
                   style: TextStyle(
                     fontSize: 15,
@@ -105,9 +108,12 @@ class _InfoScreenState extends State<InfoScreen> {
               const SizedBox(height: 24),
               const SectionTitle(text: 'Open Source Credits'),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 'Transportia is built with the help of amazing open-source projects and APIs:',
-                style: TextStyle(fontSize: 14, color: Color(0x80000000)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.5),
+                ),
               ),
               const SizedBox(height: 12),
               _buildCreditItem(
@@ -163,10 +169,10 @@ class _InfoScreenState extends State<InfoScreen> {
           Text(
             'Version $latest is ready to download. '
             'Tap below to grab the update.',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.4,
-              color: Color(0xCC000000),
+              color: AppColors.black.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 12),
@@ -255,7 +261,7 @@ class _InfoScreenState extends State<InfoScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppColors.black,
@@ -293,9 +299,9 @@ class _InfoScreenState extends State<InfoScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0x05000000),
+        color: AppColors.black.withValues(alpha: 0.02),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0x0A000000)),
+        border: Border.all(color: AppColors.black.withValues(alpha: 0.04)),
       ),
       child: Row(
         children: [
@@ -315,7 +321,7 @@ class _InfoScreenState extends State<InfoScreen> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: AppColors.black,
@@ -324,9 +330,9 @@ class _InfoScreenState extends State<InfoScreen> {
                 const SizedBox(height: 2),
                 Text(
                   description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0x66000000),
+                    color: AppColors.black.withValues(alpha: 0.4),
                   ),
                 ),
               ],

@@ -109,8 +109,6 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
           _buildWalkingCard(context),
           const SizedBox(height: 28),
           _buildTransferCard(context),
-          const SizedBox(height: 28),
-          _buildAccessibilityCard(context),
           const SizedBox(height: 16),
         ],
       ),
@@ -126,7 +124,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
         const SizedBox(height: 12),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 14, color: Color(0x99000000)),
+          style: TextStyle(fontSize: 14, color: AppColors.black.withValues(alpha: 0.6)),
         ),
         const SizedBox(height: 12),
         LayoutBuilder(
@@ -180,7 +178,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                   const SizedBox(width: 8),
                   Text(
                     '${_walkingSpeed.toStringAsFixed(1)} km/h',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: AppColors.black,
@@ -251,7 +249,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                     _transferBuffer == 0
                         ? 'No extra time'
                         : '${_transferBuffer} minute buffer',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                       color: AppColors.black,
@@ -286,67 +284,6 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                 onChanged: (val) {
                   setState(() => _transferBuffer = val.round());
                 },
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAccessibilityCard(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SectionTitle(text: 'Accessibility'),
-        const SizedBox(height: 12),
-        CustomCard(
-          padding: const EdgeInsets.all(16),
-          margin: const EdgeInsets.all(0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    LucideIcons.accessibility,
-                    size: 18,
-                    color: AppColors.accentOf(context),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Pedestrian profile',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.black,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              CupertinoSlidingSegmentedControl<String>(
-                groupValue: _pedestrianProfile,
-                children: const {
-                  'FOOT': Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Foot'),
-                  ),
-                  'WHEELCHAIR': Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Wheelchair'),
-                  ),
-                },
-                onValueChanged: (value) => setState(() {
-                  if (value != null) _pedestrianProfile = value;
-                }),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _pedestrianProfile == 'FOOT'
-                    ? 'Standard routing with stairs when available.'
-                    : 'Avoids stairs and favours accessible transfers.',
-                style: const TextStyle(fontSize: 13, color: Color(0x66000000)),
               ),
             ],
           ),
@@ -670,7 +607,7 @@ class _StepperSelectorState extends State<_StepperSelector> {
                 children: [
                   Text(
                     widget.displayBuilder(widget.value),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: AppColors.black,
@@ -679,9 +616,9 @@ class _StepperSelectorState extends State<_StepperSelector> {
                   const SizedBox(height: 2),
                   Text(
                     widget.label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0x80000000),
+                      color: AppColors.black.withValues(alpha: 0.5),
                     ),
                   ),
                 ],

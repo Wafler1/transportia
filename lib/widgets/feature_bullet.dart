@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 
 class FeatureBullet extends StatelessWidget {
@@ -9,17 +11,20 @@ class FeatureBullet extends StatelessWidget {
     required this.label,
     this.icon = LucideIcons.check,
     this.iconColor,
-    this.textColor = const Color(0x99000000),
+    this.textColor,
   });
 
   final String label;
   final IconData icon;
   final Color? iconColor;
-  final Color textColor;
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) {
+    final themeTextColor = context.watch<ThemeProvider>().textColor;
     final effectiveIconColor = iconColor ?? AppColors.accentOf(context);
+    final effectiveTextColor =
+        textColor ?? themeTextColor.withValues(alpha: 0.6);
 
     return Row(
       children: [
@@ -31,7 +36,7 @@ class FeatureBullet extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: textColor,
+              color: effectiveTextColor,
             ),
           ),
         ),

@@ -88,7 +88,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
                     onMapCreated: _onMapCreated,
                     styleString: context.watch<ThemeProvider>().mapStyleUrl,
                     initialCameraPosition: _calculateInitialCamera(),
-                    myLocationEnabled: false,
+                    myLocationEnabled: true,
+                    myLocationRenderMode: MyLocationRenderMode.compass,
                     rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                     compassEnabled: false,
@@ -524,7 +525,7 @@ class _JourneySummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Journey overview',
             style: TextStyle(
               fontSize: 14,
@@ -552,6 +553,7 @@ class _JourneySummaryCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
+                        color: AppColors.black,
                       ),
                     ),
                   ],
@@ -601,7 +603,7 @@ class _LegCarouselCard extends StatelessWidget {
             headline,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: AppColors.black,
@@ -612,10 +614,10 @@ class _LegCarouselCard extends StatelessWidget {
             subtitle,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Color(0x66000000),
+              color: AppColors.black.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(height: 12),
@@ -690,7 +692,7 @@ class _TransferCarouselCard extends StatelessWidget {
             children: [
               const Icon(LucideIcons.arrowLeftRight, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Transfer',
                 style: TextStyle(
                   fontSize: 14,
@@ -701,7 +703,7 @@ class _TransferCarouselCard extends StatelessWidget {
               const Spacer(),
               Text(
                 formatDuration(leg.duration),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.black,
@@ -719,9 +721,9 @@ class _TransferCarouselCard extends StatelessWidget {
                   children: [
                     Text(
                       depTime,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0x80000000),
+                        color: AppColors.black.withValues(alpha: 0.5),
                       ),
                     ),
                     if (depDelay != null) ...[
@@ -741,9 +743,9 @@ class _TransferCarouselCard extends StatelessWidget {
                         leg.fromName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Color(0x99000000),
+                          color: AppColors.black.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -756,7 +758,7 @@ class _TransferCarouselCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
-              style: const TextStyle(fontSize: 12, color: Color(0x99000000)),
+              style: TextStyle(fontSize: 12, color: AppColors.black.withValues(alpha: 0.6)),
             ),
           ],
           const SizedBox(height: 6),
@@ -769,9 +771,9 @@ class _TransferCarouselCard extends StatelessWidget {
                   children: [
                     Text(
                       arrTime,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0x80000000),
+                        color: AppColors.black.withValues(alpha: 0.5),
                       ),
                     ),
                     if (arrDelay != null) ...[
@@ -791,9 +793,9 @@ class _TransferCarouselCard extends StatelessWidget {
                         leg.toName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: Color(0x99000000),
+                          color: AppColors.black.withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -832,10 +834,10 @@ class _JourneyTimeTile extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: Color(0x66000000),
+            color: AppColors.black.withValues(alpha: 0.4),
           ),
         ),
         const SizedBox(height: 4),
@@ -844,7 +846,7 @@ class _JourneyTimeTile extends StatelessWidget {
           children: [
             Text(
               displayTime,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: AppColors.black,
@@ -887,14 +889,14 @@ class _LegStopRow extends StatelessWidget {
     final delay = computeDelay(scheduledTime, actualTime);
     return Row(
       children: [
-        Icon(icon, size: 16, color: const Color(0x66000000)),
+        Icon(icon, size: 16, color: AppColors.black.withValues(alpha: 0.4)),
         const SizedBox(width: 8),
         Text.rich(
           TextSpan(
             children: [
               TextSpan(
                 text: displayTime,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.black,
@@ -918,10 +920,10 @@ class _LegStopRow extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0x99000000),
+              color: AppColors.black.withValues(alpha: 0.6),
             ),
           ),
         ),

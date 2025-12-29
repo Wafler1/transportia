@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import '../widgets/pressable_highlight.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import 'map_screen.dart';
 
@@ -38,6 +40,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -76,7 +79,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   child: child,
                 ),
                 child: ColoredBox(
-                  color: const Color(0xFFFFFFFF),
+                  color: AppColors.white,
                   child: SafeArea(
                     child: SizedBox.expand(
                       child: Center(
@@ -94,7 +97,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              const Text(
+                              Text(
                                 "Welcome to Transportia, \na free transportation app",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
@@ -105,12 +108,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
+                              Text(
                                 "With Transportia, you can find your way \nfrom one city to another easily.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xA3000000),
+                                  color: AppColors.black.withValues(alpha: 0.64),
                                   height: 1.35,
                                 ),
                               ),

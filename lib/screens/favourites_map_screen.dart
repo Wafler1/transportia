@@ -207,7 +207,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x1A000000)),
+        border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x26000000),
@@ -240,12 +240,12 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Selected Location',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        color: Color(0x66000000),
+                        color: AppColors.black.withValues(alpha: 0.4),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -265,7 +265,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                           )
                         : Text(
                             _selectedLocationName ?? 'Unknown location',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: AppColors.black,
@@ -287,11 +287,13 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0x08000000),
+                      color: AppColors.black.withValues(alpha: 0.03),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x1A000000)),
+                      border: Border.all(
+                        color: AppColors.black.withValues(alpha: 0.1),
+                      ),
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
                         'Cancel',
                         style: TextStyle(
@@ -312,7 +314,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
                       color: _isLoadingName
-                          ? const Color(0x1A000000)
+                          ? AppColors.black.withValues(alpha: 0.1)
                           : AppColors.accentOf(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -322,7 +324,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.white,
+                          color: AppColors.solidWhite,
                         ),
                       ),
                     ),

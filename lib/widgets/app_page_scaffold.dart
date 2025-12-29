@@ -12,7 +12,7 @@ class AppPageScaffold extends StatelessWidget {
     super.key,
     required this.title,
     required this.body,
-    this.backgroundColor = AppColors.white,
+    this.backgroundColor,
     this.scrollable = false,
     this.padding,
     this.footer,
@@ -21,7 +21,7 @@ class AppPageScaffold extends StatelessWidget {
 
   final String title;
   final Widget body;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final bool scrollable;
   final EdgeInsetsGeometry? padding;
   final Widget? footer;
@@ -34,6 +34,7 @@ class AppPageScaffold extends StatelessWidget {
         (scrollable
             ? const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
             : EdgeInsets.zero);
+    final resolvedBackgroundColor = backgroundColor ?? AppColors.white;
 
     Widget content = body;
     if (scrollable) {
@@ -43,7 +44,7 @@ class AppPageScaffold extends StatelessWidget {
     }
 
     return ColoredBox(
-      color: backgroundColor,
+      color: resolvedBackgroundColor,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

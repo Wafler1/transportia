@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 
 class FloatingNavBar extends StatelessWidget {
@@ -17,6 +19,7 @@ class FloatingNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     final opacity = visibility.clamp(0.0, 1.0);
     final translateY = (1 - opacity) * 32; // Slide down 32px when hiding
     final blur = (1 - opacity) * 8.0; // Blur when fading out
@@ -40,7 +43,9 @@ class FloatingNavBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0x1A000000)),
+                    border: Border.all(
+                      color: AppColors.black.withValues(alpha: 0.1),
+                    ),
                     boxShadow: const [
                       BoxShadow(
                         color: Color(0x1F000000),
@@ -127,7 +132,7 @@ class _NavBarItemState extends State<_NavBarItem> {
                   size: 24,
                   color: widget.isSelected
                       ? AppColors.accentOf(context)
-                      : const Color(0x66000000),
+                      : AppColors.black.withValues(alpha: 0.4),
                 ),
               ),
             ],

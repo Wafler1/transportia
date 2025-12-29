@@ -2,7 +2,9 @@ import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
@@ -60,15 +62,16 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return AppPageScaffold(
       title: 'Location',
       scrollable: !_isLoading,
       padding: _isLoading ? null : const EdgeInsets.all(20),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: Text(
                 'Checking location status...',
-                style: TextStyle(fontSize: 14, color: Color(0x66000000)),
+                style: TextStyle(fontSize: 14, color: AppColors.black.withValues(alpha: 0.4)),
               ),
             )
           : _buildContent(),
@@ -123,7 +126,11 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
                 ],
               ),
             ),
-            Container(height: 20, width: 1, color: const Color(0x1A000000)),
+            Container(
+              height: 20,
+              width: 1,
+              color: AppColors.black.withValues(alpha: 0.1),
+            ),
             PressableHighlight(
               onPressed: _isLoading ? () {} : _checkLocationStatus,
               enableHaptics: false,
@@ -158,7 +165,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x1A000000)),
+        border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x08000000),
@@ -185,10 +192,10 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0x66000000),
+                    color: AppColors.black.withValues(alpha: 0.4),
                   ),
                 ),
                 const SizedBox(height: 4),

@@ -95,7 +95,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              const Text(
+              Text(
                 'Set time',
                 style: TextStyle(
                   fontSize: 15,
@@ -302,7 +302,7 @@ class _DateSelector extends StatelessWidget {
           ),
           Text(
             _formatDate(selectedDate),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: AppColors.black,
@@ -505,7 +505,7 @@ class _NumberPickerState extends State<_NumberPicker> {
                 children: [
                   Text(
                     widget.value.toString().padLeft(2, '0'),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: AppColors.black,
@@ -575,7 +575,7 @@ class _ToggleButton extends StatelessWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isSelected ? AppColors.white : AppColors.black,
+              color: isSelected ? AppColors.solidWhite : AppColors.black,
             ),
           ),
         ),

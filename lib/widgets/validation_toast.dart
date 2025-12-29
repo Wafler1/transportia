@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../theme/app_colors.dart';
 
 bool _globalToastOpen = false;
 
@@ -92,9 +93,9 @@ class _ToastCard extends StatelessWidget {
     final borderRadius = BorderRadius.circular(14);
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xEEFFFFFF),
+        color: AppColors.white.withValues(alpha: 0.93),
         borderRadius: borderRadius,
-        border: Border.all(color: const Color(0x1A000000)),
+        border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
         boxShadow: const [
           BoxShadow(
             color: Color(0x33000000),
@@ -130,8 +131,8 @@ class _ToastCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     message,
-                    style: const TextStyle(
-                      color: Color(0xFF000000),
+                    style: TextStyle(
+                      color: AppColors.black,
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                     ),

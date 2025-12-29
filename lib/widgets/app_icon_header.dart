@@ -1,5 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 
 /// Consistent hero/header used across multiple preference/info screens.
@@ -23,6 +25,7 @@ class AppIconHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = context.watch<ThemeProvider>().textColor;
     final accent = iconColor ?? AppColors.accentOf(context);
     final badgeBackground = backgroundColor ?? accent.withValues(alpha: 0.12);
 
@@ -41,10 +44,10 @@ class AppIconHeader extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w800,
-            color: AppColors.black,
+            color: textColor,
           ),
         ),
         if (subtitle != null) ...[
@@ -52,10 +55,10 @@ class AppIconHeader extends StatelessWidget {
           Text(
             subtitle!,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
-              color: Color(0x66000000),
+              color: textColor.withValues(alpha: 0.4),
             ),
           ),
         ],

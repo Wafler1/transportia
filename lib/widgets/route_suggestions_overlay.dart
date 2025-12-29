@@ -104,7 +104,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -154,9 +154,11 @@ class _SuggestionPlaceholder extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: const Color(0x0F000000),
+            color: AppColors.black.withValues(alpha: 0.06),
             shape: BoxShape.circle,
-            border: Border.all(color: const Color(0x11000000)),
+            border: Border.all(
+              color: AppColors.black.withValues(alpha: 0.07),
+            ),
           ),
           alignment: Alignment.center,
           child: Icon(icon, color: AppColors.black, size: 20),
@@ -165,7 +167,7 @@ class _SuggestionPlaceholder extends StatelessWidget {
         Text(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(
+          style: TextStyle(
             color: AppColors.black,
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -175,7 +177,10 @@ class _SuggestionPlaceholder extends StatelessWidget {
         Text(
           subtitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Color(0x99000000), fontSize: 13),
+          style: TextStyle(
+            color: AppColors.black.withValues(alpha: 0.6),
+            fontSize: 13,
+          ),
         ),
       ],
     );
@@ -189,9 +194,9 @@ class _SuggestionLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: const [
+      children: [
         Icon(LucideIcons.cloudDownload, size: 28, color: AppColors.black),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         Text(
           'Fetching…',
           style: TextStyle(
@@ -229,9 +234,11 @@ class _SuggestionTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0x0F000000),
+              color: AppColors.black.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x11000000)),
+              border: Border.all(
+                color: AppColors.black.withValues(alpha: 0.07),
+              ),
             ),
             alignment: Alignment.center,
             child: Icon(iconData, size: 18, color: AppColors.black),
@@ -243,7 +250,7 @@ class _SuggestionTile extends StatelessWidget {
               children: [
                 Text(
                   suggestion.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.black,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -252,8 +259,8 @@ class _SuggestionTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    color: Color(0x99000000),
+                  style: TextStyle(
+                    color: AppColors.black.withValues(alpha: 0.6),
                     fontSize: 13,
                   ),
                 ),

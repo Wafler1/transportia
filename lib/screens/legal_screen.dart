@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
@@ -23,6 +25,7 @@ class LegalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
 
     DateTime now = DateTime.now();
     int year = now.year;
@@ -63,9 +66,11 @@ class LegalScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0x05000000),
+              color: AppColors.black.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x0A000000)),
+              border: Border.all(
+                color: AppColors.black.withValues(alpha: 0.04),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,7 +83,7 @@ class LegalScreen extends StatelessWidget {
                       color: AppColors.accentOf(context),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Data We Collect',
                       style: TextStyle(
                         fontSize: 16,
@@ -119,7 +124,7 @@ class LegalScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0x66000000),
+                    color: AppColors.black.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -147,7 +152,7 @@ class LegalScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0x1A000000)),
+          border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
           boxShadow: const [
             BoxShadow(
               color: Color(0x05000000),
@@ -174,7 +179,7 @@ class LegalScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.black,
@@ -183,9 +188,9 @@ class LegalScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0x66000000),
+                      color: AppColors.black.withValues(alpha: 0.4),
                     ),
                   ),
                 ],
@@ -219,7 +224,10 @@ class LegalScreen extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 14, color: Color(0x80000000)),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.black.withValues(alpha: 0.5),
+              ),
             ),
           ),
         ],

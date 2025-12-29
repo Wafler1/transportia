@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 
 import '../models/itinerary.dart';
+import '../providers/theme_provider.dart';
 import '../services/trip_details_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
@@ -178,6 +180,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -198,9 +201,9 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                         padding: const EdgeInsets.all(32),
                         child: Text(
                           'Failed to load trip details',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Color(0x80000000),
+                            color: AppColors.black.withValues(alpha: 0.5),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -216,14 +219,23 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
   Widget _buildContent() {
     if (_itinerary == null || _itinerary!.legs.isEmpty) {
-      return const Center(child: Text('No trip data available'));
+      return Center(
+        child: Text(
+          'No trip data available',
+          style: TextStyle(
+            fontSize: 15,
+            color: AppColors.black.withValues(alpha: 0.5),
+          ),
+        ),
+      );
     }
 
     // For now, we'll use the first leg (main transit leg)
     final leg = _itinerary!.legs.first;
     final routeColor =
         parseHexColor(leg.routeColor) ?? AppColors.accentOf(context);
-    final routeTextColor = parseHexColor(leg.routeTextColor) ?? AppColors.white;
+    final routeTextColor =
+        parseHexColor(leg.routeTextColor) ?? AppColors.solidWhite;
     final modeIcon = getLegIcon(leg.mode);
 
     final stops = _buildStopsForLeg(leg);
@@ -324,13 +336,13 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                             ),
                           if (leg.headsign != null) ...[
                             const SizedBox(height: 8),
-                            Text(
-                              '${getTransitModeName(leg.mode)} • ${leg.headsign!}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.black,
-                              ),
+                                    Text(
+                                      '${getTransitModeName(leg.mode)} • ${leg.headsign!}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.black,
+                                      ),
                             ),
                           ],
                         ],
@@ -370,7 +382,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Text(
                         'Warnings',
@@ -416,7 +428,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                                   if (hasTitle)
                                     Text(
                                       alert.headerText!,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: AppColors.black,
@@ -453,7 +465,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Information',
                   style: TextStyle(
                     fontSize: 16,
@@ -510,7 +522,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Journey',
                   style: TextStyle(
                     fontSize: 16,

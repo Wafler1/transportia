@@ -30,7 +30,6 @@ class UpdatePromptOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     final accent = AppColors.accentOf(context);
 
     return Positioned.fill(
@@ -54,7 +53,7 @@ class UpdatePromptOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
+                      Text(
                         'Update available',
                         textAlign: TextAlign.center,
                         style: TextStyle(
@@ -68,10 +67,10 @@ class UpdatePromptOverlay extends StatelessWidget {
                         'Version $remoteVersion is available. '
                         'You are currently on $localVersion.',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           height: 1.35,
-                          color: Color(0xCC000000),
+                          color: AppColors.black.withValues(alpha: 0.8),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -79,10 +78,10 @@ class UpdatePromptOverlay extends StatelessWidget {
                         'We recommend updating to get the latest fixes '
                         'and improvements.',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           height: 1.35,
-                          color: Color(0x99000000),
+                          color: AppColors.black.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -95,7 +94,7 @@ class UpdatePromptOverlay extends StatelessWidget {
                           ),
                           child: PressableHighlight(
                             enableHaptics: false,
-                            highlightColor: AppColors.white,
+                            highlightColor: AppColors.solidWhite,
                             borderRadius: BorderRadius.circular(12),
                             onPressed: _handleUpdateTap,
                             child: const Padding(
@@ -104,7 +103,7 @@ class UpdatePromptOverlay extends StatelessWidget {
                                 child: Text(
                                   'Download update',
                                   style: TextStyle(
-                                    color: AppColors.white,
+                                    color: AppColors.solidWhite,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -116,41 +115,49 @@ class UpdatePromptOverlay extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            PressableHighlight(
-              onPressed: onDismiss,
-              enableHaptics: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Dismiss',
-                    style: TextStyle(fontSize: 16, color: accent),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(LucideIcons.x, size: 20, color: accent),
-                ],
-              ),
-            ),
-            Container(height: 20, width: 1, color: const Color(0x1A000000)),
-            PressableHighlight(
-              onPressed: onSkipVersion,
-              enableHaptics: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Don\'t show again',
-                    style: TextStyle(fontSize: 16, color: accent),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(LucideIcons.octagonMinus, size: 20, color: accent),
-                ],
-              ),
-            ),
-          ],
-        ),
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          PressableHighlight(
+                            onPressed: onDismiss,
+                            enableHaptics: false,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Dismiss',
+                                  style: TextStyle(fontSize: 16, color: accent),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(LucideIcons.x, size: 20, color: accent),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            height: 20,
+                            width: 1,
+                            color: AppColors.black.withValues(alpha: 0.1),
+                          ),
+                          PressableHighlight(
+                            onPressed: onSkipVersion,
+                            enableHaptics: false,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Don\'t show again',
+                                  style: TextStyle(fontSize: 16, color: accent),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  LucideIcons.octagonMinus,
+                                  size: 20,
+                                  color: accent,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

@@ -21,26 +21,45 @@ class Transportia extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => ThemeProvider(),
       child: OKToast(
-        child: WidgetsApp(
-          title: 'Transportia',
-          color: const Color(0xFF0b0f14),
-          debugShowCheckedModeBanner: false,
-          localizationsDelegates: const [
-            DefaultWidgetsLocalizations.delegate,
-            DefaultCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('en', 'US'), Locale('en')],
-          pageRouteBuilder: <T>(RouteSettings settings, WidgetBuilder builder) {
-            return PageRouteBuilder<T>(
-              settings: settings,
-              pageBuilder: (context, animation, secondaryAnimation) =>
-                  builder(context),
-              transitionsBuilder:
-                  (context, animation, secondaryAnimation, child) => child,
+        child: Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            final baseTextStyle = TextStyle(
+              color: themeProvider.textColor,
+              fontSize: 14,
+            );
+            return WidgetsApp(
+              title: 'Transportia',
+              color: themeProvider.backgroundColor,
+              debugShowCheckedModeBanner: false,
+              localizationsDelegates: const [
+                DefaultWidgetsLocalizations.delegate,
+                DefaultCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: const [Locale('en', 'US'), Locale('en')],
+              pageRouteBuilder:
+                  <T>(RouteSettings settings, WidgetBuilder builder) {
+                return PageRouteBuilder<T>(
+                  settings: settings,
+                  pageBuilder: (context, animation, secondaryAnimation) =>
+                      builder(context),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) => child,
+                );
+              },
+              textStyle: baseTextStyle,
+              builder: (context, child) {
+                final content = child ?? const SizedBox.shrink();
+                return ColoredBox(
+                  color: themeProvider.backgroundColor,
+                  child: IconTheme(
+                    data: IconThemeData(color: themeProvider.textColor),
+                    child: content,
+                  ),
+                );
+              },
+              home: const _RootGate(),
             );
           },
-          textStyle: const TextStyle(color: Color(0xFF000000), fontSize: 14),
-          home: const _RootGate(),
         ),
       ),
     );
@@ -58,7 +77,6 @@ class _RootGateState extends State<_RootGate> {
   static const _kWelcomeSeenKey = 'welcome_seen_v1';
   static const _kIgnoredUpdateKey = 'ignored_update_version';
   bool? _seen;
-  String? _ignoredUpdateVersion;
   String? _availableUpdateVersion;
   SharedPreferences? _prefs;
   StreamSubscription<Uri?>? _appLinkSubscription;
@@ -102,7 +120,6 @@ class _RootGateState extends State<_RootGate> {
     if (!mounted) return;
     setState(() {
       _seen = seen;
-      _ignoredUpdateVersion = ignored;
     });
     _checkForUpdates(ignored);
   }
@@ -144,7 +161,6 @@ class _RootGateState extends State<_RootGate> {
     await prefs.setString(_kIgnoredUpdateKey, version);
     if (!mounted) return;
     setState(() {
-      _ignoredUpdateVersion = version;
       _availableUpdateVersion = null;
     });
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
 
-import '../theme/app_colors.dart';
+import '../providers/theme_provider.dart';
 
 class InfoChip extends StatelessWidget {
   const InfoChip({
@@ -16,9 +17,10 @@ class InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = tint ?? AppColors.black;
-    final iconColor = tint ?? AppColors.black.withValues(alpha: 0.6);
-    final textColor = tint ?? AppColors.black.withValues(alpha: 0.8);
+    final themeTextColor = context.watch<ThemeProvider>().textColor;
+    final baseColor = tint ?? themeTextColor;
+    final iconColor = tint ?? themeTextColor.withValues(alpha: 0.6);
+    final textColor = tint ?? themeTextColor.withValues(alpha: 0.8);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

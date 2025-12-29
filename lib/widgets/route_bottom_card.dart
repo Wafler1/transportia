@@ -135,7 +135,7 @@ class _BottomCardState extends State<BottomCard> {
                           width: 48,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: const Color(0x33000000),
+                            color: AppColors.black.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         ),
@@ -163,7 +163,7 @@ class _BottomCardState extends State<BottomCard> {
                             heightFactor: opacity, // shrink height as it fades
                             child: Opacity(
                               opacity: opacity,
-                              child: const Padding(
+                              child: Padding(
                                 padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
                                 child: Align(
                                   alignment: Alignment.centerLeft,
@@ -252,7 +252,7 @@ class _BottomCardState extends State<BottomCard> {
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(
+                                            Icon(
                                               LucideIcons.clock,
                                               size: 16,
                                               color: AppColors.black,
@@ -261,7 +261,7 @@ class _BottomCardState extends State<BottomCard> {
                                             Text(
                                               widget.timeSelection
                                                   .toDisplayString(),
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 color: AppColors.black,
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w500,
@@ -289,7 +289,7 @@ class _BottomCardState extends State<BottomCard> {
                                           Text(
                                             'Search',
                                             style: TextStyle(
-                                              color: AppColors.white,
+                                              color: AppColors.solidWhite,
                                               fontSize: 15,
                                               fontWeight: FontWeight.w700,
                                             ),
@@ -324,7 +324,7 @@ class _BottomCardState extends State<BottomCard> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'Favourites',
                                         style: TextStyle(
                                           fontSize: 16,
@@ -358,7 +358,7 @@ class _BottomCardState extends State<BottomCard> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'Recent trips',
                                           style: TextStyle(
                                             fontSize: 16,
@@ -409,10 +409,10 @@ class PillButton extends StatefulWidget {
     this.onTapDown,
     this.onTapUp,
     this.onTapCancel,
-    this.restingColor = const Color(0x0F000000),
-    this.pressedColor = const Color(0x14000000),
+    this.restingColor,
+    this.pressedColor,
     this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-    this.borderColor = const Color(0x11000000),
+    this.borderColor,
     this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
   });
   final VoidCallback onTap;
@@ -420,10 +420,10 @@ class PillButton extends StatefulWidget {
   final VoidCallback? onTapUp;
   final VoidCallback? onTapCancel;
   final Widget child;
-  final Color restingColor;
-  final Color pressedColor;
+  final Color? restingColor;
+  final Color? pressedColor;
   final BorderRadius borderRadius;
-  final Color borderColor;
+  final Color? borderColor;
   final EdgeInsetsGeometry padding;
   @override
   State<PillButton> createState() => _PillButtonState();
@@ -433,6 +433,13 @@ class _PillButtonState extends State<PillButton> {
   bool _pressed = false;
   @override
   Widget build(BuildContext context) {
+    final restingColor =
+        widget.restingColor ?? AppColors.black.withValues(alpha: 0.06);
+    final pressedColor =
+        widget.pressedColor ?? AppColors.black.withValues(alpha: 0.08);
+    final borderColor =
+        widget.borderColor ?? AppColors.black.withValues(alpha: 0.07);
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
@@ -455,8 +462,8 @@ class _PillButtonState extends State<PillButton> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
-            color: _pressed ? widget.pressedColor : widget.restingColor,
-            border: Border.all(color: widget.borderColor),
+            color: _pressed ? pressedColor : restingColor,
+            border: Border.all(color: borderColor),
             borderRadius: widget.borderRadius,
           ),
           padding: widget.padding,
@@ -541,12 +548,14 @@ class _RecentTripTileState extends State<_RecentTripTile> {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: const Color(0x0F000000),
+            color: AppColors.black.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0x11000000)),
+            border: Border.all(
+              color: AppColors.black.withValues(alpha: 0.07),
+            ),
           ),
           alignment: Alignment.center,
-          child: const Icon(
+          child: Icon(
             LucideIcons.route,
             size: 18,
             color: AppColors.black,
@@ -559,7 +568,7 @@ class _RecentTripTileState extends State<_RecentTripTile> {
             children: [
               Text(
                 widget.trip.fromName,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.black,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -570,17 +579,17 @@ class _RecentTripTileState extends State<_RecentTripTile> {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(
+                  Icon(
                     LucideIcons.chevronRight,
                     size: 14,
-                    color: Color(0x99000000),
+                    color: AppColors.black.withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
                       widget.trip.toName,
-                      style: const TextStyle(
-                        color: Color(0x99000000),
+                      style: TextStyle(
+                        color: AppColors.black.withValues(alpha: 0.6),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
@@ -675,7 +684,8 @@ class _FavoriteShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
-    final textColor = enabled ? AppColors.black : const Color(0x99000000);
+    final textColor =
+        enabled ? AppColors.black : AppColors.black.withValues(alpha: 0.6);
 
     return Opacity(
       opacity: enabled ? 1.0 : 0.6,
@@ -751,7 +761,7 @@ class _FavoritesEmptyMessage extends StatelessWidget {
             child: Icon(LucideIcons.heart, size: 24, color: accent),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'No favourites yet',
             style: TextStyle(
               fontSize: 15,
@@ -760,13 +770,13 @@ class _FavoritesEmptyMessage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Add your go-to destinations for quick routing.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Color(0x66000000),
+              color: AppColors.black.withValues(alpha: 0.4),
             ),
           ),
         ],

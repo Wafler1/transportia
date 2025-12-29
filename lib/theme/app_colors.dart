@@ -15,6 +15,23 @@ class AppColors {
 
   // Static accent color for places where context is not available
   static const Color accent = Color.fromARGB(255, 0, 113, 133);
-  static const Color black = Color(0xFF000000);
-  static const Color white = Color(0xFFFFFFFF);
+  static const Color solidBlack = Color(0xFF000000);
+  static const Color solidWhite = Color(0xFFFFFFFF);
+
+  // Theme-driven base colors (light/dark).
+  static Color get black =>
+      _resolveThemeColor((provider) => provider.textColor, solidBlack);
+  static Color get white =>
+      _resolveThemeColor((provider) => provider.backgroundColor, solidWhite);
+
+  static Color _resolveThemeColor(
+    Color Function(ThemeProvider provider) resolver,
+    Color fallback,
+  ) {
+    final provider = ThemeProvider.instance;
+    if (provider == null) {
+      return fallback;
+    }
+    return resolver(provider);
+  }
 }

@@ -5,10 +5,12 @@ import 'package:transportia/utils/custom_page_route.dart';
 import 'package:transportia/utils/leg_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/time_selection.dart';
 import '../widgets/custom_card.dart';
 import '../models/itinerary.dart';
+import '../providers/theme_provider.dart';
 import '../services/routing_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
@@ -166,6 +168,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return PopScope(
       // Handle both back button and back gesture
       onPopInvokedWithResult: (didPop, result) {
@@ -192,7 +195,15 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                 child: _isLoading
                     ? _buildLoadingSkeleton()
                     : _itineraries.isEmpty
-                    ? const Center(child: Text('No routes found.'))
+                    ? Center(
+                        child: Text(
+                          'No routes found.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: AppColors.black.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      )
                     : Builder(
                         builder: (context) {
                           final hasPreviousSlot = _previousPageCursor != null;
@@ -298,7 +309,7 @@ class ItineraryCard extends StatelessWidget {
             children: [
               Text(
                 formatDuration(itinerary.duration),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.black,
@@ -319,7 +330,10 @@ class ItineraryCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '${formatTime(itinerary.startTime)} - ${formatTime(itinerary.endTime)}',
-            style: const TextStyle(fontSize: 14, color: Color(0x80000000)),
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.black.withValues(alpha: 0.5),
+            ),
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -328,13 +342,13 @@ class ItineraryCard extends StatelessWidget {
             children: itinerary.legs.map((leg) => LegWidget(leg: leg)).toList(),
           ),
           // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
             child: SizedBox(
               height: 1,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Color(0x33000000), // semi‑transparent
+                  color: AppColors.black.withValues(alpha: 0.2),
                 ),
               ),
             ),
@@ -379,10 +393,10 @@ class ItineraryCard extends StatelessWidget {
                     const SizedBox(width: 12),
                   ],
                   if (delaySummary != null) ...[
-                    const Icon(
+                    Icon(
                       LucideIcons.clock,
                       size: 16,
-                      color: Color(0x80000000),
+                      color: AppColors.black.withValues(alpha: 0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -476,7 +490,11 @@ class LegWidget extends StatelessWidget {
           height:
               18, // Match the height of the text container (14 font + 2*2 padding)
           child: Center(
-            child: Icon(icon, size: 16, color: const Color(0x80000000)),
+            child: Icon(
+              icon,
+              size: 16,
+              color: AppColors.black.withValues(alpha: 0.5),
+            ),
           ),
         ),
         const SizedBox(width: 4),

@@ -1247,7 +1247,7 @@ class _MapScreenState extends State<MapScreen>
     canvas.drawPath(pointerPath, bodyPaint);
 
     final borderPaint = Paint()
-      ..color = AppColors.white
+      ..color = AppColors.solidWhite
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
     canvas.drawCircle(bubbleCenter, bubbleRadius - 1, borderPaint);
@@ -1260,7 +1260,7 @@ class _MapScreenState extends State<MapScreen>
           fontSize: 28,
           fontFamily: icon.fontFamily,
           package: icon.fontPackage,
-          color: AppColors.white,
+          color: AppColors.solidWhite,
         ),
       ),
     )..layout();
@@ -1572,12 +1572,12 @@ class _MapControlPills extends StatelessWidget {
             _MapControlChip(
               onTap: onLocate,
               width: 104,
-              leading: const Icon(
+              leading: Icon(
                 LucideIcons.locate,
                 size: 16,
                 color: AppColors.black,
               ),
-              label: const Text(
+              label: Text(
                 'Locate',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -1615,9 +1615,9 @@ class _MapControlChip extends StatelessWidget {
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       restingColor: AppColors.white,
-      pressedColor: const Color(0xFFF4F6F8),
+      pressedColor: AppColors.white.withValues(alpha: 0.92),
       borderRadius: BorderRadius.circular(18),
-      borderColor: const Color(0x1A000000),
+      borderColor: AppColors.black.withValues(alpha: 0.1),
       child: SizedBox(width: width, child: content),
     );
   }
@@ -1797,7 +1797,7 @@ class _LongPressModalCard extends StatelessWidget {
                         maxLines: 1,
                         softWrap: false,
                         overflow: TextOverflow.fade,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 15,
                           color: AppColors.black,
@@ -1814,7 +1814,7 @@ class _LongPressModalCard extends StatelessWidget {
                         maxLines: 1,
                         softWrap: false,
                         overflow: TextOverflow.fade,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 15,
                           color: AppColors.black,
@@ -1853,12 +1853,14 @@ class _LongPressModalCard extends StatelessWidget {
                   width: iconBoxSize,
                   height: iconBoxSize,
                   decoration: BoxDecoration(
-                    color: const Color(0x0F000000),
+                    color: AppColors.black.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0x11000000)),
+                    border: Border.all(
+                      color: AppColors.black.withValues(alpha: 0.07),
+                    ),
                   ),
                   alignment: Alignment.center,
-                  child: const Icon(
+                  child: Icon(
                     LucideIcons.mapPin,
                     size: 18,
                     color: AppColors.black,
@@ -1872,7 +1874,7 @@ class _LongPressModalCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Use this spot',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
@@ -1882,10 +1884,10 @@ class _LongPressModalCard extends StatelessWidget {
                         ),
                         Text(
                           '${latLng.latitude.toStringAsFixed(4)}, ${latLng.longitude.toStringAsFixed(4)}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: 13,
-                            color: Color(0x99000000),
+                            color: AppColors.black.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -1895,20 +1897,22 @@ class _LongPressModalCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Choose how to use this location:',
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 fontSize: 14,
-                color: Color(0x99000000),
+                color: AppColors.black.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F6F8),
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: const Color(0x11000000)),
+                border: Border.all(
+                  color: AppColors.black.withValues(alpha: 0.07),
+                ),
               ),
               padding: const EdgeInsets.all(4),
               child: Row(

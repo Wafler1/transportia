@@ -76,9 +76,11 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
       link: widget.layerLink,
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0x1A000000)), // ~10% black
+          border: Border.all(
+            color: AppColors.black.withValues(alpha: 0.1),
+          ), // ~10% black
           boxShadow: const [
             BoxShadow(
               color: Color(0x14000000), // subtle shadow
@@ -114,7 +116,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                   Container(
                     width: 1,
                     height: 28,
-                    color: const Color(0x1A000000),
+                    color: AppColors.black.withValues(alpha: 0.1),
                   ),
                   // The swap button centered on the divider
                   GestureDetector(
@@ -146,10 +148,12 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                         height: 28,
                         decoration: BoxDecoration(
                           color: _swapPressed
-                              ? const Color(0xFFF5F5F5)
-                              : const Color(0xFFFFFFFF),
+                              ? AppColors.white.withValues(alpha: 0.92)
+                              : AppColors.white,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0x1A000000)),
+                          border: Border.all(
+                            color: AppColors.black.withValues(alpha: 0.1),
+                          ),
                           boxShadow: const [
                             BoxShadow(
                               color: Color(0x14000000),
@@ -239,11 +243,11 @@ class _InlineField extends StatelessWidget {
                       !isFocused)
                   ? ''
                   : hintText,
-              placeholderStyle: const TextStyle(
-                color: Color(0x66000000),
+              placeholderStyle: TextStyle(
+                color: AppColors.black.withValues(alpha: 0.4),
                 fontSize: 16,
               ),
-              style: const TextStyle(color: AppColors.black, fontSize: 16),
+              style: TextStyle(color: AppColors.black, fontSize: 16),
               cursorColor: AppColors.accentOf(context),
               textAlign: textAlign,
               decoration: null, // Let outer container draw the box

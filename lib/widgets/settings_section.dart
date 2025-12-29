@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import '../theme/app_colors.dart';
 
 /// Card-like grouping for related settings rows.
 class SettingsSection extends StatelessWidget {
@@ -27,19 +28,21 @@ class SettingsSection extends StatelessWidget {
             child: Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: Color(0x66000000),
+                color: AppColors.black.withValues(alpha: 0.4),
                 letterSpacing: 0.5,
               ),
             ),
           ),
           Container(
             decoration: BoxDecoration(
-              color: const Color(0x05000000),
+              color: AppColors.black.withValues(alpha: 0.02),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0x0A000000)),
+              border: Border.all(
+                color: AppColors.black.withValues(alpha: 0.04),
+              ),
             ),
             child: Column(
               children: [
@@ -51,10 +54,12 @@ class SettingsSection extends StatelessWidget {
                         bottom: spacing,
                         top: spacing,
                       ),
-                      child: const SizedBox(
+                      child: SizedBox(
                         height: 1,
                         child: DecoratedBox(
-                          decoration: BoxDecoration(color: Color(0x0A000000)),
+                          decoration: BoxDecoration(
+                            color: AppColors.black.withValues(alpha: 0.04),
+                          ),
                         ),
                       ),
                     ),

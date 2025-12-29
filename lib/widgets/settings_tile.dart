@@ -47,7 +47,7 @@ class SettingsTile extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppColors.black,
@@ -57,10 +57,10 @@ class SettingsTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0x66000000),
+                    color: AppColors.black.withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -70,7 +70,11 @@ class SettingsTile extends StatelessWidget {
         if (trailing != null) ...[
           trailing!,
         ] else if (trailingIcon != null) ...[
-          Icon(trailingIcon, size: 20, color: const Color(0x33000000)),
+          Icon(
+            trailingIcon,
+            size: 20,
+            color: AppColors.black.withValues(alpha: 0.2),
+          ),
         ],
       ],
     );

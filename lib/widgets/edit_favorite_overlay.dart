@@ -111,7 +111,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                         ),
                       ),
                       const SizedBox(width: 16),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Edit Favourite',
                           style: TextStyle(
@@ -124,7 +124,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'Name',
                     style: TextStyle(
                       fontSize: 14,
@@ -138,18 +138,20 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                     placeholder: 'Enter name',
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0x08000000),
+                      color: AppColors.black.withValues(alpha: 0.03),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0x1A000000)),
+                      border: Border.all(
+                        color: AppColors.black.withValues(alpha: 0.1),
+                      ),
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppColors.black,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'Icon',
                     style: TextStyle(
                       fontSize: 14,
@@ -198,12 +200,12 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? AppColors.accentOf(context)
-                                    : const Color(0x08000000),
+                                    : AppColors.black.withValues(alpha: 0.03),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
                                   color: isSelected
                                       ? AppColors.accentOf(context)
-                                      : const Color(0x1A000000),
+                                      : AppColors.black.withValues(alpha: 0.1),
                                   width: isSelected ? 2 : 1,
                                 ),
                               ),
@@ -211,7 +213,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                                 icon,
                                 size: 24,
                                 color: isSelected
-                                    ? AppColors.white
+                                    ? AppColors.solidWhite
                                     : AppColors.black.withValues(alpha: 0.6),
                               ),
                             ),
@@ -229,11 +231,13 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: const Color(0x08000000),
+                              color: AppColors.black.withValues(alpha: 0.03),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0x1A000000)),
+                              border: Border.all(
+                                color: AppColors.black.withValues(alpha: 0.1),
+                              ),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Cancel',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -261,7 +265,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.white,
+                                color: AppColors.solidWhite,
                               ),
                             ),
                           ),

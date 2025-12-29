@@ -9,8 +9,10 @@ import 'package:transportia/screens/transit_options_screen.dart';
 import 'package:transportia/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/settings_section.dart';
 import '../utils/app_version.dart';
@@ -21,6 +23,7 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -49,7 +52,7 @@ class AccountScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -67,7 +70,7 @@ class AccountScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
-                            color: Color(0x66000000),
+                            color: AppColors.black.withValues(alpha: 0.4),
                           ),
                         ),
                       ],
@@ -99,7 +102,9 @@ class AccountScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0x1A000000)),
+                      border: Border.all(
+                        color: AppColors.black.withValues(alpha: 0.1),
+                      ),
                       boxShadow: const [
                         BoxShadow(
                           color: Color(0x20FC970A),
@@ -138,15 +143,15 @@ class AccountScreen extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Created by ',
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color: Color(0x80000000),
+                                      color: AppColors.black.withValues(alpha: 0.5),
                                     ),
                                   ),
-                                  const Text(
+                                  Text(
                                     'Wafler.one',
                                     style: TextStyle(
                                       fontSize: 13,
@@ -157,12 +162,12 @@ class AccountScreen extends StatelessWidget {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 'Helping you travel smarter',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
-                                  color: Color(0x66000000),
+                                  color: AppColors.black.withValues(alpha: 0.4),
                                   height: 1.2,
                                 ),
                               ),
@@ -280,14 +285,14 @@ class AccountScreen extends StatelessWidget {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.asset(
-                        'assets/branding/icon-filled-min.png',
+                        'assets/branding/logo_rounded_min.png',
                         width: 56,
                         height: 56,
                         fit: BoxFit.cover,
                       ),
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'Transportia',
                       style: TextStyle(
                         fontSize: 16,
@@ -298,10 +303,10 @@ class AccountScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Version ${AppVersion.current}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Color(0x66000000),
+                        color: AppColors.black.withValues(alpha: 0.4),
                       ),
                     ),
                     // Add extra padding to account for floating nav bar

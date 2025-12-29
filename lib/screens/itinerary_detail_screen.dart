@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:transportia/widgets/load_more_button.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 
 import '../models/itinerary.dart';
+import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
@@ -33,6 +35,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     final displayLegs = buildDisplayLegs(widget.itinerary.legs);
 
     return Container(
@@ -48,12 +51,12 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             JourneyOverviewWidget(itinerary: widget.itinerary),
             Expanded(
               child: displayLegs.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text(
                         'No additional steps required for this journey.',
                         style: TextStyle(
                           fontSize: 14,
-                          color: Color(0x66000000),
+                          color: AppColors.black.withValues(alpha: 0.4),
                         ),
                       ),
                     )
@@ -173,7 +176,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       formatTime(itinerary.startTime),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.black,
@@ -190,7 +193,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       formatDuration(itinerary.duration),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.black,
@@ -214,7 +217,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       formatTime(itinerary.endTime),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: AppColors.black,
@@ -357,7 +360,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                       ),
                     Text(
                       formatDuration(widget.leg.duration),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: AppColors.black,
@@ -380,7 +383,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             const SizedBox(height: 8),
             Text(
               _buildModeText(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.black,
@@ -397,9 +400,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   Expanded(
                     child: Text(
                       '${formatTime(scheduledStart)} - ${widget.leg.fromName}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0x80000000),
+                        color: AppColors.black.withValues(alpha: 0.5),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -417,9 +420,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   Expanded(
                     child: Text(
                       '${formatTime(scheduledEnd)} - ${widget.leg.toName}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0x80000000),
+                        color: AppColors.black.withValues(alpha: 0.5),
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -753,7 +756,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                 if (alert.headerText != null && alert.headerText!.isNotEmpty)
                   Text(
                     alert.headerText!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
                       color: AppColors.black,
@@ -822,7 +825,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     // Fallback to transit mode name when no short name.
     return Text(
       getTransitModeName(widget.leg.mode),
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
         color: AppColors.black,
@@ -848,7 +851,7 @@ class TransferLegCard extends StatelessWidget {
             children: [
               Icon(LucideIcons.arrowLeftRight, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Transfer',
                 style: TextStyle(
                   fontSize: 16,
@@ -859,7 +862,7 @@ class TransferLegCard extends StatelessWidget {
               const Spacer(),
               Text(
                 formatDuration(leg.duration),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.black,
@@ -875,9 +878,9 @@ class TransferLegCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${formatTime(leg.startTime)} - ${leg.fromName}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0x80000000),
+                    color: AppColors.black.withValues(alpha: 0.5),
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -889,7 +892,10 @@ class TransferLegCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
-              style: const TextStyle(fontSize: 13, color: Color(0x99000000)),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.black.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ],
@@ -948,7 +954,7 @@ class FinishLegCard extends StatelessWidget {
             children: [
               const Icon(LucideIcons.flag, size: 20),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Finish',
                 style: TextStyle(
                   fontSize: 16,
@@ -959,7 +965,7 @@ class FinishLegCard extends StatelessWidget {
               const Spacer(),
               Text(
                 formatTime(arrivalTime),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: AppColors.black,

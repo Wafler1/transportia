@@ -4,8 +4,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
 import 'favourites_map_screen.dart';
+import '../providers/theme_provider.dart';
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/custom_page_route.dart';
@@ -69,6 +71,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<ThemeProvider>();
     return AppPageScaffold(
       title: 'Favourites',
       scrollable: false,
@@ -98,12 +101,12 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
+                      Text(
                         'Long press and drag to reorder your favourites. Tap to edit.',
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: Color(0x66000000),
+                          color: AppColors.black.withValues(alpha: 0.4),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -142,7 +145,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        children: const [
+        children: [
           Text(
             'No favourites yet',
             style: TextStyle(
@@ -159,7 +162,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Color(0x66000000),
+              color: AppColors.black.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -186,14 +189,14 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(LucideIcons.plus, size: 20, color: AppColors.white),
+            Icon(LucideIcons.plus, size: 20, color: AppColors.solidWhite),
             SizedBox(width: 8),
             Text(
               'Add Favourite',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.white,
+                color: AppColors.solidWhite,
               ),
             ),
           ],
@@ -242,7 +245,9 @@ class _FavouriteListEntry extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0x11000000)),
+          border: Border.all(
+            color: AppColors.black.withValues(alpha: 0.07),
+          ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x06000000),
@@ -272,7 +277,7 @@ class _FavouriteListEntry extends StatelessWidget {
                 children: [
                   Text(
                     favorite.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.black,
@@ -281,10 +286,10 @@ class _FavouriteListEntry extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     '${favorite.lat.toStringAsFixed(4)}, ${favorite.lon.toStringAsFixed(4)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0x66000000),
+                      color: AppColors.black.withValues(alpha: 0.4),
                     ),
                   ),
                 ],
