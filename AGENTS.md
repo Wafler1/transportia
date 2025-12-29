@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 - `lib/`: application code.
-  - `lib/main.dart`: entrypoint; boots `EntariaApp`.
+  - `lib/main.dart`: entrypoint; boots `Transportia`.
   - `lib/app.dart`: app shell, routing, locale setup.
   - `lib/screens/`: UI screens (e.g., `map_screen.dart`, `welcome_screen.dart`).
   - `lib/services/`: platform/data services (e.g., `location_service.dart`).

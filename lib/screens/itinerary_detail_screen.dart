@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:entaria_app/widgets/load_more_button.dart';
+import 'package:transportia/widgets/load_more_button.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:share_plus/share_plus.dart';

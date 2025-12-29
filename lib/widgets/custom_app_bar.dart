@@ -1,4 +1,4 @@
-import 'package:entaria_app/widgets/pressable_highlight.dart';
+import 'package:transportia/widgets/pressable_highlight.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:lucide_icons_flutter/lucide_icons.dart';

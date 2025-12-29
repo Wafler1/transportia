@@ -823,7 +823,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
     if (scheduled == null && actual == null) return null;
     final display = formatTime(scheduled ?? actual);
     final delay = (scheduled != null && actual != null)
-        ? computeDelay(scheduled!, actual!)
+        ? computeDelay(scheduled, actual)
         : null;
     final baseColor = isPassed
         ? AppColors.black.withValues(alpha: 0.4)

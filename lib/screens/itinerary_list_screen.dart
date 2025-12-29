@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:entaria_app/services/transitous_geocode_service.dart';
-import 'package:entaria_app/utils/custom_page_route.dart';
-import 'package:entaria_app/utils/leg_helper.dart';
+import 'package:transportia/services/transitous_geocode_service.dart';
+import 'package:transportia/utils/custom_page_route.dart';
+import 'package:transportia/utils/leg_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';

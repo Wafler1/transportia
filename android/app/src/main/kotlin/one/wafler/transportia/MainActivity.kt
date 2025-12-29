@@ -1,4 +1,4 @@
-package com.example.entaria_app
+package one.wafler.transportia
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine

@@ -1,12 +1,12 @@
-import 'package:entaria_app/screens/appearance_screen.dart';
-import 'package:entaria_app/screens/statistics_screen.dart';
-import 'package:entaria_app/screens/favourites_screen.dart';
-import 'package:entaria_app/screens/info_screen.dart';
-import 'package:entaria_app/screens/legal_screen.dart';
-import 'package:entaria_app/screens/location_settings_screen.dart';
-import 'package:entaria_app/utils/custom_page_route.dart';
-import 'package:entaria_app/screens/transit_options_screen.dart';
-import 'package:entaria_app/widgets/validation_toast.dart';
+import 'package:transportia/screens/appearance_screen.dart';
+import 'package:transportia/screens/statistics_screen.dart';
+import 'package:transportia/screens/favourites_screen.dart';
+import 'package:transportia/screens/info_screen.dart';
+import 'package:transportia/screens/legal_screen.dart';
+import 'package:transportia/screens/location_settings_screen.dart';
+import 'package:transportia/utils/custom_page_route.dart';
+import 'package:transportia/screens/transit_options_screen.dart';
+import 'package:transportia/widgets/validation_toast.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -85,7 +85,7 @@ class AccountScreen extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () async {
                     try {
-                      final uri = Uri.parse('http://wafler.one?ref=entaria');
+                      final uri = Uri.parse('http://wafler.one?ref=transportia');
                       await launchUrl(
                         uri,
                         mode: LaunchMode.externalApplication,
@@ -250,7 +250,7 @@ class AccountScreen extends StatelessWidget {
                 children: [
                   SettingsTile(
                     icon: LucideIcons.info,
-                    title: 'About Entaria',
+                    title: 'About Transportia',
                     subtitle: 'About, credits, and more',
                     onPressed: () {
                       Navigator.of(
@@ -288,7 +288,7 @@ class AccountScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Entaria',
+                      'Transportia',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

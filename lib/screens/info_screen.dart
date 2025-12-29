@@ -53,7 +53,7 @@ class _InfoScreenState extends State<InfoScreen> {
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold(
-      title: 'About Entaria',
+      title: 'About Transportia',
       scrollable: true,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       body: Column(
@@ -61,7 +61,7 @@ class _InfoScreenState extends State<InfoScreen> {
         children: [
           AppIconHeader(
             icon: LucideIcons.info,
-            title: 'Entaria',
+            title: 'Transportia',
             subtitle: 'Version ${AppVersion.current}',
             iconSize: 40,
           ),
@@ -77,7 +77,7 @@ class _InfoScreenState extends State<InfoScreen> {
               const SizedBox(height: 12),
               _buildCard(
                 child: const Text(
-                  'Entaria is a modern travel companion designed to make public transportation easier and more accessible. Entaria aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.',
+                  'Transportia is a modern travel companion designed to make public transportation easier and more accessible. Transportia aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.',
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.5,
@@ -100,13 +100,13 @@ class _InfoScreenState extends State<InfoScreen> {
                 'Website',
                 'wafler.one',
                 LucideIcons.globe,
-                'https://wafler.one?ref=entaria',
+                'https://wafler.one?ref=transportia',
               ),
               const SizedBox(height: 24),
               const SectionTitle(text: 'Open Source Credits'),
               const SizedBox(height: 12),
               const Text(
-                'Entaria is built with the help of amazing open-source projects and APIs:',
+                'Transportia is built with the help of amazing open-source projects and APIs:',
                 style: TextStyle(fontSize: 14, color: Color(0x80000000)),
               ),
               const SizedBox(height: 12),

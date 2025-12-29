@@ -12,5 +12,5 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const EntariaApp());
+  runApp(const Transportia());
 }

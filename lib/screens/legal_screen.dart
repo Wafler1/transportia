@@ -47,8 +47,8 @@ class LegalScreen extends StatelessWidget {
             context: context,
             icon: LucideIcons.fileText,
             title: 'Terms of Service',
-            description: 'Review our terms and conditions for using Entaria',
-            onTap: () => _openUrl(context, 'https://wafler.one/entaria/terms'),
+            description: 'Review our terms and conditions for using Transportia',
+            onTap: () => _openUrl(context, 'https://wafler.one/transportia/terms'),
           ),
           const SizedBox(height: 12),
           _buildLegalCard(
@@ -57,7 +57,7 @@ class LegalScreen extends StatelessWidget {
             title: 'Privacy Policy',
             description: 'Learn how we collect, use, and protect your data',
             onTap: () =>
-                _openUrl(context, 'https://wafler.one/entaria/privacy'),
+                _openUrl(context, 'https://wafler.one/transportia/privacy'),
           ),
           const SizedBox(height: 32),
           Container(

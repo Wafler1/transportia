@@ -95,7 +95,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                               const SizedBox(height: 32),
                               const Text(
-                                "Welcome to Entaria, \na free transportation app",
+                                "Welcome to Transportia, \na free transportation app",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 24,
@@ -106,7 +106,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                "With Entaria, you can find your way \nfrom one city to another easily.",
+                                "With Transportia, you can find your way \nfrom one city to another easily.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 14,

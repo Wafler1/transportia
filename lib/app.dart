@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
@@ -14,8 +13,8 @@ import 'utils/app_version.dart';
 import 'utils/version_utils.dart';
 import 'widgets/update_prompt_overlay.dart';
 
-class EntariaApp extends StatelessWidget {
-  const EntariaApp({super.key});
+class Transportia extends StatelessWidget {
+  const Transportia({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +22,7 @@ class EntariaApp extends StatelessWidget {
       create: (_) => ThemeProvider(),
       child: OKToast(
         child: WidgetsApp(
-          title: 'Entaria',
+          title: 'Transportia',
           color: const Color(0xFF0b0f14),
           debugShowCheckedModeBanner: false,
           localizationsDelegates: const [
@@ -151,10 +150,10 @@ class _RootGateState extends State<_RootGate> {
   }
 
   void _handleIncomingDeepLink(Uri uri) {
-    if (uri.scheme != 'entaria' || uri.host != 'trip') {
+    if (uri.scheme != 'transportia' || uri.host != 'trip') {
       return;
     }
-    debugPrint('Received Entaria trip link: ${uri.toString()}');
+    debugPrint('Received Transportia trip link: ${uri.toString()}');
     // Trip link payload will be handled in a future iteration.
   }
 

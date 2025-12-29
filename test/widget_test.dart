@@ -7,11 +7,11 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:entaria_app/app.dart';
+import 'package:transportia/app.dart';
 
 void main() {
   testWidgets('App builds', (tester) async {
-    await tester.pumpWidget(const EntariaApp());
+    await tester.pumpWidget(const Transportia());
     expect(find.byType(WidgetsApp), findsOneWidget);
   });
 }
