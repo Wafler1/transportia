@@ -178,13 +178,6 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
         decoration: BoxDecoration(
           color: AppColors.accentOf(context),
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.accentOf(context).withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -248,13 +241,6 @@ class _FavouriteListEntry extends StatelessWidget {
           border: Border.all(
             color: AppColors.black.withValues(alpha: 0.07),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x06000000),
-              blurRadius: 12,
-              offset: Offset(0, 6),
-            ),
-          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -465,15 +451,7 @@ class _FavoritesReorderListState extends State<_FavoritesReorderList> {
       feedback: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: width),
         child: DecoratedBox(
-          decoration: const BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 16,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
+          decoration: const BoxDecoration(),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: buildEntry(interactive: false),

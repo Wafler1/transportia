@@ -105,19 +105,6 @@ class AccountScreen extends StatelessWidget {
                       border: Border.all(
                         color: AppColors.black.withValues(alpha: 0.1),
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x20FC970A),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: Color(0x08000000),
-                          blurRadius: 12,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Row(
                       children: [

@@ -759,7 +759,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.black,
+                      color: AppColors.solidBlack,
                     ),
                   ),
                 if (alert.descriptionText != null &&
@@ -769,7 +769,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                     alert.descriptionText!,
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.black.withValues(alpha: 0.8),
+                      color: AppColors.solidBlack.withValues(alpha: 0.8),
                     ),
                   ),
                 ],

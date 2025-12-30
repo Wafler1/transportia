@@ -231,7 +231,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _DateSelector extends StatelessWidget {
+class _DateSelector extends StatefulWidget {
   const _DateSelector({
     required this.selectedDate,
     required this.onDateChanged,
@@ -239,6 +239,21 @@ class _DateSelector extends StatelessWidget {
 
   final DateTime selectedDate;
   final void Function(DateTime) onDateChanged;
+
+  @override
+  State<_DateSelector> createState() => _DateSelectorState();
+}
+
+class _DateSelectorState extends State<_DateSelector> {
+  double _dragOffset = 0;
+  Timer? _autoScrollTimer;
+  int _autoScrollDirection = 0; // 1 for next day, -1 for previous day
+
+  @override
+  void dispose() {
+    _autoScrollTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
@@ -267,14 +282,73 @@ class _DateSelector extends StatelessWidget {
   }
 
   void _changeDate(int days) {
-    final newDate = selectedDate.add(Duration(days: days));
+    final newDate = widget.selectedDate.add(Duration(days: days));
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 30));
 
     if (newDate.isAfter(now.subtract(const Duration(days: 1))) &&
         newDate.isBefore(maxDate.add(const Duration(days: 1)))) {
-      onDateChanged(newDate);
+      widget.onDateChanged(newDate);
     }
+  }
+
+  void _incrementDate() => _changeDate(1);
+
+  void _decrementDate() => _changeDate(-1);
+
+  void _startAutoScroll(int direction) {
+    if (_autoScrollDirection == direction) return;
+    _autoScrollDirection = direction;
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+      if (_autoScrollDirection == 1) {
+        _incrementDate();
+      } else if (_autoScrollDirection == -1) {
+        _decrementDate();
+      }
+    });
+  }
+
+  void _stopAutoScroll() {
+    _autoScrollDirection = 0;
+    _autoScrollTimer?.cancel();
+    _autoScrollTimer = null;
+  }
+
+  void _handleDragStart(DragStartDetails details) {
+    _dragOffset = 0;
+    _stopAutoScroll();
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    _dragOffset += details.delta.dx;
+
+    int direction;
+    if (_dragOffset >= 10) {
+      direction = 1;
+    } else if (_dragOffset <= -10) {
+      direction = -1;
+    } else {
+      direction = 0;
+    }
+
+    if (direction != 0) {
+      _startAutoScroll(direction);
+    }
+
+    if (_dragOffset.abs() >= 26) {
+      if (_dragOffset > 0) {
+        _incrementDate();
+      } else {
+        _decrementDate();
+      }
+      _dragOffset = 0;
+    }
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    _dragOffset = 0;
+    _stopAutoScroll();
   }
 
   @override
@@ -286,40 +360,47 @@ class _DateSelector extends StatelessWidget {
         border: Border.all(color: const Color(0x11000000)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          GestureDetector(
-            onTap: () => _changeDate(-1),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                LucideIcons.chevronLeft,
-                size: 20,
-                color: AppColors.black.withValues(alpha: 0.6),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onHorizontalDragStart: _handleDragStart,
+        onHorizontalDragUpdate: _handleDragUpdate,
+        onHorizontalDragEnd: _handleDragEnd,
+        onHorizontalDragCancel: _stopAutoScroll,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            GestureDetector(
+              onTap: _decrementDate,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  LucideIcons.chevronLeft,
+                  size: 20,
+                  color: AppColors.black.withValues(alpha: 0.6),
+                ),
               ),
             ),
-          ),
-          Text(
-            _formatDate(selectedDate),
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.black,
-            ),
-          ),
-          GestureDetector(
-            onTap: () => _changeDate(1),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Icon(
-                LucideIcons.chevronRight,
-                size: 20,
-                color: AppColors.black.withValues(alpha: 0.6),
+            Text(
+              _formatDate(widget.selectedDate),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.black,
               ),
             ),
-          ),
-        ],
+            GestureDetector(
+              onTap: _incrementDate,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  LucideIcons.chevronRight,
+                  size: 20,
+                  color: AppColors.black.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

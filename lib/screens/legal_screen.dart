@@ -153,13 +153,6 @@ class LegalScreen extends StatelessWidget {
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
         ),
         child: Row(
           children: [

@@ -54,7 +54,6 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
   final Set<String> _selectedModes = {..._transitModeOptions};
   double _walkingSpeed = 4.8;
   int _transferBuffer = 0;
-  String _pedestrianProfile = 'FOOT';
   static const double _walkingMin = 2.0;
   static const double _walkingMax = 7.0;
   static const double _walkingStep = 0.1;
@@ -377,13 +376,6 @@ class _ModeCategoryCard extends StatelessWidget {
           border: Border.all(
             color: selected ? accent : const Color(0x14000000),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -444,13 +436,6 @@ class _QuickValueCard extends StatelessWidget {
           border: Border.all(
             color: selected ? accent : const Color(0x14000000),
           ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x05000000),
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Center(
           child: Text(

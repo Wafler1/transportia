@@ -31,7 +31,7 @@ class StopTimesService {
     }
 
     if (startTime != null) {
-      params['time'] = startTime.toUtc().toIso8601String();
+      params['time'] = _formatIso8601Millis(startTime);
     }
 
     if (arriveBy) {
@@ -62,4 +62,15 @@ class StopTimesService {
       throw StopTimesServiceException('Failed to fetch stop times: $e');
     }
   }
+}
+
+String _formatIso8601Millis(DateTime dateTime) {
+  final utc = dateTime.toUtc();
+  final base = utc.toIso8601String();
+  final dot = base.indexOf('.');
+  if (dot == -1) {
+    return base;
+  }
+  final millis = utc.millisecond.toString().padLeft(3, '0');
+  return '${base.substring(0, dot)}.${millis}Z';
 }

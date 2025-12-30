@@ -3,6 +3,7 @@ import '../widgets/floating_nav_bar.dart';
 import 'map_screen.dart';
 import 'timetables_screen.dart';
 import 'user_screen.dart';
+import '../services/transitous_geocode_service.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -13,6 +14,7 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  TransitousLocationSuggestion? _pendingTimetableStop;
   final ValueNotifier<bool> _mapCollapsedNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double> _mapCollapseProgressNotifier =
       ValueNotifier<double>(0.0);
@@ -24,6 +26,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     if (index != _currentIndex) {
       setState(() => _currentIndex = index);
     }
+  }
+
+  void _handleTimetableRequested(TransitousLocationSuggestion stop) {
+    setState(() {
+      _pendingTimetableStop = stop;
+      _currentIndex = 1;
+    });
   }
 
   bool _handleBackGesture() {
@@ -75,8 +84,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     _overlaysVisibleNotifier.value = overlaysVisible;
                   });
                 },
+                onTabChangeRequested: _onNavIndexChanged,
+                onTimetableRequested: _handleTimetableRequested,
               ),
-              const TimetablesScreen(),
+              TimetablesScreen(initialStop: _pendingTimetableStop),
               const AccountScreen(),
             ],
           ),

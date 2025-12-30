@@ -123,15 +123,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                                   : color,
                               width: isSelected ? 3 : 0,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(
-                                  alpha: isSelected ? 0.4 : 0.25,
-                                ),
-                                blurRadius: isSelected ? 12 : 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
                           ),
                           child: isSelected
                               ? const Icon(
@@ -309,21 +300,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 : AppColors.black.withValues(alpha: 0.1),
             width: isSelected ? 2.5 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: selectedAccentColor.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    color: Color(0x08000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -407,21 +383,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 : AppColors.black.withValues(alpha: 0.1),
             width: isSelected ? 2.5 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: selectedAccentColor.withValues(alpha: 0.15),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    color: Color(0x08000000),
-                    blurRadius: 8,
-                    offset: Offset(0, 2),
-                  ),
-                ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

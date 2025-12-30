@@ -22,7 +22,9 @@ import '../widgets/time_selection_overlay.dart';
 import '../widgets/validation_toast.dart';
 
 class TimetablesScreen extends StatefulWidget {
-  const TimetablesScreen({super.key});
+  const TimetablesScreen({super.key, this.initialStop});
+
+  final TransitousLocationSuggestion? initialStop;
 
   @override
   State<TimetablesScreen> createState() => _TimetablesScreenState();
@@ -69,6 +71,15 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     _searchController.addListener(_onSearchTextChanged);
     _searchFocus.addListener(_onFocusChanged);
     _checkLocationPermission();
+    _applyInitialStop(widget.initialStop);
+  }
+
+  @override
+  void didUpdateWidget(covariant TimetablesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialStop?.id != oldWidget.initialStop?.id) {
+      _applyInitialStop(widget.initialStop);
+    }
   }
 
   @override
@@ -174,6 +185,18 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
         _isFetchingSuggestions = false;
       });
     }
+  }
+
+  void _applyInitialStop(TransitousLocationSuggestion? initialStop) {
+    if (initialStop == null) return;
+    _selectedStop = initialStop;
+    _searchController.text = initialStop.name;
+    _suggestions = [];
+    _isFetchingSuggestions = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _onSearch();
+    });
   }
 
   Future<void> _requestSuggestions(String query) async {
