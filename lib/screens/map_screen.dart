@@ -12,10 +12,12 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:timelines_plus/timelines_plus.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
 import '../providers/theme_provider.dart';
 import '../models/route_field_kind.dart';
+import '../models/itinerary.dart';
 import '../models/stop_time.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
@@ -28,13 +30,17 @@ import '../services/recent_trips_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_map_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../services/trip_details_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
+import '../utils/duration_formatter.dart';
 import '../utils/geo_utils.dart';
 import '../utils/haptics.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart';
 import '../utils/time_utils.dart';
+import '../widgets/custom_card.dart';
+import '../widgets/info_chip.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
@@ -148,6 +154,26 @@ class _MapScreenState extends State<MapScreen>
   Color? _stopAccentColor;
   bool _didAddStopsLayer = false;
   bool _didAddVehiclesLayer = false;
+  bool _didAddFocusedVehiclesLayer = false;
+  bool _didAddFocusedStopsLayer = false;
+  bool _didAddFocusedRouteLayer = false;
+  Future<void>? _stopsLayerInit;
+  Future<void>? _vehicleLayerInit;
+  Future<void>? _focusedVehiclesLayerInit;
+  Future<void>? _focusedStopsLayerInit;
+  Future<void>? _focusedRouteLayerInit;
+  bool _isTripFocus = false;
+  bool _isTripFocusLoading = false;
+  String? _tripFocusError;
+  String? _focusedTripId;
+  Itinerary? _focusedItinerary;
+  bool _showStopsBeforeFocus = true;
+  int _focusedTripRequestId = 0;
+  final Map<String, _VehicleMarker> _focusedVehicles = {};
+  final Map<String, MapStop> _focusedStops = {};
+  final Set<String> _focusedRouteKeys = {};
+  final Set<String> _focusedRouteColors = {};
+  final Set<String> _focusedTripIds = {};
   MapStop? _selectedStop;
   bool _isStopOverlayClosing = false;
   bool _isStopTimesLoading = false;
@@ -158,6 +184,8 @@ class _MapScreenState extends State<MapScreen>
   static const Duration _tripWindowFuture = Duration(minutes: 10);
   static const int _maxVehicleCount = 120;
   static const int _maxStopCount = 240;
+  static const double _focusedTransferZoomLevel = 16.5;
+  static const double _focusedTransferDistanceThresholdMeters = 80.0;
   static const Duration _mapRefreshDebounce = Duration(milliseconds: 250);
   String? _lastTripsRequestKey;
   String? _lastStopsRequestKey;
@@ -222,7 +250,7 @@ class _MapScreenState extends State<MapScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final accent = AppColors.accentOf(context);
-    if (_stopAccentColor?.value == accent.value) return;
+    if (_stopAccentColor?.toARGB32() == accent.toARGB32()) return;
     _stopAccentColor = accent;
     if (_isMapReady) {
       unawaited(_applyStopAccentColor());
@@ -250,6 +278,9 @@ class _MapScreenState extends State<MapScreen>
     _controller?.onFeatureTapped.remove(_handleFeatureTapped);
     unawaited(_clearVehicleMarkers());
     unawaited(_clearStopMarkers());
+    unawaited(_clearFocusedRoute());
+    unawaited(_clearFocusedVehicles());
+    unawaited(_clearFocusedStops());
     unawaited(_removeRouteSymbols());
     super.dispose();
     _snapCtrl.dispose();
@@ -388,7 +419,25 @@ class _MapScreenState extends State<MapScreen>
     _stopMarkerImageId = null;
     _didAddStopsLayer = false;
     _didAddVehiclesLayer = false;
+    _didAddFocusedVehiclesLayer = false;
+    _didAddFocusedStopsLayer = false;
+    _didAddFocusedRouteLayer = false;
+    _vehicleLayerInit = null;
+    _stopsLayerInit = null;
+    _focusedVehiclesLayerInit = null;
+    _focusedStopsLayerInit = null;
+    _focusedRouteLayerInit = null;
     _vehicleMarkerImages.clear();
+    _focusedVehicles.clear();
+    _focusedStops.clear();
+    _focusedRouteKeys.clear();
+    _focusedRouteColors.clear();
+    _focusedTripIds.clear();
+    _focusedTripId = null;
+    _focusedItinerary = null;
+    _isTripFocus = false;
+    _isTripFocusLoading = false;
+    _tripFocusError = null;
     _lastTripsRequestKey = null;
     _lastStopsRequestKey = null;
     _tripRefreshTimer?.cancel();
@@ -406,7 +455,7 @@ class _MapScreenState extends State<MapScreen>
     );
     _tripRefreshTimer = Timer.periodic(
       const Duration(seconds: 5),
-      (_) => _refreshTrips(force: true),
+      (_) => _handleTripRefreshTick(),
     );
     _scheduleTripRefresh();
     _scheduleStopRefresh();
@@ -418,6 +467,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _scheduleTripRefresh() {
+    if (_isTripFocus) return;
     _tripRefreshDebounce?.cancel();
     _tripRefreshDebounce = Timer(_mapRefreshDebounce, () {
       unawaited(_refreshTrips());
@@ -425,6 +475,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _scheduleStopRefresh() {
+    if (_isTripFocus) return;
     _stopRefreshDebounce?.cancel();
     _stopRefreshDebounce = Timer(_mapRefreshDebounce, () {
       unawaited(_refreshStops());
@@ -486,7 +537,7 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _refreshTrips({bool force = false}) async {
     final controller = _controller;
-    if (controller == null || !_isMapReady) return;
+    if (controller == null || !_isMapReady || _isTripFocus) return;
     if (controller.isCameraMoving) return;
     final token = ++_tripRequestId;
     LatLngBounds bounds;
@@ -514,6 +565,105 @@ class _MapScreenState extends State<MapScreen>
     if (!mounted || token != _tripRequestId) return;
     _lastTripsRequestKey = viewKey;
     await _updateVehiclesFromSegments(segments, now, token);
+  }
+
+  void _handleTripRefreshTick() {
+    if (_isTripFocus) {
+      unawaited(_refreshFocusedTripVehicles(force: true));
+    } else {
+      unawaited(_refreshTrips(force: true));
+    }
+  }
+
+  Future<void> _refreshFocusedTripVehicles({bool force = false}) async {
+    if (!_isTripFocus) return;
+    final tripId = _focusedTripId;
+    if (tripId == null || tripId.isEmpty) return;
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    if (controller.isCameraMoving) return;
+    final token = ++_tripRequestId;
+    LatLngBounds bounds;
+    try {
+      bounds = await controller.getVisibleRegion();
+    } catch (_) {
+      return;
+    }
+    if (!force) {
+      final viewKey = _viewKey(bounds, _lastCam.zoom);
+      if (viewKey == _lastTripsRequestKey) return;
+    }
+    final now = DateTime.now().toUtc();
+    final startTime = now.subtract(_tripWindowPast);
+    final endTime = now.add(_tripWindowFuture);
+    List<MapTripSegment> segments;
+    try {
+      segments = await TransitousMapService.fetchTripSegments(
+        zoom: _lastCam.zoom,
+        bounds: bounds,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    } catch (_) {
+      return;
+    }
+    if (!mounted || token != _tripRequestId) return;
+    await _ensureFocusedVehiclesLayer();
+    _lastTripsRequestKey = _viewKey(bounds, _lastCam.zoom);
+
+    final chosen = <String, _SelectedSegment>{};
+    for (int i = 0; i < segments.length; i++) {
+      final segment = segments[i];
+      if (!_matchesFocusedSegment(segment, tripId)) continue;
+      final dep = segment.departure?.toUtc();
+      final arr = segment.arrival?.toUtc();
+      if (dep == null || arr == null) continue;
+      if (now.isBefore(dep) || now.isAfter(arr)) continue;
+      final key = segment.tripId;
+      final existing = chosen[key];
+      if (existing == null || arr.isBefore(existing.arrival)) {
+        chosen[key] = _SelectedSegment(
+          segment: segment,
+          colorIndex: i,
+          arrival: arr,
+        );
+      }
+    }
+
+    final seenTripIds = chosen.keys.toSet();
+    for (final entry in chosen.entries) {
+      final segData = _buildTripSegmentData(
+        entry.value.segment,
+        entry.value.colorIndex,
+      );
+      if (segData == null) continue;
+      final visual = _vehicleMarkerVisual(segData);
+      final imageId = await _ensureVehicleMarkerImage(visual, segData.color);
+      if (imageId == null) continue;
+      final existing = _focusedVehicles[entry.key];
+      if (existing == null) {
+        _focusedVehicles[entry.key] = _VehicleMarker(
+          segmentData: segData,
+          imageId: imageId,
+        )..lastPosition = _positionAlongSegment(segData, now);
+      } else {
+        existing.segmentData = segData;
+        existing.imageId = imageId;
+      }
+    }
+
+    for (final entry in _focusedVehicles.entries.toList()) {
+      if (!seenTripIds.contains(entry.key)) {
+        _focusedVehicles.remove(entry.key);
+      }
+    }
+
+    if (!mounted || token != _tripRequestId) return;
+    unawaited(_pushFocusedVehicleSource(now));
+  }
+
+  bool _matchesFocusedSegment(MapTripSegment segment, String tripId) {
+    return segment.tripId == tripId;
   }
 
   Future<void> _updateVehiclesFromSegments(
@@ -578,13 +728,24 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _updateVehiclePositions() {
+    if (_isTripFocus) {
+      _updateVehiclePositionsFor(_focusedVehicles, _pushFocusedVehicleSource);
+    } else {
+      _updateVehiclePositionsFor(_vehicles, _pushVehicleSource);
+    }
+  }
+
+  void _updateVehiclePositionsFor(
+    Map<String, _VehicleMarker> markers,
+    Future<void> Function(DateTime) push,
+  ) {
     final controller = _controller;
-    if (controller == null || _vehicles.isEmpty) return;
+    if (controller == null || markers.isEmpty) return;
     if (controller.isCameraMoving) return;
     final now = DateTime.now().toUtc();
     final nowMs = now.millisecondsSinceEpoch;
     var anyChange = false;
-    for (final entry in _vehicles.values) {
+    for (final entry in markers.values) {
       final segData = entry.segmentData;
       final target = _positionAlongSegment(segData, now);
       final lastPosition = entry.lastPosition;
@@ -617,13 +778,13 @@ class _MapScreenState extends State<MapScreen>
       anyChange = true;
     }
     if (anyChange) {
-      unawaited(_pushVehicleSource(now));
+      unawaited(push(now));
     }
   }
 
   Future<void> _refreshStops() async {
     final controller = _controller;
-    if (controller == null || !_isMapReady) return;
+    if (controller == null || !_isMapReady || _isTripFocus) return;
     if (!_showStops) {
       _applyStopsLayerVisibility();
       return;
@@ -820,6 +981,58 @@ class _MapScreenState extends State<MapScreen>
     return _defaultRouteColor(index);
   }
 
+  Color _focusedRouteColor(Itinerary itinerary) {
+    for (final leg in itinerary.legs) {
+      if (leg.mode == 'WALK') continue;
+      final parsed = parseHexColor(leg.routeColor);
+      if (parsed != null) return parsed;
+    }
+    return AppColors.accentOf(context);
+  }
+
+  Set<String> _buildFocusedRouteKeys(Itinerary itinerary) {
+    final keys = <String>{};
+    for (final leg in itinerary.legs) {
+      if (leg.mode == 'WALK') continue;
+      final display = leg.displayName?.trim();
+      if (display != null && display.isNotEmpty) {
+        keys.add(display);
+      }
+      final shortName = leg.routeShortName?.trim();
+      if (shortName != null && shortName.isNotEmpty) {
+        keys.add(shortName);
+      }
+      final longName = leg.routeLongName?.trim();
+      if (longName != null && longName.isNotEmpty) {
+        keys.add(longName);
+      }
+    }
+    return keys;
+  }
+
+  Set<String> _buildFocusedRouteColors(Itinerary itinerary) {
+    final colors = <String>{};
+    for (final leg in itinerary.legs) {
+      if (leg.routeColor == null) continue;
+      final color = leg.routeColor!.trim();
+      if (color.isNotEmpty) {
+        colors.add(color.toUpperCase());
+      }
+    }
+    return colors;
+  }
+
+  Set<String> _buildFocusedTripIds(Itinerary itinerary) {
+    final tripIds = <String>{};
+    for (final leg in itinerary.legs) {
+      final id = leg.tripId?.trim();
+      if (id != null && id.isNotEmpty) {
+        tripIds.add(id);
+      }
+    }
+    return tripIds;
+  }
+
   String _vehicleLabelForSegment(MapTripSegment segment) {
     final display = segment.displayName?.trim();
     if (display != null && display.isNotEmpty) return display;
@@ -974,6 +1187,7 @@ class _MapScreenState extends State<MapScreen>
   Widget build(BuildContext context) {
     return PopScope(
       canPop:
+          !_isTripFocus &&
           !_fromFocus.hasFocus &&
           !_toFocus.hasFocus &&
           !_isSheetCollapsed &&
@@ -982,7 +1196,9 @@ class _MapScreenState extends State<MapScreen>
           _longPressLatLng == null,
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          if (_selectedStop != null) {
+          if (_isTripFocus) {
+            _exitTripFocus();
+          } else if (_selectedStop != null) {
             _dismissStopOverlay();
           } else if (_longPressLatLng != null) {
             _dismissLongPressOverlay();
@@ -1075,7 +1291,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               ),
 
-              if (_sheetTop != null)
+              if (_sheetTop != null && !_isTripFocus)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -1140,146 +1356,196 @@ class _MapScreenState extends State<MapScreen>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      BottomCard(
-                        isCollapsed: _isSheetCollapsed,
-                        collapseProgress: progress,
-                        onHandleTap: () {
-                          _unfocusInputs();
-                          final target = _isSheetCollapsed
-                              ? expandedTop
-                              : collapsedTop;
-                          _animateTo(target, collapsedTop);
-                          _stopDragRumble();
-                        },
-                        onDragStart: () {
-                          _unfocusInputs();
-                          _snapCtrl.stop();
-                          _startDragRumble();
-                        },
-                        onDragUpdate: (dy) {
-                          final newTop = (_sheetTop! + dy).clamp(
-                            expandedTop,
-                            collapsedTop,
-                          );
-                          setState(() => _sheetTop = newTop);
-                        },
-                        onDragEnd: (velocityDy) {
-                          final mid = (collapsedTop + expandedTop) / 2;
-                          const vThresh = 700.0; // px/s
-                          double target;
-                          if (velocityDy.abs() > vThresh) {
-                            target = velocityDy > 0
-                                ? collapsedTop
-                                : expandedTop;
-                          } else {
-                            target = (_sheetTop! > mid)
-                                ? collapsedTop
-                                : expandedTop;
-                          }
-                          _animateTo(target, collapsedTop);
-                          _stopDragRumble();
-                        },
-                        fromCtrl: _fromCtrl,
-                        toCtrl: _toCtrl,
-                        fromFocusNode: _fromFocus,
-                        toFocusNode: _toFocus,
-                        showMyLocationDefault: _hasLocationPermission,
-                        onUnfocus: _unfocusInputs,
-                        onSwapRequested: _handleSwapRequested,
-                        routeFieldLink: _routeFieldLink,
-                        fromLoading: _isReverseGeocodeLoading(
-                          RouteFieldKind.from,
-                        ),
-                        toLoading: _isReverseGeocodeLoading(RouteFieldKind.to),
-                        fromSelection: _fromSelection,
-                        toSelection: _toSelection,
-                        onSearch: _search,
-                        timeSelectionLayerLink: _timeSelectionLayerLink,
-                        onTimeSelectionTap: _handleTimeSelectionTap,
-                        onTimeSelectionTapDown: _handleTimeSelectionTapDown,
-                        onTimeSelectionTapCancel: _handleTimeSelectionTapCancel,
-                        timeSelection: _timeSelection,
-                        recentTrips: _recentTrips,
-                        onRecentTripTap: _onRecentTripTap,
-                        tripsRefreshKey: _tripsRefreshKey,
-                        favorites: _favorites,
-                        onFavoriteTap: _onFavoriteTap,
-                        hasLocationPermission: _hasLocationPermission,
-                      ),
-                      CompositedTransformFollower(
-                        link: _routeFieldLink,
-                        showWhenUnlinked: false,
-                        targetAnchor: Alignment.bottomLeft,
-                        followerAnchor: Alignment.topLeft,
-                        offset: const Offset(0, 8),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            final offsetTween = Tween<Offset>(
-                              begin: const Offset(0, -0.05),
-                              end: Offset.zero,
-                            );
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: animation.drive(offsetTween),
-                                child: child,
+                      _isTripFocus
+                          ? _TripFocusBottomCard(
+                              onHandleTap: () {
+                                _unfocusInputs();
+                                final target = _isSheetCollapsed
+                                    ? expandedTop
+                                    : collapsedTop;
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              onDragStart: () {
+                                _unfocusInputs();
+                                _snapCtrl.stop();
+                                _startDragRumble();
+                              },
+                              onDragUpdate: (dy) {
+                                final newTop = (_sheetTop! + dy).clamp(
+                                  expandedTop,
+                                  collapsedTop,
+                                );
+                                setState(() => _sheetTop = newTop);
+                              },
+                              onDragEnd: (velocityDy) {
+                                final mid = (collapsedTop + expandedTop) / 2;
+                                const vThresh = 700.0; // px/s
+                                double target;
+                                if (velocityDy.abs() > vThresh) {
+                                  target = velocityDy > 0
+                                      ? collapsedTop
+                                      : expandedTop;
+                                } else {
+                                  target = (_sheetTop! > mid)
+                                      ? collapsedTop
+                                      : expandedTop;
+                                }
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              onBack: _exitTripFocus,
+                              itinerary: _focusedItinerary,
+                              isLoading: _isTripFocusLoading,
+                              errorMessage: _tripFocusError,
+                              bottomSpacer: _bottomBarHeight,
+                            )
+                          : BottomCard(
+                              isCollapsed: _isSheetCollapsed,
+                              collapseProgress: progress,
+                              onHandleTap: () {
+                                _unfocusInputs();
+                                final target = _isSheetCollapsed
+                                    ? expandedTop
+                                    : collapsedTop;
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              onDragStart: () {
+                                _unfocusInputs();
+                                _snapCtrl.stop();
+                                _startDragRumble();
+                              },
+                              onDragUpdate: (dy) {
+                                final newTop = (_sheetTop! + dy).clamp(
+                                  expandedTop,
+                                  collapsedTop,
+                                );
+                                setState(() => _sheetTop = newTop);
+                              },
+                              onDragEnd: (velocityDy) {
+                                final mid = (collapsedTop + expandedTop) / 2;
+                                const vThresh = 700.0; // px/s
+                                double target;
+                                if (velocityDy.abs() > vThresh) {
+                                  target = velocityDy > 0
+                                      ? collapsedTop
+                                      : expandedTop;
+                                } else {
+                                  target = (_sheetTop! > mid)
+                                      ? collapsedTop
+                                      : expandedTop;
+                                }
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              fromCtrl: _fromCtrl,
+                              toCtrl: _toCtrl,
+                              fromFocusNode: _fromFocus,
+                              toFocusNode: _toFocus,
+                              showMyLocationDefault: _hasLocationPermission,
+                              onUnfocus: _unfocusInputs,
+                              onSwapRequested: _handleSwapRequested,
+                              routeFieldLink: _routeFieldLink,
+                              fromLoading: _isReverseGeocodeLoading(
+                                RouteFieldKind.from,
                               ),
-                            );
-                          },
-                          child: !showOverlay
-                              ? const SizedBox.shrink()
-                              : RouteSuggestionsOverlay(
-                                  key: const ValueKey(
-                                    'route-suggestions-overlay',
+                              toLoading: _isReverseGeocodeLoading(
+                                RouteFieldKind.to,
+                              ),
+                              fromSelection: _fromSelection,
+                              toSelection: _toSelection,
+                              onSearch: _search,
+                              timeSelectionLayerLink: _timeSelectionLayerLink,
+                              onTimeSelectionTap: _handleTimeSelectionTap,
+                              onTimeSelectionTapDown:
+                                  _handleTimeSelectionTapDown,
+                              onTimeSelectionTapCancel:
+                                  _handleTimeSelectionTapCancel,
+                              timeSelection: _timeSelection,
+                              recentTrips: _recentTrips,
+                              onRecentTripTap: _onRecentTripTap,
+                              tripsRefreshKey: _tripsRefreshKey,
+                              favorites: _favorites,
+                              onFavoriteTap: _onFavoriteTap,
+                              hasLocationPermission: _hasLocationPermission,
+                            ),
+                      if (!_isTripFocus)
+                        CompositedTransformFollower(
+                          link: _routeFieldLink,
+                          showWhenUnlinked: false,
+                          targetAnchor: Alignment.bottomLeft,
+                          followerAnchor: Alignment.topLeft,
+                          offset: const Offset(0, 8),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              final offsetTween = Tween<Offset>(
+                                begin: const Offset(0, -0.05),
+                                end: Offset.zero,
+                              );
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: animation.drive(offsetTween),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: !showOverlay
+                                ? const SizedBox.shrink()
+                                : RouteSuggestionsOverlay(
+                                    key: const ValueKey(
+                                      'route-suggestions-overlay',
+                                    ),
+                                    width: overlayWidth,
+                                    activeField: _activeSuggestionField,
+                                    fromController: _fromCtrl,
+                                    toController: _toCtrl,
+                                    suggestions: _suggestions,
+                                    isLoading: _isFetchingSuggestions,
+                                    onSuggestionTap: _onSuggestionSelected,
+                                    onDismissRequest: _unfocusInputs,
                                   ),
-                                  width: overlayWidth,
-                                  activeField: _activeSuggestionField,
-                                  fromController: _fromCtrl,
-                                  toController: _toCtrl,
-                                  suggestions: _suggestions,
-                                  isLoading: _isFetchingSuggestions,
-                                  onSuggestionTap: _onSuggestionSelected,
-                                  onDismissRequest: _unfocusInputs,
-                                ),
+                          ),
                         ),
-                      ),
-                      CompositedTransformFollower(
-                        link: _timeSelectionLayerLink,
-                        showWhenUnlinked: false,
-                        targetAnchor: Alignment.bottomLeft,
-                        followerAnchor: Alignment.topLeft,
-                        offset: const Offset(0, 8),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 180),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            final offsetTween = Tween<Offset>(
-                              begin: const Offset(0, -0.05),
-                              end: Offset.zero,
-                            );
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: animation.drive(offsetTween),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: !_showTimeSelectionOverlay
-                              ? const SizedBox.shrink()
-                              : TimeSelectionOverlay(
-                                  width: overlayWidth,
-                                  currentSelection: _timeSelection,
-                                  onSelectionChanged: _onTimeSelectionChanged,
-                                  onDismiss: _closeTimeSelectionOverlay,
-                                  showDepartArriveToggle: true,
+                      if (!_isTripFocus)
+                        CompositedTransformFollower(
+                          link: _timeSelectionLayerLink,
+                          showWhenUnlinked: false,
+                          targetAnchor: Alignment.bottomLeft,
+                          followerAnchor: Alignment.topLeft,
+                          offset: const Offset(0, 8),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 180),
+                            switchInCurve: Curves.easeOutCubic,
+                            switchOutCurve: Curves.easeInCubic,
+                            transitionBuilder: (child, animation) {
+                              final offsetTween = Tween<Offset>(
+                                begin: const Offset(0, -0.05),
+                                end: Offset.zero,
+                              );
+                              return FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: animation.drive(offsetTween),
+                                  child: child,
                                 ),
+                              );
+                            },
+                            child: !_showTimeSelectionOverlay
+                                ? const SizedBox.shrink()
+                                : TimeSelectionOverlay(
+                                    width: overlayWidth,
+                                    currentSelection: _timeSelection,
+                                    onSelectionChanged: _onTimeSelectionChanged,
+                                    onDismiss: _closeTimeSelectionOverlay,
+                                    showDepartArriveToggle: true,
+                                  ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1629,10 +1895,12 @@ class _MapScreenState extends State<MapScreen>
 
   void _maybeFitSelectionsOnCollapsed() {
     if (!_isSheetCollapsed) return;
+    if (_isTripFocus) return;
     unawaited(_fitSelectionBounds());
   }
 
   Future<void> _fitSelectionBounds() async {
+    if (_isTripFocus) return;
     final controller = _controller;
     if (controller == null) return;
     final points = _selectionLatLngs();
@@ -1683,9 +1951,13 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _refreshRouteMarkers() async {
+  Future<void> _refreshRouteMarkers({bool allowFit = true}) async {
     final controller = _controller;
     if (controller == null) return;
+    if (_isTripFocus) {
+      await _removeRouteSymbols();
+      return;
+    }
     await _ensureMarkerImages();
     final token = ++_markerRefreshToken;
 
@@ -1702,6 +1974,7 @@ class _MapScreenState extends State<MapScreen>
     _toSymbol = null;
     await removeSymbol(prevFrom);
     await removeSymbol(prevTo);
+    if (_isTripFocus) return;
 
     Future<Symbol?> addSymbol(
       TransitousLocationSuggestion? selection,
@@ -1733,7 +2006,9 @@ class _MapScreenState extends State<MapScreen>
 
     _fromSymbol = newFrom;
     _toSymbol = newTo;
-    _maybeFitSelectionsOnCollapsed();
+    if (allowFit) {
+      _maybeFitSelectionsOnCollapsed();
+    }
   }
 
   static const String _kFromMarkerId = 'route-marker-from';
@@ -1742,6 +2017,13 @@ class _MapScreenState extends State<MapScreen>
   static const String _kStopsLayerId = 'map-stops-layer';
   static const String _kVehiclesSourceId = 'map-vehicles-source';
   static const String _kVehiclesLayerId = 'map-vehicles-layer';
+  static const String _kFocusedVehiclesSourceId =
+      'map-focused-vehicles-source';
+  static const String _kFocusedVehiclesLayerId = 'map-focused-vehicles-layer';
+  static const String _kFocusedStopsSourceId = 'map-focused-stops-source';
+  static const String _kFocusedStopsLayerId = 'map-focused-stops-layer';
+  static const String _kFocusedRouteSourceId = 'map-focused-route-source';
+  static const String _kFocusedRouteLayerId = 'map-focused-route-layer';
 
   Future<void> _ensureMarkerImages() async {
     if (_didAddMarkerImages) return;
@@ -1877,9 +2159,13 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _applyStopAccentColor() async {
     final color = _stopAccentColor ?? AppColors.accentOf(context);
     final imageId = await _ensureStopMarkerImageForColor(color);
-    if (imageId == null || !_didAddStopsLayer) return;
-    if (_visibleStops.isEmpty) return;
-    await _setStopsSource(_visibleStops.values.toList());
+    if (imageId == null) return;
+    if (_didAddStopsLayer && _visibleStops.isNotEmpty) {
+      await _setStopsSource(_visibleStops.values.toList());
+    }
+    if (_didAddFocusedStopsLayer && _focusedStops.isNotEmpty) {
+      await _setFocusedStopsSource(_focusedStops.values.toList());
+    }
   }
 
   _VehicleMarkerVisual _vehicleMarkerVisual(_TripSegmentData data) {
@@ -2088,14 +2374,38 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _ensureVehicleLayer() async {
     if (_didAddVehiclesLayer) return;
+    final inFlight = _vehicleLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _vehicleLayerInit = completer.future;
     final controller = _controller;
-    if (controller == null || !_isMapReady) return;
     try {
-      await controller.addGeoJsonSource(
-        _kVehiclesSourceId,
-        _emptyFeatureCollection(),
-        promoteId: 'id',
-      );
+      if (controller == null || !_isMapReady) return;
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kVehiclesSourceId);
+      final hasLayer = layerIds.contains(_kVehiclesLayerId);
+      if (hasSource && hasLayer) {
+        _didAddVehiclesLayer = true;
+        return;
+      }
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kVehiclesSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (hasLayer) {
+        _didAddVehiclesLayer = true;
+        return;
+      }
       await controller.addSymbolLayer(
         _kVehiclesSourceId,
         _kVehiclesLayerId,
@@ -2107,11 +2417,208 @@ class _MapScreenState extends State<MapScreen>
           iconAnchor: 'center',
           symbolSortKey: 1000,
         ),
-        enableInteraction: false,
+        enableInteraction: true,
       );
       _didAddVehiclesLayer = true;
     } catch (_) {
       _didAddVehiclesLayer = false;
+    } finally {
+      _vehicleLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
+    }
+  }
+
+  Future<void> _ensureFocusedVehiclesLayer() async {
+    if (_didAddFocusedVehiclesLayer) return;
+    final inFlight = _focusedVehiclesLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _focusedVehiclesLayerInit = completer.future;
+    final controller = _controller;
+    try {
+      if (controller == null || !_isMapReady) return;
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kFocusedVehiclesSourceId);
+      final hasLayer = layerIds.contains(_kFocusedVehiclesLayerId);
+      if (hasSource && hasLayer) {
+        _didAddFocusedVehiclesLayer = true;
+        _applyFocusedVehiclesLayerVisibility();
+        return;
+      }
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kFocusedVehiclesSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (hasLayer) {
+        _didAddFocusedVehiclesLayer = true;
+        _applyFocusedVehiclesLayerVisibility();
+        return;
+      }
+      await controller.addSymbolLayer(
+        _kFocusedVehiclesSourceId,
+        _kFocusedVehiclesLayerId,
+        SymbolLayerProperties(
+          iconImage: [Expressions.get, 'iconId'],
+          iconSize: _vehicleIconSizeExpression(),
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          symbolSortKey: 1200,
+        ),
+        enableInteraction: true,
+      );
+      _didAddFocusedVehiclesLayer = true;
+      _applyFocusedVehiclesLayerVisibility();
+    } catch (_) {
+      _didAddFocusedVehiclesLayer = false;
+    } finally {
+      _focusedVehiclesLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
+    }
+  }
+
+  Future<void> _ensureFocusedStopsLayer() async {
+    if (_didAddFocusedStopsLayer) return;
+    final inFlight = _focusedStopsLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _focusedStopsLayerInit = completer.future;
+    final controller = _controller;
+    try {
+      if (controller == null || !_isMapReady) return;
+      await _ensureFocusedVehiclesLayer();
+      final color = _stopAccentColor ?? AppColors.accentOf(context);
+      final imageId = await _ensureStopMarkerImageForColor(color);
+      if (imageId == null) return;
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kFocusedStopsSourceId);
+      final hasLayer = layerIds.contains(_kFocusedStopsLayerId);
+      if (hasSource && hasLayer) {
+        _didAddFocusedStopsLayer = true;
+        _applyFocusedStopsLayerVisibility();
+        return;
+      }
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kFocusedStopsSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (hasLayer) {
+        _didAddFocusedStopsLayer = true;
+        _applyFocusedStopsLayerVisibility();
+        return;
+      }
+      await controller.addSymbolLayer(
+        _kFocusedStopsSourceId,
+        _kFocusedStopsLayerId,
+        SymbolLayerProperties(
+          iconImage: [Expressions.get, 'iconId'],
+          iconSize: _stopIconSizeExpression(),
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconAnchor: 'center',
+          symbolSortKey: [Expressions.get, 'importance'],
+        ),
+        belowLayerId: _kFocusedVehiclesLayerId,
+        enableInteraction: false,
+      );
+      _didAddFocusedStopsLayer = true;
+      _applyFocusedStopsLayerVisibility();
+    } catch (_) {
+      _didAddFocusedStopsLayer = false;
+    } finally {
+      _focusedStopsLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
+    }
+  }
+
+  Future<void> _ensureFocusedRouteLayer() async {
+    if (_didAddFocusedRouteLayer) return;
+    final inFlight = _focusedRouteLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _focusedRouteLayerInit = completer.future;
+    final controller = _controller;
+    try {
+      if (controller == null || !_isMapReady) return;
+      await _ensureFocusedStopsLayer();
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kFocusedRouteSourceId);
+      final hasLayer = layerIds.contains(_kFocusedRouteLayerId);
+      if (hasSource && hasLayer) {
+        _didAddFocusedRouteLayer = true;
+        _applyFocusedRouteVisibility();
+        return;
+      }
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kFocusedRouteSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (hasLayer) {
+        _didAddFocusedRouteLayer = true;
+        _applyFocusedRouteVisibility();
+        return;
+      }
+      await controller.addLineLayer(
+        _kFocusedRouteSourceId,
+        _kFocusedRouteLayerId,
+        LineLayerProperties(
+          lineColor: [Expressions.get, 'color'],
+          lineWidth: [
+            Expressions.interpolate,
+            ['linear'],
+            [Expressions.zoom],
+            11.0,
+            2.2,
+            14.0,
+            3.4,
+            17.0,
+            4.6,
+            20.0,
+            6.0,
+          ],
+          lineJoin: 'round',
+          lineCap: 'round',
+        ),
+        belowLayerId: _kFocusedStopsLayerId,
+        enableInteraction: false,
+      );
+      _didAddFocusedRouteLayer = true;
+      _applyFocusedRouteVisibility();
+    } catch (_) {
+      _didAddFocusedRouteLayer = false;
+    } finally {
+      _focusedRouteLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
     }
   }
 
@@ -2119,6 +2626,36 @@ class _MapScreenState extends State<MapScreen>
     final controller = _controller;
     if (controller == null || !_didAddStopsLayer) return;
     unawaited(controller.setLayerVisibility(_kStopsLayerId, _showStops));
+  }
+
+  void _applyVehiclesLayerVisibility() {
+    final controller = _controller;
+    if (controller == null || !_didAddVehiclesLayer) return;
+    unawaited(controller.setLayerVisibility(_kVehiclesLayerId, !_isTripFocus));
+  }
+
+  void _applyFocusedVehiclesLayerVisibility() {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedVehiclesLayer) return;
+    unawaited(
+      controller.setLayerVisibility(_kFocusedVehiclesLayerId, _isTripFocus),
+    );
+  }
+
+  void _applyFocusedStopsLayerVisibility() {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedStopsLayer) return;
+    unawaited(
+      controller.setLayerVisibility(_kFocusedStopsLayerId, _isTripFocus),
+    );
+  }
+
+  void _applyFocusedRouteVisibility() {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedRouteLayer) return;
+    unawaited(
+      controller.setLayerVisibility(_kFocusedRouteLayerId, _isTripFocus),
+    );
   }
 
   Future<void> _setStopsSource(List<MapStop> stops) async {
@@ -2137,9 +2674,229 @@ class _MapScreenState extends State<MapScreen>
     } catch (_) {}
   }
 
+  Future<void> _setFocusedStopsSource(List<MapStop> stops) async {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedStopsLayer) return;
+    final color = _stopAccentColor ?? AppColors.accentOf(context);
+    final imageId =
+        _stopMarkerImageId ?? await _ensureStopMarkerImageForColor(color);
+    if (imageId == null) return;
+    final features = stops.map((stop) => _stopFeature(stop, imageId)).toList();
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedStopsSourceId,
+        {'type': 'FeatureCollection', 'features': features},
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _setFocusedRoute(Itinerary itinerary) async {
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    await _ensureFocusedRouteLayer();
+    if (!_didAddFocusedRouteLayer) return;
+    final routeColor = _focusedRouteColor(itinerary);
+    final colorHex = _colorToHex(routeColor);
+    final features = <Map<String, dynamic>>[];
+    for (int i = 0; i < itinerary.legs.length; i++) {
+      final leg = itinerary.legs[i];
+      final geometry = leg.legGeometry;
+      List<LatLng> points = [];
+      if (geometry != null && geometry.points.isNotEmpty) {
+        try {
+          points = _decodePolyline(geometry.points, geometry.precision);
+        } catch (_) {
+          points = [];
+        }
+      }
+      if (points.length < 2) {
+        if (leg.fromLat != 0.0 ||
+            leg.fromLon != 0.0 ||
+            leg.toLat != 0.0 ||
+            leg.toLon != 0.0) {
+          points = [
+            LatLng(leg.fromLat, leg.fromLon),
+            LatLng(leg.toLat, leg.toLon),
+          ];
+        }
+      }
+      if (points.length < 2) continue;
+      features.add({
+        'type': 'Feature',
+        'id': 'route-$i',
+        'properties': {'color': colorHex},
+        'geometry': {
+          'type': 'LineString',
+          'coordinates': [
+            for (final p in points) [p.longitude, p.latitude],
+          ],
+        },
+      });
+    }
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedRouteSourceId,
+        {'type': 'FeatureCollection', 'features': features},
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _setFocusedStops(Itinerary itinerary) async {
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    await _ensureFocusedStopsLayer();
+    if (!_didAddFocusedStopsLayer) return;
+    final stops = _buildFocusedStops(itinerary);
+    _focusedStops
+      ..clear()
+      ..addAll(stops);
+    if (_focusedStops.isEmpty) return;
+    await _setFocusedStopsSource(_focusedStops.values.toList());
+  }
+
+  Map<String, MapStop> _buildFocusedStops(Itinerary itinerary) {
+    final deduped = <String, MapStop>{};
+
+    void addStop(String name, double lat, double lon, String? stopId) {
+      if (name.trim().isEmpty) return;
+      if (lat == 0.0 && lon == 0.0) return;
+      final key = (stopId != null && stopId.isNotEmpty)
+          ? stopId
+          : '${lat.toStringAsFixed(6)}:${lon.toStringAsFixed(6)}';
+      if (deduped.containsKey(key)) return;
+      deduped[key] = MapStop(
+        id: key,
+        name: name,
+        lat: lat,
+        lon: lon,
+        stopId: stopId,
+      );
+    }
+
+    for (final leg in itinerary.legs) {
+      addStop(leg.fromName, leg.fromLat, leg.fromLon, null);
+      for (final stop in leg.intermediateStops) {
+        addStop(stop.name, stop.lat, stop.lon, stop.stopId);
+      }
+      addStop(leg.toName, leg.toLat, leg.toLon, null);
+    }
+    return deduped;
+  }
+
+  Future<void> _fitCameraToFocusedItinerary(Itinerary itinerary) async {
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    final points = <LatLng>[];
+    for (final leg in itinerary.legs) {
+      final geometry = leg.legGeometry;
+      if (geometry != null && geometry.points.isNotEmpty) {
+        try {
+          points.addAll(_decodePolyline(geometry.points, geometry.precision));
+          continue;
+        } catch (_) {}
+      }
+      if (leg.fromLat != 0.0 || leg.fromLon != 0.0) {
+        points.add(LatLng(leg.fromLat, leg.fromLon));
+      }
+      if (leg.toLat != 0.0 || leg.toLon != 0.0) {
+        points.add(LatLng(leg.toLat, leg.toLon));
+      }
+    }
+    if (points.isEmpty) return;
+    final first = points.first;
+    double minLat = first.latitude;
+    double maxLat = first.latitude;
+    double minLon = first.longitude;
+    double maxLon = first.longitude;
+    for (final point in points) {
+      if (point.latitude < minLat) minLat = point.latitude;
+      if (point.latitude > maxLat) maxLat = point.latitude;
+      if (point.longitude < minLon) minLon = point.longitude;
+      if (point.longitude > maxLon) maxLon = point.longitude;
+    }
+    final center = LatLng((minLat + maxLat) / 2, (minLon + maxLon) / 2);
+    if (points.length == 1) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(center, _focusedTransferZoomLevel),
+      );
+      return;
+    }
+
+    final approxDistance = coordinateDistanceInMeters(
+      points.first.latitude,
+      points.first.longitude,
+      points.last.latitude,
+      points.last.longitude,
+    );
+    if (approxDistance <= _focusedTransferDistanceThresholdMeters) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(center, _focusedTransferZoomLevel),
+      );
+      return;
+    }
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(minLat, minLon),
+      northeast: LatLng(maxLat, maxLon),
+    );
+
+    try {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          bounds,
+          left: 48,
+          top: 64,
+          right: 48,
+          bottom: 220,
+        ),
+      );
+    } catch (_) {
+      await controller.animateCamera(
+        CameraUpdate.newLatLngZoom(center, _focusedTransferZoomLevel),
+      );
+    }
+  }
+
+  Future<void> _clearFocusedRoute() async {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedRouteLayer) return;
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedRouteSourceId,
+        _emptyFeatureCollection(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearFocusedVehicles() async {
+    final controller = _controller;
+    if (controller == null) return;
+    _focusedVehicles.clear();
+    if (!_didAddFocusedVehiclesLayer) return;
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedVehiclesSourceId,
+        _emptyFeatureCollection(),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearFocusedStops() async {
+    final controller = _controller;
+    if (controller == null) return;
+    _focusedStops.clear();
+    if (!_didAddFocusedStopsLayer) return;
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedStopsSourceId,
+        _emptyFeatureCollection(),
+      );
+    } catch (_) {}
+  }
+
   Future<void> _pushVehicleSource(DateTime now) async {
     final controller = _controller;
-    if (controller == null || !_didAddVehiclesLayer) return;
+    if (controller == null || !_didAddVehiclesLayer || _isTripFocus) return;
     if (_vehicles.isEmpty) {
       try {
         await controller.setGeoJsonSource(
@@ -2251,7 +3008,14 @@ class _MapScreenState extends State<MapScreen>
     String layerId,
     Annotation? annotation,
   ) {
+    if (layerId == _kVehiclesLayerId || layerId == _kFocusedVehiclesLayerId) {
+      if (_isTripFocus) return;
+      Haptics.lightTick();
+      _enterTripFocus(id);
+      return;
+    }
     if (layerId != _kStopsLayerId) return;
+    if (!_isSheetCollapsed) return;
     final stop = _visibleStops[id];
     if (stop == null) return;
     Haptics.lightTick();
@@ -2264,6 +3028,132 @@ class _MapScreenState extends State<MapScreen>
       _isStopTimesLoading = true;
     });
     unawaited(_loadStopTimesPreview(stop));
+  }
+
+  void _enterTripFocus(String tripId) {
+    if (tripId.isEmpty) return;
+    _showStopsBeforeFocus = _showStops;
+    setState(() {
+      _isTripFocus = true;
+      _isTripFocusLoading = true;
+      _tripFocusError = null;
+      _focusedTripId = tripId;
+      _focusedItinerary = null;
+      _showStops = false;
+    });
+    _unfocusInputs();
+    _clearSuggestions();
+    _closeTimeSelectionOverlay();
+    _dismissStopOverlay(animated: false);
+    _dismissLongPressOverlay(animated: false);
+    unawaited(_removeRouteSymbols());
+    _applyStopsLayerVisibility();
+    _applyVehiclesLayerVisibility();
+    _applyFocusedVehiclesLayerVisibility();
+    _applyFocusedStopsLayerVisibility();
+    _applyFocusedRouteVisibility();
+    unawaited(_clearFocusedRoute());
+    unawaited(_clearFocusedVehicles());
+    unawaited(_clearFocusedStops());
+    _focusedRouteKeys.clear();
+    _focusedRouteColors.clear();
+    _focusedTripIds.clear();
+    _lastTripsRequestKey = null;
+    _lastStopsRequestKey = null;
+    unawaited(_loadFocusedTripDetails(tripId));
+    unawaited(_refreshFocusedTripVehicles(force: true));
+  }
+
+  void _exitTripFocus() {
+    setState(() {
+      _isTripFocus = false;
+      _isTripFocusLoading = false;
+      _tripFocusError = null;
+      _focusedTripId = null;
+      _focusedItinerary = null;
+      _showStops = _showStopsBeforeFocus;
+    });
+    _lastTripsRequestKey = null;
+    _lastStopsRequestKey = null;
+    unawaited(_clearFocusedRoute());
+    unawaited(_clearFocusedVehicles());
+    unawaited(_clearFocusedStops());
+    _focusedRouteKeys.clear();
+    _focusedRouteColors.clear();
+    _focusedTripIds.clear();
+    _applyStopsLayerVisibility();
+    _applyVehiclesLayerVisibility();
+    _applyFocusedVehiclesLayerVisibility();
+    _applyFocusedStopsLayerVisibility();
+    _applyFocusedRouteVisibility();
+    unawaited(_refreshRouteMarkers(allowFit: false));
+    _scheduleTripRefresh();
+    _scheduleStopRefresh();
+  }
+
+  Future<void> _loadFocusedTripDetails(String tripId) async {
+    final requestId = ++_focusedTripRequestId;
+    try {
+      final itinerary = await TripDetailsService.fetchTripDetails(
+        tripId: tripId,
+      );
+      if (!mounted || requestId != _focusedTripRequestId) return;
+      setState(() {
+        _focusedItinerary = itinerary;
+        _isTripFocusLoading = false;
+      });
+      _focusedRouteKeys
+        ..clear()
+        ..addAll(_buildFocusedRouteKeys(itinerary));
+      _focusedRouteColors
+        ..clear()
+        ..addAll(_buildFocusedRouteColors(itinerary));
+      _focusedTripIds
+        ..clear()
+        ..addAll(_buildFocusedTripIds(itinerary));
+      unawaited(_setFocusedRoute(itinerary));
+      unawaited(_setFocusedStops(itinerary));
+      unawaited(_refreshFocusedTripVehicles(force: true));
+      _applyFocusedStopsLayerVisibility();
+      _applyFocusedRouteVisibility();
+      unawaited(_fitCameraToFocusedItinerary(itinerary));
+    } catch (e) {
+      if (!mounted || requestId != _focusedTripRequestId) return;
+      setState(() {
+        _focusedItinerary = null;
+        _isTripFocusLoading = false;
+        _tripFocusError = 'Failed to load trip.';
+      });
+    }
+  }
+
+  Future<void> _pushFocusedVehicleSource(DateTime now) async {
+    final controller = _controller;
+    if (controller == null || !_didAddFocusedVehiclesLayer) return;
+    if (_focusedVehicles.isEmpty) {
+      try {
+        await controller.setGeoJsonSource(
+          _kFocusedVehiclesSourceId,
+          _emptyFeatureCollection(),
+        );
+      } catch (_) {}
+      return;
+    }
+
+    final features = <Map<String, dynamic>>[];
+    for (final entry in _focusedVehicles.entries) {
+      final marker = entry.value;
+      final position =
+          marker.lastPosition ??
+          _positionAlongSegment(marker.segmentData, now);
+      features.add(_vehicleFeature(entry.key, marker, position));
+    }
+    try {
+      await controller.setGeoJsonSource(
+        _kFocusedVehiclesSourceId,
+        {'type': 'FeatureCollection', 'features': features},
+      );
+    } catch (_) {}
   }
 
   void _dismissStopOverlay({bool animated = true}) {
@@ -2699,6 +3589,535 @@ class _MapControlPills extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TripFocusBottomCard extends StatelessWidget {
+  const _TripFocusBottomCard({
+    required this.onHandleTap,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onBack,
+    required this.itinerary,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.bottomSpacer,
+  });
+
+  final VoidCallback onHandleTap;
+  final VoidCallback onDragStart;
+  final ValueChanged<double> onDragUpdate;
+  final ValueChanged<double> onDragEnd;
+  final VoidCallback onBack;
+  final Itinerary? itinerary;
+  final bool isLoading;
+  final String? errorMessage;
+  final double bottomSpacer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 14,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onHandleTap,
+              onVerticalDragStart: (_) => onDragStart(),
+              onVerticalDragUpdate: (d) => onDragUpdate(d.delta.dy),
+              onVerticalDragEnd: (d) => onDragEnd(d.velocity.pixelsPerSecond.dy),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 18),
+                  Container(
+                    width: 48,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppColors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: PressableHighlight(
+                  onPressed: onBack,
+                  borderRadius: BorderRadius.circular(14),
+                  highlightColor: AppColors.accentOf(context),
+                  enableHaptics: false,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.chevronLeft,
+                        size: 18,
+                        color: AppColors.accentOf(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Back',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accentOf(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: _TripFocusContent(
+                itinerary: itinerary,
+                isLoading: isLoading,
+                errorMessage: errorMessage,
+                bottomSpacer: bottomSpacer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TripFocusContent extends StatelessWidget {
+  const _TripFocusContent({
+    required this.itinerary,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.bottomSpacer,
+  });
+
+  final Itinerary? itinerary;
+  final bool isLoading;
+  final String? errorMessage;
+  final double bottomSpacer;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return Shimmer.fromColors(
+        baseColor: const Color(0x1A000000),
+        highlightColor: const Color(0x0D000000),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  height: 140,
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Container(
+                  height: 420,
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              SizedBox(height: bottomSpacer),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            errorMessage!,
+            style: TextStyle(
+              fontSize: 15,
+              color: AppColors.black.withValues(alpha: 0.55),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final itinerary = this.itinerary;
+    if (itinerary == null || itinerary.legs.isEmpty) {
+      return Center(
+        child: Text(
+          'No trip data available',
+          style: TextStyle(
+            fontSize: 15,
+            color: AppColors.black.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    final routeColor = _routeColorForItinerary(itinerary, context);
+    final headerLeg = itinerary.legs.firstWhere(
+      (leg) => leg.mode != 'WALK',
+      orElse: () => itinerary.legs.first,
+    );
+    final headerText =
+        headerLeg.displayName?.trim().isNotEmpty == true
+            ? headerLeg.displayName!
+            : headerLeg.routeShortName?.trim().isNotEmpty == true
+            ? headerLeg.routeShortName!
+            : getTransitModeName(headerLeg.mode);
+    final headsign =
+        headerLeg.headsign?.trim().isNotEmpty == true
+            ? headerLeg.headsign
+            : null;
+    final totalDistance = itinerary.legs.fold<double>(
+      0.0,
+      (sum, leg) => sum + (leg.distance ?? 0.0),
+    );
+    final allAlerts = <String, Alert>{};
+    for (final leg in itinerary.legs) {
+      for (final alert in leg.alerts) {
+        if (alert.headerText != null || alert.descriptionText != null) {
+          final key = '${alert.headerText}|${alert.descriptionText}';
+          allAlerts[key] = alert;
+        }
+      }
+      for (final stop in leg.intermediateStops) {
+        for (final alert in stop.alerts) {
+          if (alert.headerText != null || alert.descriptionText != null) {
+            final key = '${alert.headerText}|${alert.descriptionText}';
+            allAlerts[key] = alert;
+          }
+        }
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      getLegIcon(headerLeg.mode),
+                      size: 32,
+                      color: AppColors.black,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (headerText.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: routeColor,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                headerText,
+                                style: TextStyle(
+                                  color: AppColors.solidWhite,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          if (headsign != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '${getTransitModeName(headerLeg.mode)} • $headsign',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.black,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (allAlerts.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            CustomCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Warnings',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...allAlerts.values.map((alert) {
+                    final hasTitle =
+                        alert.headerText != null &&
+                        alert.headerText!.isNotEmpty;
+                    final hasBody =
+                        alert.descriptionText != null &&
+                        alert.descriptionText!.isNotEmpty;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF3CD),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFFC107)),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              LucideIcons.triangleAlert,
+                              size: 16,
+                              color: Color(0xFFF57C00),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (hasTitle)
+                                    Text(
+                                      alert.headerText!,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.black,
+                                      ),
+                                    ),
+                                  if (hasBody) ...[
+                                    if (hasTitle) const SizedBox(height: 2),
+                                    Text(
+                                      alert.descriptionText!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Information',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (itinerary.legs.any((leg) => leg.realTime))
+                      const InfoChip(
+                        icon: LucideIcons.radio,
+                        label: 'Real-time',
+                      ),
+                    InfoChip(
+                      icon: LucideIcons.clock,
+                      label: formatDuration(itinerary.duration),
+                    ),
+                    if (totalDistance > 0)
+                      InfoChip(
+                        icon: LucideIcons.ruler,
+                        label:
+                            '${(totalDistance / 1000).toStringAsFixed(1)} km',
+                      ),
+                    if (itinerary.fare != null)
+                      InfoChip(
+                        icon: LucideIcons.coins,
+                        label:
+                            '${itinerary.fare!.amount.toStringAsFixed(2)} ${itinerary.fare!.currency}',
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          CustomCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Journey',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...itinerary.legs.map(
+                  (leg) => _TripLegSection(leg: leg),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: bottomSpacer),
+        ],
+      ),
+    );
+  }
+
+  Color _routeColorForItinerary(Itinerary itinerary, BuildContext context) {
+    for (final leg in itinerary.legs) {
+      if (leg.mode == 'WALK') continue;
+      final parsed = parseHexColor(leg.routeColor);
+      if (parsed != null) return parsed;
+    }
+    return AppColors.accentOf(context);
+  }
+}
+
+class _TripLegSection extends StatelessWidget {
+  const _TripLegSection({required this.leg});
+
+  final Leg leg;
+
+  @override
+  Widget build(BuildContext context) {
+    final routeColor =
+        parseHexColor(leg.routeColor) ?? AppColors.accentOf(context);
+    final stops = _buildStopsForLeg(leg);
+    if (stops.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FixedTimeline.tileBuilder(
+            theme: TimelineThemeData(
+              nodePosition: 0.08,
+              color: routeColor,
+              indicatorTheme: const IndicatorThemeData(size: 20),
+              connectorTheme: const ConnectorThemeData(thickness: 2),
+            ),
+            builder: TimelineTileBuilder.connected(
+              itemCount: stops.length,
+              connectionDirection: ConnectionDirection.before,
+              contentsBuilder: (context, index) {
+                final stop = stops[index];
+                final isTerminal = index == 0 || index == stops.length - 1;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 12, bottom: 12),
+                  child: Text(
+                    stop.name,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight:
+                          isTerminal ? FontWeight.w600 : FontWeight.normal,
+                      color: AppColors.black,
+                    ),
+                  ),
+                );
+              },
+              indicatorBuilder: (context, index) {
+                final isTerminal = index == 0 || index == stops.length - 1;
+                final dotSize = isTerminal ? 14.0 : 10.0;
+                return DotIndicator(
+                  color: routeColor,
+                  size: dotSize,
+                );
+              },
+              connectorBuilder: (context, index, connectorType) {
+                return SolidLineConnector(
+                  color: routeColor.withValues(alpha: 0.7),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_TripStop> _buildStopsForLeg(Leg leg) {
+    final stops = <_TripStop>[];
+    if (leg.fromName.isNotEmpty) {
+      stops.add(_TripStop(leg.fromName));
+    }
+    for (final stop in leg.intermediateStops) {
+      if (stop.name.isNotEmpty) {
+        stops.add(_TripStop(stop.name));
+      }
+    }
+    if (leg.toName.isNotEmpty) {
+      stops.add(_TripStop(leg.toName));
+    }
+    return stops;
+  }
+}
+
+class _TripStop {
+  const _TripStop(this.name);
+
+  final String name;
 }
 
 class _MapControlChip extends StatelessWidget {
@@ -3364,7 +4783,7 @@ class _StopModalCard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              'Next departures & arrivals',
+              'Departures & arrivals',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
@@ -3378,28 +4797,32 @@ class _StopModalCard extends StatelessWidget {
               errorMessage: errorMessage,
             ),
             const SizedBox(height: 16),
-            PressableHighlight(
-              onPressed: onViewTimetable,
-              highlightColor: AppColors.accentOf(context),
-              borderRadius: BorderRadius.circular(14),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    LucideIcons.clock,
-                    size: 18,
-                    color: AppColors.accentOf(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'View full timetable',
-                    style: TextStyle(
+            Align(
+              alignment: Alignment.center,
+              child: PressableHighlight(
+                onPressed: onViewTimetable,
+                highlightColor: AppColors.accentOf(context),
+                borderRadius: BorderRadius.circular(14),
+                enableHaptics: false,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.clock,
+                      size: 18,
                       color: AppColors.accentOf(context),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Text(
+                      'View full timetable',
+                      style: TextStyle(
+                        color: AppColors.accentOf(context),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 18),

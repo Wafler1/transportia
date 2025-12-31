@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -33,6 +35,11 @@ class ItineraryMapScreen extends StatefulWidget {
 class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   MapLibreMapController? _controller;
   final List<Line> _lines = [];
+  final Set<String> _stopMarkerImages = {};
+  String? _stopMarkerImageId;
+  Color? _stopAccentColor;
+  bool _didAddStopsLayer = false;
+  Future<void>? _stopsLayerInit;
   bool _isMapReady = false;
   late final PageController _pageController;
   int _currentPage = 0;
@@ -41,6 +48,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   static const double _transferZoomLevel = 16.5;
   static const double _transferDistanceThresholdMeters = 80.0;
+  static const String _kStopsSourceId = 'itinerary-stops-source';
+  static const String _kStopsLayerId = 'itinerary-stops-layer';
 
   List<DisplayLegInfo> get _mapLegs {
     if (_displayLegs.isNotEmpty) return _displayLegs;
@@ -62,6 +71,19 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     _pageController = PageController(
       viewportFraction: widget.showCarousel ? 0.86 : 1.0,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final color = AppColors.accentOf(context);
+    if (_stopAccentColor == color) return;
+    _stopAccentColor = color;
+    _stopMarkerImageId = null;
+    if (_isMapReady) {
+      unawaited(_ensureStopMarkerImageForColor(color));
+      unawaited(_drawRouteStops());
+    }
   }
 
   @override
@@ -290,6 +312,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
     // Draw all the journey legs
     await _drawJourneyLegs();
+    await _drawRouteStops();
 
     // Fit the camera to show all legs
     await _fitCameraToBounds();
@@ -357,6 +380,190 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       }
     }
     _legGeometries = geometries;
+  }
+
+  List<LatLng> _collectRouteStops() {
+    final stops = <LatLng>[];
+    final seen = <String>{};
+
+    void addStop(double lat, double lon) {
+      final key = '${lat.toStringAsFixed(5)},${lon.toStringAsFixed(5)}';
+      if (seen.add(key)) {
+        stops.add(LatLng(lat, lon));
+      }
+    }
+
+    for (final entry in _mapLegs) {
+      final leg = entry.leg;
+      addStop(leg.fromLat, leg.fromLon);
+      for (final stop in leg.intermediateStops) {
+        addStop(stop.lat, stop.lon);
+      }
+      addStop(leg.toLat, leg.toLon);
+    }
+
+    return stops;
+  }
+
+  Future<void> _drawRouteStops() async {
+    final controller = _controller;
+    if (controller == null || !_isMapReady) return;
+    await _ensureStopsLayer();
+    if (!_didAddStopsLayer || _stopMarkerImageId == null) return;
+
+    final stops = _collectRouteStops();
+    if (stops.isEmpty) {
+      try {
+        await controller.setGeoJsonSource(
+          _kStopsSourceId,
+          _emptyFeatureCollection(),
+        );
+      } catch (_) {}
+      return;
+    }
+
+    final imageId = _stopMarkerImageId!;
+    final features = <Map<String, dynamic>>[];
+    for (int i = 0; i < stops.length; i++) {
+      final point = stops[i];
+      features.add({
+        'type': 'Feature',
+        'id': i,
+        'properties': {
+          'iconId': imageId,
+          'order': i,
+        },
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [point.longitude, point.latitude],
+        },
+      });
+    }
+    try {
+      await controller.setGeoJsonSource(
+        _kStopsSourceId,
+        {'type': 'FeatureCollection', 'features': features},
+      );
+    } catch (_) {}
+  }
+
+  String _stopMarkerImageIdForColor(Color color) {
+    final hex = _colorToHex(color).replaceAll('#', '');
+    return 'itinerary-stop-marker-$hex';
+  }
+
+  Future<String?> _ensureStopMarkerImageForColor(Color color) async {
+    final controller = _controller;
+    if (controller == null) return null;
+    final imageId = _stopMarkerImageIdForColor(color);
+    if (_stopMarkerImages.contains(imageId)) {
+      _stopMarkerImageId = imageId;
+      return imageId;
+    }
+    try {
+      final image = await _buildStopMarkerImage(color);
+      await controller.addImage(imageId, image);
+      _stopMarkerImages.add(imageId);
+      _stopMarkerImageId = imageId;
+      return imageId;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  List<Object> _stopIconSizeExpression() {
+    return [
+      Expressions.interpolate,
+      ['linear'],
+      [Expressions.zoom],
+      11.0,
+      0.55,
+      13.0,
+      0.7,
+      15.0,
+      0.85,
+      17.0,
+      1.0,
+    ];
+  }
+
+  Future<Uint8List> _buildStopMarkerImage(Color accentColor) async {
+    const double size = 32;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final center = Offset(size / 2, size / 2);
+
+    final outerPaint = Paint()
+      ..color = AppColors.black.withValues(alpha: 0.2);
+    canvas.drawCircle(center, size / 2, outerPaint);
+
+    final ringPaint = Paint()..color = AppColors.white;
+    canvas.drawCircle(center, size / 2 - 2, ringPaint);
+
+    final innerPaint = Paint()..color = accentColor;
+    canvas.drawCircle(center, size / 2 - 8, innerPaint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(size.toInt(), size.toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return byteData!.buffer.asUint8List();
+  }
+
+  Map<String, dynamic> _emptyFeatureCollection() {
+    return const {'type': 'FeatureCollection', 'features': []};
+  }
+
+  Future<void> _ensureStopsLayer() async {
+    if (_didAddStopsLayer) return;
+    final inFlight = _stopsLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _stopsLayerInit = completer.future;
+    final controller = _controller;
+    try {
+      if (controller == null || !_isMapReady) return;
+      final color = _stopAccentColor ?? AppColors.accentOf(context);
+      final imageId = await _ensureStopMarkerImageForColor(color);
+      if (imageId == null) return;
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kStopsSourceId);
+      final hasLayer = layerIds.contains(_kStopsLayerId);
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kStopsSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (!hasLayer) {
+        await controller.addSymbolLayer(
+          _kStopsSourceId,
+          _kStopsLayerId,
+          SymbolLayerProperties(
+            iconImage: [Expressions.get, 'iconId'],
+            iconSize: _stopIconSizeExpression(),
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+            iconAnchor: 'center',
+            symbolSortKey: [Expressions.get, 'order'],
+          ),
+          enableInteraction: false,
+        );
+      }
+      _didAddStopsLayer = true;
+    } catch (_) {
+      _didAddStopsLayer = false;
+    } finally {
+      _stopsLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
+    }
   }
 
   /// Decode an encoded polyline string to a list of LatLng coordinates
