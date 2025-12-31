@@ -382,26 +382,45 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     _legGeometries = geometries;
   }
 
-  List<LatLng> _collectRouteStops() {
-    final stops = <LatLng>[];
-    final seen = <String>{};
+  List<_RouteStop> _collectRouteStops() {
+    final deduped = <String, _RouteStop>{};
+    int order = 0;
 
-    void addStop(double lat, double lon) {
+    void addStop(double lat, double lon, Color color, bool isWalk) {
       final key = '${lat.toStringAsFixed(5)},${lon.toStringAsFixed(5)}';
-      if (seen.add(key)) {
-        stops.add(LatLng(lat, lon));
+      final existing = deduped[key];
+      if (existing == null) {
+        deduped[key] = _RouteStop(
+          point: LatLng(lat, lon),
+          color: color,
+          order: order++,
+          isWalk: isWalk,
+        );
+        return;
+      }
+      if (existing.isWalk && !isWalk) {
+        deduped[key] = _RouteStop(
+          point: existing.point,
+          color: color,
+          order: existing.order,
+          isWalk: false,
+        );
       }
     }
 
     for (final entry in _mapLegs) {
       final leg = entry.leg;
-      addStop(leg.fromLat, leg.fromLon);
+      final isWalk = leg.mode == 'WALK';
+      final color = _getLegColorFromLeg(leg, entry.originalIndex);
+      addStop(leg.fromLat, leg.fromLon, color, isWalk);
       for (final stop in leg.intermediateStops) {
-        addStop(stop.lat, stop.lon);
+        addStop(stop.lat, stop.lon, color, isWalk);
       }
-      addStop(leg.toLat, leg.toLon);
+      addStop(leg.toLat, leg.toLon, color, isWalk);
     }
 
+    final stops = deduped.values.toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
     return stops;
   }
 
@@ -409,7 +428,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final controller = _controller;
     if (controller == null || !_isMapReady) return;
     await _ensureStopsLayer();
-    if (!_didAddStopsLayer || _stopMarkerImageId == null) return;
+    if (!_didAddStopsLayer) return;
 
     final stops = _collectRouteStops();
     if (stops.isEmpty) {
@@ -422,20 +441,21 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       return;
     }
 
-    final imageId = _stopMarkerImageId!;
     final features = <Map<String, dynamic>>[];
     for (int i = 0; i < stops.length; i++) {
-      final point = stops[i];
+      final stop = stops[i];
+      final imageId = await _ensureStopMarkerImageForColor(stop.color);
+      if (imageId == null) continue;
       features.add({
         'type': 'Feature',
         'id': i,
         'properties': {
           'iconId': imageId,
-          'order': i,
+          'order': stop.order,
         },
         'geometry': {
           'type': 'Point',
-          'coordinates': [point.longitude, point.latitude],
+          'coordinates': [stop.point.longitude, stop.point.latitude],
         },
       });
     }
@@ -783,6 +803,20 @@ class _JourneySummaryCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RouteStop {
+  const _RouteStop({
+    required this.point,
+    required this.color,
+    required this.order,
+    required this.isWalk,
+  });
+
+  final LatLng point;
+  final Color color;
+  final int order;
+  final bool isWalk;
 }
 
 class _LegCarouselCard extends StatelessWidget {

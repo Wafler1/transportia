@@ -11,6 +11,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 import 'package:vibration/vibration.dart';
@@ -162,6 +163,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void>? _focusedVehiclesLayerInit;
   Future<void>? _focusedStopsLayerInit;
   Future<void>? _focusedRouteLayerInit;
+  Color? _focusedStopsColor;
   bool _isTripFocus = false;
   bool _isTripFocusLoading = false;
   String? _tripFocusError;
@@ -187,12 +189,14 @@ class _MapScreenState extends State<MapScreen>
   static const double _focusedTransferZoomLevel = 16.5;
   static const double _focusedTransferDistanceThresholdMeters = 80.0;
   static const Duration _mapRefreshDebounce = Duration(milliseconds: 250);
+  static const String _kShowStopsPrefKey = 'map_show_stops';
   String? _lastTripsRequestKey;
   String? _lastStopsRequestKey;
 
   @override
   void initState() {
     super.initState();
+    unawaited(_loadShowStopsPreference());
     FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
     _favorites = FavoritesService.favoritesListenable.value;
     if (!widget.deferInit) {
@@ -427,6 +431,7 @@ class _MapScreenState extends State<MapScreen>
     _focusedVehiclesLayerInit = null;
     _focusedStopsLayerInit = null;
     _focusedRouteLayerInit = null;
+    _focusedStopsColor = null;
     _vehicleMarkerImages.clear();
     _focusedVehicles.clear();
     _focusedStops.clear();
@@ -517,6 +522,7 @@ class _MapScreenState extends State<MapScreen>
     _stopRequestId++;
     _stopRefreshDebounce?.cancel();
     setState(() => _showStops = !_showStops);
+    unawaited(_persistShowStopsPreference(_showStops));
     _applyStopsLayerVisibility();
     if (_showStops) {
       _lastStopsRequestKey = null;
@@ -528,6 +534,27 @@ class _MapScreenState extends State<MapScreen>
 
   void _onCameraMove(CameraPosition pos) {
     _lastCam = pos;
+  }
+
+  Future<void> _loadShowStopsPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getBool(_kShowStopsPrefKey);
+    if (stored == null || !mounted || stored == _showStops) return;
+    _stopRequestId++;
+    _stopRefreshDebounce?.cancel();
+    setState(() => _showStops = stored);
+    _applyStopsLayerVisibility();
+    if (_showStops) {
+      _lastStopsRequestKey = null;
+      _scheduleStopRefresh();
+    } else {
+      _dismissStopOverlay();
+    }
+  }
+
+  Future<void> _persistShowStopsPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowStopsPrefKey, value);
   }
 
   void _onCameraIdle() {
@@ -2662,8 +2689,10 @@ class _MapScreenState extends State<MapScreen>
     final controller = _controller;
     if (controller == null || !_didAddStopsLayer) return;
     final color = _stopAccentColor ?? AppColors.accentOf(context);
-    final imageId =
-        _stopMarkerImageId ?? await _ensureStopMarkerImageForColor(color);
+    final desiredId = _stopMarkerImageIdForColor(color);
+    final imageId = _stopMarkerImageId == desiredId
+        ? _stopMarkerImageId
+        : await _ensureStopMarkerImageForColor(color);
     if (imageId == null) return;
     final features = stops.map((stop) => _stopFeature(stop, imageId)).toList();
     try {
@@ -2677,9 +2706,14 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _setFocusedStopsSource(List<MapStop> stops) async {
     final controller = _controller;
     if (controller == null || !_didAddFocusedStopsLayer) return;
-    final color = _stopAccentColor ?? AppColors.accentOf(context);
-    final imageId =
-        _stopMarkerImageId ?? await _ensureStopMarkerImageForColor(color);
+    final color =
+        _focusedStopsColor ??
+        _stopAccentColor ??
+        AppColors.accentOf(context);
+    final desiredId = _stopMarkerImageIdForColor(color);
+    final imageId = _stopMarkerImageId == desiredId
+        ? _stopMarkerImageId
+        : await _ensureStopMarkerImageForColor(color);
     if (imageId == null) return;
     final features = stops.map((stop) => _stopFeature(stop, imageId)).toList();
     try {
@@ -3039,6 +3073,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = tripId;
       _focusedItinerary = null;
+      _focusedStopsColor = null;
       _showStops = false;
     });
     _unfocusInputs();
@@ -3071,6 +3106,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = null;
       _focusedItinerary = null;
+      _focusedStopsColor = null;
       _showStops = _showStopsBeforeFocus;
     });
     _lastTripsRequestKey = null;
@@ -3102,6 +3138,7 @@ class _MapScreenState extends State<MapScreen>
         _focusedItinerary = itinerary;
         _isTripFocusLoading = false;
       });
+      _focusedStopsColor = _focusedRouteColor(itinerary);
       _focusedRouteKeys
         ..clear()
         ..addAll(_buildFocusedRouteKeys(itinerary));
@@ -3226,7 +3263,7 @@ class _MapScreenState extends State<MapScreen>
     try {
       final response = await StopTimesService.fetchStopTimes(
         stopId: stopId,
-        n: 6,
+        n: 3,
         startTime: DateTime.now(),
       );
       if (!mounted || requestId != _stopTimesRequestId) return;
