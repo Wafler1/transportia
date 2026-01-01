@@ -98,6 +98,8 @@ class _MapScreenState extends State<MapScreen>
   double? _sheetTop; // dynamic top position of the sheet
   static const double _collapsedMapFraction = 0.25; // visible map when expanded
   static const double _bottomBarHeight = 116.0; // collapsed bar height
+  static const double _tripFocusBottomBarHeight = 200.0;
+  static const List<String> _mapStyleCycle = ['default', 'light', 'dark'];
   final _fromCtrl = TextEditingController();
   final _toCtrl = TextEditingController();
   final FocusNode _fromFocus = FocusNode();
@@ -158,13 +160,13 @@ class _MapScreenState extends State<MapScreen>
   bool _didAddFocusedVehiclesLayer = false;
   bool _didAddFocusedStopsLayer = false;
   bool _didAddFocusedRouteLayer = false;
-  Future<void>? _stopsLayerInit;
   Future<void>? _vehicleLayerInit;
   Future<void>? _focusedVehiclesLayerInit;
   Future<void>? _focusedStopsLayerInit;
   Future<void>? _focusedRouteLayerInit;
   Color? _focusedStopsColor;
   bool _isTripFocus = false;
+  bool _isQuickSettings = false;
   bool _isTripFocusLoading = false;
   String? _tripFocusError;
   String? _focusedTripId;
@@ -181,6 +183,18 @@ class _MapScreenState extends State<MapScreen>
   bool _isStopTimesLoading = false;
   String? _stopTimesError;
   List<StopTime> _stopTimesPreview = [];
+  bool _showVehicles = true;
+  bool _hideNonRealtimeVehicles = false;
+  _QuickButtonAction _quickButtonAction = _QuickButtonAction.toggleStops;
+  final Map<_VehicleModeGroup, bool> _vehicleModeVisibility = {
+    _VehicleModeGroup.train: true,
+    _VehicleModeGroup.metro: true,
+    _VehicleModeGroup.tram: true,
+    _VehicleModeGroup.bus: true,
+    _VehicleModeGroup.ferry: true,
+    _VehicleModeGroup.lift: true,
+    _VehicleModeGroup.other: true,
+  };
 
   static const Duration _tripWindowPast = Duration(minutes: 2);
   static const Duration _tripWindowFuture = Duration(minutes: 10);
@@ -190,6 +204,16 @@ class _MapScreenState extends State<MapScreen>
   static const double _focusedTransferDistanceThresholdMeters = 80.0;
   static const Duration _mapRefreshDebounce = Duration(milliseconds: 250);
   static const String _kShowStopsPrefKey = 'map_show_stops';
+  static const String _kQuickButtonPrefKey = 'map_quick_button';
+  static const String _kShowVehiclesPrefKey = 'map_show_vehicles';
+  static const String _kHideNonRtPrefKey = 'map_hide_non_rt_vehicles';
+  static const String _kShowTrainPrefKey = 'map_show_train';
+  static const String _kShowMetroPrefKey = 'map_show_metro';
+  static const String _kShowTramPrefKey = 'map_show_tram';
+  static const String _kShowBusPrefKey = 'map_show_bus';
+  static const String _kShowFerryPrefKey = 'map_show_ferry';
+  static const String _kShowLiftPrefKey = 'map_show_lift';
+  static const String _kShowOtherPrefKey = 'map_show_other';
   String? _lastTripsRequestKey;
   String? _lastStopsRequestKey;
 
@@ -197,6 +221,7 @@ class _MapScreenState extends State<MapScreen>
   void initState() {
     super.initState();
     unawaited(_loadShowStopsPreference());
+    unawaited(_loadQuickSettingsPreferences());
     FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
     _favorites = FavoritesService.favoritesListenable.value;
     if (!widget.deferInit) {
@@ -218,6 +243,10 @@ class _MapScreenState extends State<MapScreen>
       }
     });
     _snapCtrl.addStatusListener((status) {
+      if (status == AnimationStatus.completed ||
+          status == AnimationStatus.dismissed) {
+        _isBottomBarResizeAnimating = false;
+      }
       if (status == AnimationStatus.completed && _snapTarget != null) {
         final target = _snapTarget!;
         // Resolve collapsed state only once snap animation finishes
@@ -427,7 +456,6 @@ class _MapScreenState extends State<MapScreen>
     _didAddFocusedStopsLayer = false;
     _didAddFocusedRouteLayer = false;
     _vehicleLayerInit = null;
-    _stopsLayerInit = null;
     _focusedVehiclesLayerInit = null;
     _focusedStopsLayerInit = null;
     _focusedRouteLayerInit = null;
@@ -441,6 +469,7 @@ class _MapScreenState extends State<MapScreen>
     _focusedTripId = null;
     _focusedItinerary = null;
     _isTripFocus = false;
+    _isQuickSettings = false;
     _isTripFocusLoading = false;
     _tripFocusError = null;
     _lastTripsRequestKey = null;
@@ -472,7 +501,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _scheduleTripRefresh() {
-    if (_isTripFocus) return;
+    if (_isTripFocus || !_showVehicles) return;
     _tripRefreshDebounce?.cancel();
     _tripRefreshDebounce = Timer(_mapRefreshDebounce, () {
       unawaited(_refreshTrips());
@@ -519,10 +548,38 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _toggleStops() {
+    _setShowStops(!_showStops);
+  }
+
+  void _toggleVehicles() {
+    _setShowVehicles(!_showVehicles);
+  }
+
+  void _toggleRealtimeOnly() {
+    _setHideNonRealtimeVehicles(!_hideNonRealtimeVehicles);
+  }
+
+  void _changeMapStyle() {
+    unawaited(_cycleMapStyle());
+  }
+
+  Future<void> _cycleMapStyle() async {
+    if (!mounted) return;
+    final themeProvider = context.read<ThemeProvider>();
+    final current = themeProvider.mapStyle;
+    final index = _mapStyleCycle.indexOf(current);
+    final nextIndex = (index + 1) % _mapStyleCycle.length;
+    await themeProvider.setMapStyle(_mapStyleCycle[nextIndex]);
+  }
+
+  void _setShowStops(bool value, {bool persist = true}) {
+    if (_showStops == value) return;
     _stopRequestId++;
     _stopRefreshDebounce?.cancel();
-    setState(() => _showStops = !_showStops);
-    unawaited(_persistShowStopsPreference(_showStops));
+    setState(() => _showStops = value);
+    if (persist) {
+      unawaited(_persistShowStopsPreference(_showStops));
+    }
     _applyStopsLayerVisibility();
     if (_showStops) {
       _lastStopsRequestKey = null;
@@ -539,22 +596,230 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _loadShowStopsPreference() async {
     final prefs = await SharedPreferences.getInstance();
     final stored = prefs.getBool(_kShowStopsPrefKey);
-    if (stored == null || !mounted || stored == _showStops) return;
-    _stopRequestId++;
-    _stopRefreshDebounce?.cancel();
-    setState(() => _showStops = stored);
-    _applyStopsLayerVisibility();
-    if (_showStops) {
-      _lastStopsRequestKey = null;
-      _scheduleStopRefresh();
-    } else {
-      _dismissStopOverlay();
-    }
+    if (stored == null || !mounted) return;
+    _setShowStops(stored, persist: false);
   }
 
   Future<void> _persistShowStopsPreference(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kShowStopsPrefKey, value);
+  }
+
+  Future<void> _loadQuickSettingsPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    final quickButtonKey = prefs.getString(_kQuickButtonPrefKey);
+    final showVehicles = prefs.getBool(_kShowVehiclesPrefKey);
+    final hideNonRt = prefs.getBool(_kHideNonRtPrefKey);
+    final train = prefs.getBool(_kShowTrainPrefKey);
+    final metro = prefs.getBool(_kShowMetroPrefKey);
+    final tram = prefs.getBool(_kShowTramPrefKey);
+    final bus = prefs.getBool(_kShowBusPrefKey);
+    final ferry = prefs.getBool(_kShowFerryPrefKey);
+    final lift = prefs.getBool(_kShowLiftPrefKey);
+    final other = prefs.getBool(_kShowOtherPrefKey);
+    if (!mounted) return;
+    setState(() {
+      _quickButtonAction = _quickButtonActionFromKey(quickButtonKey);
+      if (showVehicles != null) {
+        _showVehicles = showVehicles;
+      }
+      if (hideNonRt != null) {
+        _hideNonRealtimeVehicles = hideNonRt;
+      }
+      if (train != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.train] = train;
+      }
+      if (metro != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.metro] = metro;
+      }
+      if (tram != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.tram] = tram;
+      }
+      if (bus != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.bus] = bus;
+      }
+      if (ferry != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.ferry] = ferry;
+      }
+      if (lift != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.lift] = lift;
+      }
+      if (other != null) {
+        _vehicleModeVisibility[_VehicleModeGroup.other] = other;
+      }
+    });
+    _applyVehiclesLayerVisibility();
+    if (!_showVehicles) {
+      unawaited(_clearVehicleMarkers());
+    }
+  }
+
+  Future<void> _persistQuickButtonPreference(_QuickButtonAction action) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kQuickButtonPrefKey, _quickButtonActionKey(action));
+  }
+
+  Future<void> _persistShowVehiclesPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowVehiclesPrefKey, value);
+  }
+
+  Future<void> _persistHideNonRtPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kHideNonRtPrefKey, value);
+  }
+
+  Future<void> _persistVehicleModePreference(
+    _VehicleModeGroup mode,
+    bool value,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = switch (mode) {
+      _VehicleModeGroup.train => _kShowTrainPrefKey,
+      _VehicleModeGroup.metro => _kShowMetroPrefKey,
+      _VehicleModeGroup.tram => _kShowTramPrefKey,
+      _VehicleModeGroup.bus => _kShowBusPrefKey,
+      _VehicleModeGroup.ferry => _kShowFerryPrefKey,
+      _VehicleModeGroup.lift => _kShowLiftPrefKey,
+      _VehicleModeGroup.other => _kShowOtherPrefKey,
+    };
+    await prefs.setBool(key, value);
+  }
+
+  void _setQuickButtonAction(_QuickButtonAction action) {
+    if (_quickButtonAction == action) return;
+    setState(() => _quickButtonAction = action);
+    unawaited(_persistQuickButtonPreference(action));
+  }
+
+  void _setShowVehicles(bool value) {
+    if (_showVehicles == value) return;
+    setState(() => _showVehicles = value);
+    unawaited(_persistShowVehiclesPreference(value));
+    _applyVehiclesLayerVisibility();
+    if (!_showVehicles) {
+      _tripRefreshDebounce?.cancel();
+      _lastTripsRequestKey = null;
+      unawaited(_clearVehicleMarkers());
+      return;
+    }
+    _lastTripsRequestKey = null;
+    _scheduleTripRefresh();
+  }
+
+  void _setHideNonRealtimeVehicles(bool value) {
+    if (_hideNonRealtimeVehicles == value) return;
+    setState(() => _hideNonRealtimeVehicles = value);
+    unawaited(_persistHideNonRtPreference(value));
+    if (_isTripFocus) {
+      unawaited(_refreshFocusedTripVehicles(force: true));
+    } else {
+      unawaited(_refreshTrips(force: true));
+    }
+  }
+
+  void _setVehicleModeVisibility(_VehicleModeGroup mode, bool value) {
+    if (_vehicleModeVisibility[mode] == value) return;
+    setState(() => _vehicleModeVisibility[mode] = value);
+    unawaited(_persistVehicleModePreference(mode, value));
+    if (_isTripFocus) {
+      unawaited(_refreshFocusedTripVehicles(force: true));
+    } else {
+      unawaited(_refreshTrips(force: true));
+    }
+  }
+
+  String _quickButtonActionKey(_QuickButtonAction action) {
+    return switch (action) {
+      _QuickButtonAction.toggleStops => 'toggle_stops',
+      _QuickButtonAction.toggleVehicles => 'toggle_vehicles',
+      _QuickButtonAction.toggleRealtimeOnly => 'toggle_rt',
+      _QuickButtonAction.changeMapStyle => 'change_map',
+    };
+  }
+
+  _QuickButtonAction _quickButtonActionFromKey(String? value) {
+    return switch (value) {
+      'toggle_vehicles' => _QuickButtonAction.toggleVehicles,
+      'toggle_rt' => _QuickButtonAction.toggleRealtimeOnly,
+      'change_map' => _QuickButtonAction.changeMapStyle,
+      _ => _QuickButtonAction.toggleStops,
+    };
+  }
+
+  List<_QuickButtonOption> _quickButtonOptions() {
+    return const [
+      _QuickButtonOption(
+        action: _QuickButtonAction.toggleStops,
+        label: 'Toggle stops',
+        icon: LucideIcons.mapPin,
+        subtitle: 'Show or hide stops',
+        enabled: true,
+      ),
+      _QuickButtonOption(
+        action: _QuickButtonAction.toggleVehicles,
+        label: 'Toggle vehicles',
+        icon: LucideIcons.busFront,
+        subtitle: 'Show or hide vehicles',
+        enabled: true,
+      ),
+      _QuickButtonOption(
+        action: _QuickButtonAction.toggleRealtimeOnly,
+        label: 'Toggle Only RT',
+        icon: LucideIcons.radio,
+        subtitle: 'Show only real-time data',
+        enabled: true,
+      ),
+      _QuickButtonOption(
+        action: _QuickButtonAction.changeMapStyle,
+        label: 'Change map',
+        icon: LucideIcons.map,
+        subtitle: 'Cycle map style',
+        enabled: true,
+      ),
+    ];
+  }
+
+  _QuickButtonConfig _quickButtonConfig(BuildContext context) {
+    switch (_quickButtonAction) {
+      case _QuickButtonAction.toggleStops:
+        final color = _showStops
+            ? AppColors.accentOf(context)
+            : AppColors.black;
+        return _QuickButtonConfig(
+          label: _showStops ? 'Hide Stops' : 'Show Stops',
+          icon: _showStops ? LucideIcons.mapPinOff : LucideIcons.mapPin,
+          color: color,
+          onTap: _toggleStops,
+        );
+      case _QuickButtonAction.toggleVehicles:
+        final color = _showVehicles
+            ? AppColors.accentOf(context)
+            : AppColors.black;
+        return _QuickButtonConfig(
+          label: _showVehicles ? 'Hide Transit' : 'Show Transit',
+          icon: LucideIcons.busFront,
+          color: color,
+          onTap: _toggleVehicles,
+        );
+      case _QuickButtonAction.toggleRealtimeOnly:
+        final color = _hideNonRealtimeVehicles
+            ? AppColors.accentOf(context)
+            : AppColors.black;
+        return _QuickButtonConfig(
+          label: _hideNonRealtimeVehicles ? 'RT Only' : 'All Data',
+          icon: LucideIcons.radio,
+          color: color,
+          onTap: _toggleRealtimeOnly,
+        );
+      case _QuickButtonAction.changeMapStyle:
+        return _QuickButtonConfig(
+          label: 'Switch Map',
+          icon: LucideIcons.map,
+          color: AppColors.black,
+          onTap: _changeMapStyle,
+        );
+    }
   }
 
   void _onCameraIdle() {
@@ -565,6 +830,10 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _refreshTrips({bool force = false}) async {
     final controller = _controller;
     if (controller == null || !_isMapReady || _isTripFocus) return;
+    if (!_showVehicles) {
+      _applyVehiclesLayerVisibility();
+      return;
+    }
     if (controller.isCameraMoving) return;
     final token = ++_tripRequestId;
     LatLngBounds bounds;
@@ -597,8 +866,13 @@ class _MapScreenState extends State<MapScreen>
   void _handleTripRefreshTick() {
     if (_isTripFocus) {
       unawaited(_refreshFocusedTripVehicles(force: true));
+      if (mounted) {
+        setState(() {});
+      }
     } else {
-      unawaited(_refreshTrips(force: true));
+      if (_showVehicles) {
+        unawaited(_refreshTrips(force: true));
+      }
     }
   }
 
@@ -639,21 +913,33 @@ class _MapScreenState extends State<MapScreen>
     _lastTripsRequestKey = _viewKey(bounds, _lastCam.zoom);
 
     final chosen = <String, _SelectedSegment>{};
+    final closestDelta = <String, Duration>{};
     for (int i = 0; i < segments.length; i++) {
       final segment = segments[i];
       if (!_matchesFocusedSegment(segment, tripId)) continue;
+      if (!_passesVehicleFilters(segment)) continue;
       final dep = segment.departure?.toUtc();
       final arr = segment.arrival?.toUtc();
       if (dep == null || arr == null) continue;
-      if (now.isBefore(dep) || now.isAfter(arr)) continue;
       final key = segment.tripId;
+      final segmentDelta = now.isBefore(dep)
+          ? dep.difference(now)
+          : now.isAfter(arr)
+          ? now.difference(arr)
+          : Duration.zero;
       final existing = chosen[key];
-      if (existing == null || arr.isBefore(existing.arrival)) {
+      final existingDelta = closestDelta[key];
+      if (existing == null ||
+          existingDelta == null ||
+          segmentDelta < existingDelta ||
+          (segmentDelta == existingDelta &&
+              arr.isBefore(existing.arrival))) {
         chosen[key] = _SelectedSegment(
           segment: segment,
           colorIndex: i,
           arrival: arr,
         );
+        closestDelta[key] = segmentDelta;
       }
     }
 
@@ -693,6 +979,38 @@ class _MapScreenState extends State<MapScreen>
     return segment.tripId == tripId;
   }
 
+  bool _passesVehicleFilters(MapTripSegment segment) {
+    if (_hideNonRealtimeVehicles && !segment.realTime) return false;
+    final group = _vehicleModeGroupFor(segment.mode);
+    return _vehicleModeVisibility[group] ?? true;
+  }
+
+  _VehicleModeGroup _vehicleModeGroupFor(String? mode) {
+    final value = (mode ?? '').toUpperCase();
+    if (value.contains('RAIL') || value == 'TRAIN') {
+      return _VehicleModeGroup.train;
+    }
+    if (value == 'SUBWAY' || value == 'METRO') {
+      return _VehicleModeGroup.metro;
+    }
+    if (value == 'TRAM' || value == 'STREETCAR') {
+      return _VehicleModeGroup.tram;
+    }
+    if (value.contains('BUS') || value == 'COACH') {
+      return _VehicleModeGroup.bus;
+    }
+    if (value == 'FERRY') {
+      return _VehicleModeGroup.ferry;
+    }
+    if (value == 'GONDOLA' ||
+        value == 'CABLE_CAR' ||
+        value == 'FUNICULAR' ||
+        value == 'LIFT') {
+      return _VehicleModeGroup.lift;
+    }
+    return _VehicleModeGroup.other;
+  }
+
   Future<void> _updateVehiclesFromSegments(
     List<MapTripSegment> segments,
     DateTime now,
@@ -705,6 +1023,7 @@ class _MapScreenState extends State<MapScreen>
     final maxVehicles = _maxVehiclesForZoom(_lastCam.zoom);
     for (int i = 0; i < segments.length; i++) {
       final segment = segments[i];
+      if (!_passesVehicleFilters(segment)) continue;
       final dep = segment.departure?.toUtc();
       final arr = segment.arrival?.toUtc();
       if (dep == null || arr == null) continue;
@@ -758,6 +1077,7 @@ class _MapScreenState extends State<MapScreen>
     if (_isTripFocus) {
       _updateVehiclePositionsFor(_focusedVehicles, _pushFocusedVehicleSource);
     } else {
+      if (!_showVehicles) return;
       _updateVehiclePositionsFor(_vehicles, _pushVehicleSource);
     }
   }
@@ -768,7 +1088,6 @@ class _MapScreenState extends State<MapScreen>
   ) {
     final controller = _controller;
     if (controller == null || markers.isEmpty) return;
-    if (controller.isCameraMoving) return;
     final now = DateTime.now().toUtc();
     final nowMs = now.millisecondsSinceEpoch;
     var anyChange = false;
@@ -1215,6 +1534,7 @@ class _MapScreenState extends State<MapScreen>
     return PopScope(
       canPop:
           !_isTripFocus &&
+          !_isQuickSettings &&
           !_fromFocus.hasFocus &&
           !_toFocus.hasFocus &&
           !_isSheetCollapsed &&
@@ -1225,6 +1545,8 @@ class _MapScreenState extends State<MapScreen>
         if (!didPop) {
           if (_isTripFocus) {
             _exitTripFocus();
+          } else if (_isQuickSettings) {
+            _closeQuickSettings();
           } else if (_selectedStop != null) {
             _dismissStopOverlay();
           } else if (_longPressLatLng != null) {
@@ -1246,8 +1568,10 @@ class _MapScreenState extends State<MapScreen>
       child: LayoutBuilder(
         builder: (context, constraints) {
           final totalH = constraints.maxHeight;
+          final double bottomBarHeight =
+              _isTripFocus ? _tripFocusBottomBarHeight : _bottomBarHeight;
           // Sheet anchors
-          final double collapsedTop = math.max(0.0, totalH - _bottomBarHeight);
+          final double collapsedTop = math.max(0.0, totalH - bottomBarHeight);
           final double expandedCandidate = totalH * _collapsedMapFraction;
           final double expandedTop = (expandedCandidate.clamp(
             0.0,
@@ -1255,10 +1579,17 @@ class _MapScreenState extends State<MapScreen>
           ));
           _lastComputedCollapsedTop = collapsedTop;
           _lastComputedExpandedTop = expandedTop;
+          _lastBottomBarHeight = bottomBarHeight;
 
           // Initialize and keep within bounds (e.g., on rotation)
           _sheetTop ??= expandedTop;
-          _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop));
+          if (_isBottomBarResizeAnimating) {
+            if (_sheetTop! < expandedTop) {
+              _sheetTop = expandedTop;
+            }
+          } else {
+            _sheetTop = ((_sheetTop!).clamp(expandedTop, collapsedTop));
+          }
           final bool collapsed = ((_sheetTop! - collapsedTop).abs() < 1.0);
           if (collapsed != _isSheetCollapsed) {
             _isSheetCollapsed = collapsed;
@@ -1318,7 +1649,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               ),
 
-              if (_sheetTop != null && !_isTripFocus)
+              if (_sheetTop != null && !_isTripFocus && !_isQuickSettings)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -1330,9 +1661,9 @@ class _MapScreenState extends State<MapScreen>
                       child: Transform.translate(
                         offset: Offset(0, pillYOffset),
                         child: _MapControlPills(
-                          showStops: _showStops,
-                          onToggleStops: _toggleStops,
+                          quickButton: _quickButtonConfig(context),
                           onLocate: _centerOnUser2D,
+                          onSettings: _openQuickSettings,
                         ),
                       ),
                     ),
@@ -1364,6 +1695,7 @@ class _MapScreenState extends State<MapScreen>
                         _onStopChoice(RouteFieldKind.from, _selectedStop!),
                     onSelectTo: () =>
                         _onStopChoice(RouteFieldKind.to, _selectedStop!),
+                    onStopTimeTap: _onStopTimeSelected,
                     onViewTimetable: () => _openStopTimetable(_selectedStop!),
                     onDismissRequested: () => _dismissStopOverlay(),
                     onClosed: _handleStopOverlayClosed,
@@ -1425,7 +1757,61 @@ class _MapScreenState extends State<MapScreen>
                               itinerary: _focusedItinerary,
                               isLoading: _isTripFocusLoading,
                               errorMessage: _tripFocusError,
-                              bottomSpacer: _bottomBarHeight,
+                              bottomSpacer: bottomBarHeight,
+                            )
+                          : _isQuickSettings
+                          ? _QuickSettingsBottomCard(
+                              onHandleTap: () {
+                                _unfocusInputs();
+                                final target = _isSheetCollapsed
+                                    ? expandedTop
+                                    : collapsedTop;
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              onDragStart: () {
+                                _unfocusInputs();
+                                _snapCtrl.stop();
+                                _startDragRumble();
+                              },
+                              onDragUpdate: (dy) {
+                                final newTop = (_sheetTop! + dy).clamp(
+                                  expandedTop,
+                                  collapsedTop,
+                                );
+                                setState(() => _sheetTop = newTop);
+                              },
+                              onDragEnd: (velocityDy) {
+                                final mid = (collapsedTop + expandedTop) / 2;
+                                const vThresh = 700.0; // px/s
+                                double target;
+                                if (velocityDy.abs() > vThresh) {
+                                  target = velocityDy > 0
+                                      ? collapsedTop
+                                      : expandedTop;
+                                } else {
+                                  target = (_sheetTop! > mid)
+                                      ? collapsedTop
+                                      : expandedTop;
+                                }
+                                _animateTo(target, collapsedTop);
+                                _stopDragRumble();
+                              },
+                              onBack: _closeQuickSettings,
+                              bottomSpacer: bottomBarHeight,
+                              quickButtonAction: _quickButtonAction,
+                              quickButtonOptions: _quickButtonOptions(),
+                              showVehicles: _showVehicles,
+                              hideNonRealtime: _hideNonRealtimeVehicles,
+                              showStops: _showStops,
+                              vehicleModeVisibility: _vehicleModeVisibility,
+                              onQuickButtonChanged: _setQuickButtonAction,
+                              onShowVehiclesChanged: _setShowVehicles,
+                              onHideNonRealtimeChanged:
+                                  _setHideNonRealtimeVehicles,
+                              onVehicleModeChanged: _setVehicleModeVisibility,
+                              onShowStopsChanged: _setShowStops,
+                              onOpenAllSettings: _openAllSettings,
                             )
                           : BottomCard(
                               isCollapsed: _isSheetCollapsed,
@@ -1497,7 +1883,7 @@ class _MapScreenState extends State<MapScreen>
                               onFavoriteTap: _onFavoriteTap,
                               hasLocationPermission: _hasLocationPermission,
                             ),
-                      if (!_isTripFocus)
+                      if (!_isTripFocus && !_isQuickSettings)
                         CompositedTransformFollower(
                           link: _routeFieldLink,
                           showWhenUnlinked: false,
@@ -1538,7 +1924,7 @@ class _MapScreenState extends State<MapScreen>
                                   ),
                           ),
                         ),
-                      if (!_isTripFocus)
+                      if (!_isTripFocus && !_isQuickSettings)
                         CompositedTransformFollower(
                           link: _timeSelectionLayerLink,
                           showWhenUnlinked: false,
@@ -1699,6 +2085,8 @@ class _MapScreenState extends State<MapScreen>
 
   double? _lastComputedCollapsedTop;
   double? _lastComputedExpandedTop;
+  double? _lastBottomBarHeight;
+  bool _isBottomBarResizeAnimating = false;
   void _animateTo(double target, double collapsedTop) {
     final begin = _sheetTop ?? target;
     _snapAnim = Tween<double>(begin: begin, end: target).animate(
@@ -1709,6 +2097,21 @@ class _MapScreenState extends State<MapScreen>
       ..reset()
       ..forward();
     _snapTarget = target;
+  }
+
+  void _animateCollapsedHeightChange(double newBottomBarHeight) {
+    final lastTop = _lastComputedCollapsedTop;
+    final lastHeight = _lastBottomBarHeight;
+    if (lastTop == null || lastHeight == null) return;
+    final currentTop = _sheetTop ?? lastTop;
+    final isNearCollapsed =
+        _isSheetCollapsed || (currentTop - lastTop).abs() < 8.0;
+    if (!isNearCollapsed) return;
+    final delta = newBottomBarHeight - lastHeight;
+    if (delta.abs() < 0.5) return;
+    final target = lastTop - delta;
+    _isBottomBarResizeAnimating = true;
+    _animateTo(target, target);
   }
 
   Future<void> _initHapticCaps() async {
@@ -2420,6 +2823,7 @@ class _MapScreenState extends State<MapScreen>
       final hasLayer = layerIds.contains(_kVehiclesLayerId);
       if (hasSource && hasLayer) {
         _didAddVehiclesLayer = true;
+        _applyVehiclesLayerVisibility();
         return;
       }
       if (!hasSource) {
@@ -2431,6 +2835,7 @@ class _MapScreenState extends State<MapScreen>
       }
       if (hasLayer) {
         _didAddVehiclesLayer = true;
+        _applyVehiclesLayerVisibility();
         return;
       }
       await controller.addSymbolLayer(
@@ -2447,6 +2852,7 @@ class _MapScreenState extends State<MapScreen>
         enableInteraction: true,
       );
       _didAddVehiclesLayer = true;
+      _applyVehiclesLayerVisibility();
     } catch (_) {
       _didAddVehiclesLayer = false;
     } finally {
@@ -2658,7 +3064,12 @@ class _MapScreenState extends State<MapScreen>
   void _applyVehiclesLayerVisibility() {
     final controller = _controller;
     if (controller == null || !_didAddVehiclesLayer) return;
-    unawaited(controller.setLayerVisibility(_kVehiclesLayerId, !_isTripFocus));
+    unawaited(
+      controller.setLayerVisibility(
+        _kVehiclesLayerId,
+        !_isTripFocus && _showVehicles,
+      ),
+    );
   }
 
   void _applyFocusedVehiclesLayerVisibility() {
@@ -3067,8 +3478,10 @@ class _MapScreenState extends State<MapScreen>
   void _enterTripFocus(String tripId) {
     if (tripId.isEmpty) return;
     _showStopsBeforeFocus = _showStops;
+    _animateCollapsedHeightChange(_tripFocusBottomBarHeight);
     setState(() {
       _isTripFocus = true;
+      _isQuickSettings = false;
       _isTripFocusLoading = true;
       _tripFocusError = null;
       _focusedTripId = tripId;
@@ -3100,6 +3513,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _exitTripFocus() {
+    _animateCollapsedHeightChange(_bottomBarHeight);
     setState(() {
       _isTripFocus = false;
       _isTripFocusLoading = false;
@@ -3125,6 +3539,28 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_refreshRouteMarkers(allowFit: false));
     _scheduleTripRefresh();
     _scheduleStopRefresh();
+  }
+
+  void _openQuickSettings() {
+    if (_isQuickSettings) return;
+    _unfocusInputs();
+    _clearSuggestions();
+    _closeTimeSelectionOverlay();
+    _dismissStopOverlay(animated: false);
+    _dismissLongPressOverlay(animated: false);
+    setState(() => _isQuickSettings = true);
+    final expandedTop = _lastComputedExpandedTop;
+    final collapsedTop = _lastComputedCollapsedTop;
+    if (expandedTop != null && collapsedTop != null) {
+      _animateTo(expandedTop, collapsedTop);
+      _stopDragRumble();
+    }
+  }
+
+  void _closeQuickSettings() {
+    if (!_isQuickSettings) return;
+    _animateCollapsedHeightChange(_bottomBarHeight);
+    setState(() => _isQuickSettings = false);
   }
 
   Future<void> _loadFocusedTripDetails(String tripId) async {
@@ -3228,6 +3664,12 @@ class _MapScreenState extends State<MapScreen>
     _maybeFitSelectionsOnCollapsed();
   }
 
+  void _onStopTimeSelected(StopTime stopTime) {
+    if (stopTime.tripId.isEmpty) return;
+    Haptics.lightTick();
+    _enterTripFocus(stopTime.tripId);
+  }
+
   void _openStopTimetable(MapStop stop) {
     final stopId = stop.stopId;
     if (stopId == null || stopId.isEmpty) {
@@ -3246,6 +3688,13 @@ class _MapScreenState extends State<MapScreen>
         builder: (_) => TimetablesScreen(initialStop: suggestion),
       ),
     );
+  }
+
+  void _openAllSettings() {
+    if (_isQuickSettings) {
+      _closeQuickSettings();
+    }
+    widget.onTabChangeRequested?.call(2);
   }
 
   Future<void> _loadStopTimesPreview(MapStop stop) async {
@@ -3560,21 +4009,60 @@ class _VehicleMarkerVisual {
   final IconData? icon;
 }
 
-class _MapControlPills extends StatelessWidget {
-  const _MapControlPills({
-    required this.showStops,
-    required this.onToggleStops,
-    required this.onLocate,
+enum _QuickButtonAction {
+  toggleStops,
+  toggleVehicles,
+  toggleRealtimeOnly,
+  changeMapStyle,
+}
+
+enum _VehicleModeGroup { train, metro, tram, bus, ferry, lift, other }
+
+class _QuickButtonOption {
+  const _QuickButtonOption({
+    required this.action,
+    required this.label,
+    required this.icon,
+    this.subtitle,
+    this.enabled = true,
   });
 
-  final bool showStops;
-  final VoidCallback onToggleStops;
+  final _QuickButtonAction action;
+  final String label;
+  final IconData icon;
+  final String? subtitle;
+  final bool enabled;
+}
+
+class _QuickButtonConfig {
+  const _QuickButtonConfig({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+class _MapControlPills extends StatelessWidget {
+  const _MapControlPills({
+    required this.quickButton,
+    required this.onLocate,
+    required this.onSettings,
+  });
+
+  final _QuickButtonConfig quickButton;
   final VoidCallback onLocate;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle stopsLabelStyle = TextStyle(
-      color: showStops ? AppColors.accentOf(context) : AppColors.black,
+    final TextStyle quickLabelStyle = TextStyle(
+      color: quickButton.color,
       fontSize: 14,
       fontWeight: FontWeight.w500,
     );
@@ -3587,25 +4075,23 @@ class _MapControlPills extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _MapControlChip(
-              onTap: onToggleStops,
-              width: 126,
+              onTap: quickButton.onTap,
+              width: 116,
               leading: Icon(
-                showStops ? LucideIcons.mapPinOff : LucideIcons.mapPin,
+                quickButton.icon,
                 size: 16,
-                color: showStops
-                    ? AppColors.accentOf(context)
-                    : AppColors.black,
+                color: quickButton.color,
               ),
               label: Text(
-                showStops ? 'Hide Stops' : 'Show Stops',
+                quickButton.label,
                 textAlign: TextAlign.center,
-                style: stopsLabelStyle,
+                style: quickLabelStyle,
               ),
             ),
             const SizedBox(width: 8),
             _MapControlChip(
               onTap: onLocate,
-              width: 104,
+              width: 92,
               leading: Icon(
                 LucideIcons.locate,
                 size: 16,
@@ -3620,6 +4106,12 @@ class _MapControlPills extends StatelessWidget {
                   fontWeight: FontWeight.w500,
                 ),
               ),
+            ),
+            const SizedBox(width: 8),
+            _MapControlIconChip(
+              onTap: onSettings,
+              icon: LucideIcons.settings2,
+              size: 40,
             ),
           ],
         ),
@@ -3738,6 +4230,143 @@ class _TripFocusBottomCard extends StatelessWidget {
   }
 }
 
+class _QuickSettingsBottomCard extends StatelessWidget {
+  const _QuickSettingsBottomCard({
+    required this.onHandleTap,
+    required this.onDragStart,
+    required this.onDragUpdate,
+    required this.onDragEnd,
+    required this.onBack,
+    required this.bottomSpacer,
+    required this.quickButtonAction,
+    required this.quickButtonOptions,
+    required this.showVehicles,
+    required this.hideNonRealtime,
+    required this.showStops,
+    required this.vehicleModeVisibility,
+    required this.onQuickButtonChanged,
+    required this.onShowVehiclesChanged,
+    required this.onHideNonRealtimeChanged,
+    required this.onVehicleModeChanged,
+    required this.onShowStopsChanged,
+    required this.onOpenAllSettings,
+  });
+
+  final VoidCallback onHandleTap;
+  final VoidCallback onDragStart;
+  final ValueChanged<double> onDragUpdate;
+  final ValueChanged<double> onDragEnd;
+  final VoidCallback onBack;
+  final double bottomSpacer;
+  final _QuickButtonAction quickButtonAction;
+  final List<_QuickButtonOption> quickButtonOptions;
+  final bool showVehicles;
+  final bool hideNonRealtime;
+  final bool showStops;
+  final Map<_VehicleModeGroup, bool> vehicleModeVisibility;
+  final ValueChanged<_QuickButtonAction> onQuickButtonChanged;
+  final ValueChanged<bool> onShowVehiclesChanged;
+  final ValueChanged<bool> onHideNonRealtimeChanged;
+  final void Function(_VehicleModeGroup, bool) onVehicleModeChanged;
+  final ValueChanged<bool> onShowStopsChanged;
+  final VoidCallback onOpenAllSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 14,
+            offset: Offset(0, -6),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onHandleTap,
+              onVerticalDragStart: (_) => onDragStart(),
+              onVerticalDragUpdate: (d) => onDragUpdate(d.delta.dy),
+              onVerticalDragEnd: (d) => onDragEnd(d.velocity.pixelsPerSecond.dy),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 18),
+                  Container(
+                    width: 48,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: AppColors.black.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: PressableHighlight(
+                  onPressed: onBack,
+                  borderRadius: BorderRadius.circular(14),
+                  highlightColor: AppColors.accentOf(context),
+                  enableHaptics: false,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        LucideIcons.chevronLeft,
+                        size: 18,
+                        color: AppColors.accentOf(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Back',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accentOf(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: _QuickSettingsContent(
+                quickButtonAction: quickButtonAction,
+                quickButtonOptions: quickButtonOptions,
+                showVehicles: showVehicles,
+                hideNonRealtime: hideNonRealtime,
+                showStops: showStops,
+                vehicleModeVisibility: vehicleModeVisibility,
+                onQuickButtonChanged: onQuickButtonChanged,
+                onShowVehiclesChanged: onShowVehiclesChanged,
+                onHideNonRealtimeChanged: onHideNonRealtimeChanged,
+                onVehicleModeChanged: onVehicleModeChanged,
+                onShowStopsChanged: onShowStopsChanged,
+                onOpenAllSettings: onOpenAllSettings,
+                bottomSpacer: bottomSpacer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _TripFocusContent extends StatelessWidget {
   const _TripFocusContent({
     required this.itinerary,
@@ -3817,40 +4446,71 @@ class _TripFocusContent extends StatelessWidget {
       );
     }
 
-    final routeColor = _routeColorForItinerary(itinerary, context);
-    final headerLeg = itinerary.legs.firstWhere(
+    final focusLeg = itinerary.legs.firstWhere(
       (leg) => leg.mode != 'WALK',
       orElse: () => itinerary.legs.first,
     );
+    final routeColor =
+        parseHexColor(focusLeg.routeColor) ?? AppColors.accentOf(context);
+    final routeTextColor =
+        parseHexColor(focusLeg.routeTextColor) ?? AppColors.solidWhite;
+    final modeIcon = getLegIcon(focusLeg.mode);
     final headerText =
-        headerLeg.displayName?.trim().isNotEmpty == true
-            ? headerLeg.displayName!
-            : headerLeg.routeShortName?.trim().isNotEmpty == true
-            ? headerLeg.routeShortName!
-            : getTransitModeName(headerLeg.mode);
+        focusLeg.displayName?.trim().isNotEmpty == true
+            ? focusLeg.displayName!
+            : focusLeg.routeShortName?.trim().isNotEmpty == true
+            ? focusLeg.routeShortName!
+            : getTransitModeName(focusLeg.mode);
     final headsign =
-        headerLeg.headsign?.trim().isNotEmpty == true
-            ? headerLeg.headsign
+        focusLeg.headsign?.trim().isNotEmpty == true
+            ? focusLeg.headsign
             : null;
-    final totalDistance = itinerary.legs.fold<double>(
-      0.0,
-      (sum, leg) => sum + (leg.distance ?? 0.0),
-    );
+    final stops = _buildJourneyStops(focusLeg);
+    final (vehicleStopIndex, isVehicleAtStation, isBeforeStart, isAfterEnd) =
+        _estimateVehiclePosition(stops);
+    final showVehicle =
+        vehicleStopIndex >= 0 && vehicleStopIndex < stops.length;
+    final timelineItems = <_TimelineItem>[];
+    for (int i = 0; i < stops.length; i++) {
+      timelineItems.add(_TimelineItem(stop: stops[i], isVehicle: false));
+      if (showVehicle &&
+          !isVehicleAtStation &&
+          i == vehicleStopIndex &&
+          i < stops.length - 1) {
+        timelineItems.add(_TimelineItem(stop: null, isVehicle: true));
+      }
+    }
+
+    int upcomingStopIndex = -1;
+    if (showVehicle) {
+      if (isVehicleAtStation) {
+        upcomingStopIndex = vehicleStopIndex < stops.length - 1
+            ? vehicleStopIndex + 1
+            : -1;
+      } else {
+        upcomingStopIndex = vehicleStopIndex < stops.length - 1
+            ? vehicleStopIndex + 1
+            : -1;
+      }
+    }
+    final currentStopIndex = isBeforeStart
+        ? -1
+        : isAfterEnd
+        ? (stops.isEmpty ? -1 : stops.length - 1)
+        : vehicleStopIndex;
     final allAlerts = <String, Alert>{};
-    for (final leg in itinerary.legs) {
-      for (final alert in leg.alerts) {
+    for (final stop in stops) {
+      for (final alert in stop.alerts) {
         if (alert.headerText != null || alert.descriptionText != null) {
           final key = '${alert.headerText}|${alert.descriptionText}';
           allAlerts[key] = alert;
         }
       }
-      for (final stop in leg.intermediateStops) {
-        for (final alert in stop.alerts) {
-          if (alert.headerText != null || alert.descriptionText != null) {
-            final key = '${alert.headerText}|${alert.descriptionText}';
-            allAlerts[key] = alert;
-          }
-        }
+    }
+    for (final alert in focusLeg.alerts) {
+      if (alert.headerText != null || alert.descriptionText != null) {
+        final key = '${alert.headerText}|${alert.descriptionText}';
+        allAlerts[key] = alert;
       }
     }
 
@@ -3866,7 +4526,7 @@ class _TripFocusContent extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      getLegIcon(headerLeg.mode),
+                      modeIcon,
                       size: 32,
                       color: AppColors.black,
                     ),
@@ -3888,7 +4548,7 @@ class _TripFocusContent extends StatelessWidget {
                               child: Text(
                                 headerText,
                                 style: TextStyle(
-                                  color: AppColors.solidWhite,
+                                  color: routeTextColor,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -3897,7 +4557,7 @@ class _TripFocusContent extends StatelessWidget {
                           if (headsign != null) ...[
                             const SizedBox(height: 8),
                             Text(
-                              '${getTransitModeName(headerLeg.mode)} • $headsign',
+                              '${getTransitModeName(focusLeg.mode)} • $headsign',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -4009,20 +4669,37 @@ class _TripFocusContent extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    if (itinerary.legs.any((leg) => leg.realTime))
+                    if (focusLeg.realTime)
                       const InfoChip(
                         icon: LucideIcons.radio,
                         label: 'Real-time',
                       ),
+                    if (focusLeg.cancelled == true)
+                      const InfoChip(
+                        icon: LucideIcons.x,
+                        label: 'CANCELLED',
+                        tint: Color(0xFFD32F2F),
+                      ),
                     InfoChip(
                       icon: LucideIcons.clock,
-                      label: formatDuration(itinerary.duration),
+                      label: formatDuration(focusLeg.duration),
                     ),
-                    if (totalDistance > 0)
+                    if (focusLeg.distance != null)
                       InfoChip(
                         icon: LucideIcons.ruler,
                         label:
-                            '${(totalDistance / 1000).toStringAsFixed(1)} km',
+                            '${(focusLeg.distance! / 1000).toStringAsFixed(1)} km',
+                      ),
+                    if (focusLeg.agencyName != null)
+                      InfoChip(
+                        icon: LucideIcons.building,
+                        label: focusLeg.agencyName!,
+                      ),
+                    if (focusLeg.routeLongName != null &&
+                        focusLeg.routeLongName!.isNotEmpty)
+                      InfoChip(
+                        icon: LucideIcons.route,
+                        label: focusLeg.routeLongName!,
                       ),
                     if (itinerary.fare != null)
                       InfoChip(
@@ -4049,10 +4726,576 @@ class _TripFocusContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ...itinerary.legs.map(
-                  (leg) => _TripLegSection(leg: leg),
-                ),
+                if (stops.isEmpty)
+                  Text(
+                    'No stops available',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.black.withValues(alpha: 0.6),
+                    ),
+                  )
+                else
+                  FixedTimeline.tileBuilder(
+                    theme: TimelineThemeData(
+                      nodePosition: 0.08,
+                      color: routeColor,
+                      indicatorTheme: const IndicatorThemeData(size: 28),
+                      connectorTheme: const ConnectorThemeData(thickness: 2.5),
+                    ),
+                    builder: TimelineTileBuilder.connected(
+                      itemCount: timelineItems.length,
+                      connectionDirection: ConnectionDirection.before,
+                      contentsBuilder: (context, index) {
+                        final item = timelineItems[index];
+                        if (item.isVehicle && item.stop == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        final stop = item.stop!;
+                        final stopIndex = stops.indexOf(stop);
+                        final isPassed = stopIndex <= currentStopIndex;
+                        final isUpcoming = stopIndex == upcomingStopIndex;
+
+                        final arrRow = _buildStopScheduleRow(
+                          'Arr',
+                          stop.scheduledArrival,
+                          stop.arrival,
+                          isPassed,
+                        );
+                        final depRow = _buildStopScheduleRow(
+                          'Dep',
+                          stop.scheduledDeparture,
+                          stop.departure,
+                          isPassed,
+                        );
+
+                        return Padding(
+                          padding: const EdgeInsets.only(left: 12, bottom: 16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      stop.name,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight:
+                                            stopIndex == 0 ||
+                                                stopIndex ==
+                                                    stops.length - 1 ||
+                                                isUpcoming
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                        color: isPassed
+                                            ? AppColors.black.withValues(
+                                                alpha: 0.5,
+                                              )
+                                            : AppColors.black,
+                                      ),
+                                    ),
+                                  ),
+                                  if (isUpcoming) ...[
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: routeColor.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Upcoming',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: routeColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              if (arrRow != null || depRow != null) ...[
+                                const SizedBox(height: 2),
+                                if (arrRow != null) arrRow,
+                                if (depRow != null) ...[
+                                  if (arrRow != null)
+                                    const SizedBox(height: 2),
+                                  depRow,
+                                ],
+                              ],
+                              if (stop.track != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Track ${stop.track}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isPassed
+                                        ? AppColors.black.withValues(
+                                            alpha: 0.4,
+                                          )
+                                        : AppColors.black.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                  ),
+                                ),
+                              ],
+                              if (stop.cancelled == true) ...[
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'CANCELLED',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFFD32F2F),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                      indicatorBuilder: (context, index) {
+                        final item = timelineItems[index];
+                        if (item.isVehicle && item.stop == null) {
+                          return _IndicatorBox(
+                            lineColor: routeColor,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: routeColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  modeIcon,
+                                  size: 14,
+                                  color: routeTextColor,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final stop = item.stop!;
+                        final stopIndex = stops.indexOf(stop);
+                        final isPassed = stopIndex <= currentStopIndex;
+                        final bool isTerminal =
+                            stopIndex == 0 || stopIndex == stops.length - 1;
+                        final double dotSize = isTerminal ? 16 : 12;
+                        final Color dotColor = isPassed
+                            ? routeColor.withValues(alpha: 0.6)
+                            : routeColor;
+                        final bool isVehicleHere =
+                            showVehicle &&
+                            isVehicleAtStation &&
+                            stopIndex == vehicleStopIndex;
+                        final bool isFirstStop = stopIndex == 0;
+                        final bool isLastStop = stopIndex == stops.length - 1;
+
+                        if (isVehicleHere) {
+                          return _IndicatorBox(
+                            lineColor: dotColor,
+                            centerGap: 28.0,
+                            cutTop: isFirstStop,
+                            cutBottom: isLastStop,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                DotIndicator(color: dotColor, size: dotSize),
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    color: routeColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    modeIcon,
+                                    size: 14,
+                                    color: routeTextColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return _IndicatorBox(
+                          lineColor: dotColor,
+                          centerGap: dotSize,
+                          cutTop: isFirstStop,
+                          cutBottom: isLastStop,
+                          child: Center(
+                            child: DotIndicator(color: dotColor, size: dotSize),
+                          ),
+                        );
+                      },
+                      connectorBuilder: (context, index, connectorType) {
+                        bool isPassed = false;
+                        if (index < timelineItems.length) {
+                          final item = timelineItems[index];
+                          if (item.isVehicle) {
+                            isPassed = true;
+                          } else {
+                            final stopIndex = stops.indexOf(item.stop!);
+                            isPassed = stopIndex <= currentStopIndex;
+                          }
+                        }
+
+                        return SolidLineConnector(
+                          color: isPassed
+                              ? routeColor.withValues(alpha: 0.6)
+                              : routeColor,
+                        );
+                      },
+                    ),
+                  ),
               ],
+            ),
+          ),
+          SizedBox(height: 100),
+        ],
+      ),
+    );
+  }
+
+  bool _isSameMinute(DateTime a, DateTime b) {
+    final aLocal = a.toLocal();
+    final bLocal = b.toLocal();
+    return aLocal.year == bLocal.year &&
+        aLocal.month == bLocal.month &&
+        aLocal.day == bLocal.day &&
+        aLocal.hour == bLocal.hour &&
+        aLocal.minute == bLocal.minute;
+  }
+
+  (int, bool, bool, bool) _estimateVehiclePosition(
+    List<_JourneyStop> stops,
+  ) {
+    if (stops.isEmpty) return (-1, false, false, false);
+    final now = DateTime.now();
+
+    final firstStop = stops.first;
+    final firstDeparture = firstStop.departure ?? firstStop.arrival;
+    if (firstDeparture != null &&
+        !_isSameMinute(now, firstDeparture) &&
+        now.isBefore(firstDeparture)) {
+      return (0, true, true, false);
+    }
+
+    final lastStop = stops.last;
+    final lastArrival = lastStop.arrival ?? lastStop.departure;
+    if (lastArrival != null &&
+        !_isSameMinute(now, lastArrival) &&
+        now.isAfter(lastArrival)) {
+      return (stops.length - 1, true, false, true);
+    }
+
+    for (int i = 0; i < stops.length; i++) {
+      final stop = stops[i];
+      final arrival = stop.arrival;
+      final departure = stop.departure;
+
+      if (departure != null && _isSameMinute(now, departure)) {
+        return (i, true, false, false);
+      }
+
+      if (arrival != null && departure != null) {
+        if (now.isAfter(arrival) && now.isBefore(departure)) {
+          return (i, true, false, false);
+        }
+      }
+
+      final nextTime = departure ?? arrival;
+      if (nextTime != null &&
+          now.isBefore(nextTime) &&
+          !_isSameMinute(now, nextTime)) {
+        return (i - 1, false, false, false);
+      }
+    }
+
+    return (stops.length - 1, true, false, true);
+  }
+
+  List<_JourneyStop> _buildJourneyStops(Leg leg) {
+    final stops = <_JourneyStop>[];
+
+    stops.add(
+      _JourneyStop(
+        name: leg.fromName,
+        lat: leg.fromLat,
+        lon: leg.fromLon,
+        arrival: null,
+        departure: leg.startTime,
+        scheduledArrival: null,
+        scheduledDeparture: leg.scheduledStartTime,
+        track: leg.fromTrack,
+        scheduledTrack: leg.fromScheduledTrack,
+        cancelled: leg.cancelled,
+        alerts: const [],
+      ),
+    );
+
+    for (final stop in leg.intermediateStops) {
+      stops.add(
+        _JourneyStop(
+          name: stop.name,
+          lat: stop.lat,
+          lon: stop.lon,
+          arrival: stop.arrival,
+          departure: stop.departure,
+          scheduledArrival: stop.scheduledArrival,
+          scheduledDeparture: stop.scheduledDeparture,
+          track: stop.track,
+          scheduledTrack: stop.scheduledTrack,
+          cancelled: stop.cancelled,
+          alerts: stop.alerts,
+        ),
+      );
+    }
+
+    stops.add(
+      _JourneyStop(
+        name: leg.toName,
+        lat: leg.toLat,
+        lon: leg.toLon,
+        arrival: leg.endTime,
+        departure: null,
+        scheduledArrival: leg.scheduledEndTime,
+        scheduledDeparture: null,
+        track: leg.toTrack,
+        scheduledTrack: leg.toScheduledTrack,
+        cancelled: leg.cancelled,
+        alerts: const [],
+      ),
+    );
+
+    return stops;
+  }
+
+  Widget? _buildStopScheduleRow(
+    String label,
+    DateTime? scheduled,
+    DateTime? actual,
+    bool isPassed,
+  ) {
+    if (scheduled == null && actual == null) return null;
+    final display = formatTime(scheduled ?? actual);
+    final delay = (scheduled != null && actual != null)
+        ? computeDelay(scheduled, actual)
+        : null;
+    final baseColor = isPassed
+        ? AppColors.black.withValues(alpha: 0.4)
+        : AppColors.black.withValues(alpha: 0.6);
+    return Row(
+      children: [
+        Text(
+          '$label $display',
+          style: TextStyle(fontSize: 13, color: baseColor),
+        ),
+        if (delay != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            formatDelay(delay),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _delayColor(delay),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Color _delayColor(Duration delay) =>
+      delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
+}
+
+class _QuickSettingsContent extends StatelessWidget {
+  const _QuickSettingsContent({
+    required this.quickButtonAction,
+    required this.quickButtonOptions,
+    required this.showVehicles,
+    required this.hideNonRealtime,
+    required this.showStops,
+    required this.vehicleModeVisibility,
+    required this.onQuickButtonChanged,
+    required this.onShowVehiclesChanged,
+    required this.onHideNonRealtimeChanged,
+    required this.onVehicleModeChanged,
+    required this.onShowStopsChanged,
+    required this.onOpenAllSettings,
+    required this.bottomSpacer,
+  });
+
+  final _QuickButtonAction quickButtonAction;
+  final List<_QuickButtonOption> quickButtonOptions;
+  final bool showVehicles;
+  final bool hideNonRealtime;
+  final bool showStops;
+  final Map<_VehicleModeGroup, bool> vehicleModeVisibility;
+  final ValueChanged<_QuickButtonAction> onQuickButtonChanged;
+  final ValueChanged<bool> onShowVehiclesChanged;
+  final ValueChanged<bool> onHideNonRealtimeChanged;
+  final void Function(_VehicleModeGroup, bool) onVehicleModeChanged;
+  final ValueChanged<bool> onShowStopsChanged;
+  final VoidCallback onOpenAllSettings;
+  final double bottomSpacer;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    Text sectionTitle(String title) {
+      return Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          letterSpacing: 0.6,
+          fontWeight: FontWeight.w700,
+          color: AppColors.black.withValues(alpha: 0.5),
+        ),
+      );
+    }
+
+    Widget sectionCard({
+      required String title,
+      required Widget child,
+    }) {
+      return CustomCard(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            sectionTitle(title),
+            const SizedBox(height: 8),
+            child,
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          sectionCard(
+            title: 'Quick button',
+            child: _QuickButtonSelectField(
+              value: quickButtonAction,
+              options: quickButtonOptions,
+              onChanged: onQuickButtonChanged,
+            ),
+          ),
+          sectionCard(
+            title: 'Map layers',
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const spacing = 12.0;
+                final width = (constraints.maxWidth - spacing) / 2;
+                return Wrap(
+                  spacing: spacing,
+                  runSpacing: spacing,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: _QuickModeCard(
+                        label: 'Vehicles',
+                        icon: LucideIcons.busFront,
+                        selected: showVehicles,
+                        onTap: () => onShowVehiclesChanged(!showVehicles),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _QuickModeCard(
+                        label: 'Stops',
+                        icon: LucideIcons.mapPin,
+                        selected: showStops,
+                        onTap: () => onShowStopsChanged(!showStops),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 220),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SizeTransition(
+                  sizeFactor: animation,
+                  axisAlignment: -1.0,
+                  child: child,
+                ),
+              );
+            },
+            child: showVehicles
+                ? Column(
+                    key: const ValueKey('quick-settings-vehicles'),
+                    children: [
+                      sectionCard(
+                        title: 'Live data',
+                        child: _QuickToggleRow(
+                          label: 'Show only real-time data',
+                          value: hideNonRealtime,
+                          onChanged: onHideNonRealtimeChanged,
+                        ),
+                      ),
+                      sectionCard(
+                        title: 'Vehicle types',
+                        child: _VehicleModesGrid(
+                          visibility: vehicleModeVisibility,
+                          onChanged: onVehicleModeChanged,
+                        ),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(
+                    key: ValueKey('quick-settings-vehicles-empty'),
+                  ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+            child: Align(
+              alignment: Alignment.center,
+              child: PressableHighlight(
+                onPressed: onOpenAllSettings,
+                highlightColor: accent,
+                borderRadius: BorderRadius.circular(14),
+                enableHaptics: false,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.settings,
+                      size: 18,
+                      color: accent,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'All settings',
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           SizedBox(height: bottomSpacer),
@@ -4060,101 +5303,660 @@ class _TripFocusContent extends StatelessWidget {
       ),
     );
   }
-
-  Color _routeColorForItinerary(Itinerary itinerary, BuildContext context) {
-    for (final leg in itinerary.legs) {
-      if (leg.mode == 'WALK') continue;
-      final parsed = parseHexColor(leg.routeColor);
-      if (parsed != null) return parsed;
-    }
-    return AppColors.accentOf(context);
-  }
 }
 
-class _TripLegSection extends StatelessWidget {
-  const _TripLegSection({required this.leg});
+class _QuickButtonSelectField extends StatefulWidget {
+  const _QuickButtonSelectField({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
 
-  final Leg leg;
+  final _QuickButtonAction value;
+  final List<_QuickButtonOption> options;
+  final ValueChanged<_QuickButtonAction> onChanged;
+
+  @override
+  State<_QuickButtonSelectField> createState() =>
+      _QuickButtonSelectFieldState();
+}
+
+class _QuickButtonSelectFieldState extends State<_QuickButtonSelectField> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed != value) {
+      setState(() => _pressed = value);
+    }
+  }
+
+  void _openPicker() {
+    showCupertinoModalPopup<void>(
+      context: context,
+      builder: (context) {
+        return _QuickButtonPickerSheet(
+          selected: widget.value,
+          options: widget.options,
+          onSelected: (action) {
+            widget.onChanged(action);
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final routeColor =
-        parseHexColor(leg.routeColor) ?? AppColors.accentOf(context);
-    final stops = _buildStopsForLeg(leg);
-    if (stops.isEmpty) return const SizedBox.shrink();
+    final borderColor = AppColors.black.withValues(alpha: 0.12);
+    final baseFill = AppColors.black.withValues(alpha: 0.03);
+    final pressedFill = AppColors.black.withValues(alpha: 0.06);
+    final selected = widget.options.firstWhere(
+      (option) => option.action == widget.value,
+      orElse: () => widget.options.first,
+    );
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FixedTimeline.tileBuilder(
-            theme: TimelineThemeData(
-              nodePosition: 0.08,
-              color: routeColor,
-              indicatorTheme: const IndicatorThemeData(size: 20),
-              connectorTheme: const ConnectorThemeData(thickness: 2),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _openPicker,
+      onTapDown: (_) => _setPressed(true),
+      onTapCancel: () => _setPressed(false),
+      onTapUp: (_) => _setPressed(false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _pressed ? pressedFill : baseFill,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              selected.icon,
+              size: 16,
+              color: AppColors.black,
             ),
-            builder: TimelineTileBuilder.connected(
-              itemCount: stops.length,
-              connectionDirection: ConnectionDirection.before,
-              contentsBuilder: (context, index) {
-                final stop = stops[index];
-                final isTerminal = index == 0 || index == stops.length - 1;
-                return Padding(
-                  padding: const EdgeInsets.only(left: 12, bottom: 12),
-                  child: Text(
-                    stop.name,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight:
-                          isTerminal ? FontWeight.w600 : FontWeight.normal,
-                      color: AppColors.black,
-                    ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                selected.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black,
+                ),
+              ),
+            ),
+            Icon(
+              LucideIcons.chevronDown,
+              size: 16,
+              color: AppColors.black.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickButtonPickerSheet extends StatelessWidget {
+  const _QuickButtonPickerSheet({
+    required this.selected,
+    required this.options,
+    required this.onSelected,
+  });
+
+  final _QuickButtonAction selected;
+  final List<_QuickButtonOption> options;
+  final ValueChanged<_QuickButtonAction> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.of(context).size.height * 0.6;
+    final accent = AppColors.accentOf(context);
+    return SafeArea(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => Navigator.of(context).pop(),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: GestureDetector(
+            onTap: () {},
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 30,
+                    offset: Offset(0, 20),
                   ),
-                );
-              },
-              indicatorBuilder: (context, index) {
-                final isTerminal = index == 0 || index == stops.length - 1;
-                final dotSize = isTerminal ? 14.0 : 10.0;
-                return DotIndicator(
-                  color: routeColor,
-                  size: dotSize,
-                );
-              },
-              connectorBuilder: (context, index, connectorType) {
-                return SolidLineConnector(
-                  color: routeColor.withValues(alpha: 0.7),
-                );
-              },
+                ],
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxHeight),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Quick button',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const Spacer(),
+                        PressableHighlight(
+                          onPressed: () => Navigator.of(context).pop(),
+                          highlightColor: accent,
+                          borderRadius: BorderRadius.circular(10),
+                          enableHaptics: false,
+                          child: Icon(
+                            LucideIcons.x,
+                            size: 16,
+                            color: AppColors.black.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            for (int i = 0; i < options.length; i++) ...[
+                              _QuickButtonOptionTile(
+                                option: options[i],
+                                selected: options[i].action == selected,
+                                onTap: options[i].enabled
+                                    ? () {
+                                        Navigator.of(context).pop();
+                                        onSelected(options[i].action);
+                                      }
+                                    : null,
+                              ),
+                              if (i != options.length - 1)
+                                const SizedBox(height: 10),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickButtonOptionTile extends StatelessWidget {
+  const _QuickButtonOptionTile({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _QuickButtonOption option;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    final enabled = option.enabled;
+    final textColor = enabled
+        ? (selected ? accent : AppColors.black)
+        : AppColors.black.withValues(alpha: 0.4);
+    final subtitleColor = enabled
+        ? AppColors.black.withValues(alpha: 0.55)
+        : AppColors.black.withValues(alpha: 0.35);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.12) : AppColors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? accent : const Color(0x14000000),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                option.icon,
+                size: 16,
+                color: enabled
+                    ? accent
+                    : accent.withValues(alpha: 0.45),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
+                    ),
+                  ),
+                  if (option.subtitle != null)
+                    Text(
+                      option.subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: subtitleColor,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (!enabled)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Soon',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.black.withValues(alpha: 0.4),
+                  ),
+                ),
+              )
+            else
+              Icon(
+                selected ? LucideIcons.check : LucideIcons.plus,
+                size: 16,
+                color: selected ? accent : const Color(0x33000000),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickModeCard extends StatelessWidget {
+  const _QuickModeCard({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.12) : AppColors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? accent : const Color(0x14000000),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: accent),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: selected ? accent : AppColors.black,
+                ),
+              ),
+            ),
+            Icon(
+              selected ? LucideIcons.check : LucideIcons.plus,
+              size: 16,
+              color: selected ? accent : const Color(0x33000000),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickToggleRow extends StatelessWidget {
+  const _QuickToggleRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelColor =
+        value ? AppColors.black : AppColors.black.withValues(alpha: 0.6);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
+              ),
+            ),
+            _MiniSwitch(value: value),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniSwitch extends StatelessWidget {
+  const _MiniSwitch({required this.value});
+
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    final trackColor = value
+        ? accent
+        : AppColors.black.withValues(alpha: 0.14);
+    final borderColor = value
+        ? accent.withValues(alpha: 0.7)
+        : AppColors.black.withValues(alpha: 0.14);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      width: 30,
+      height: 16,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: trackColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: AnimatedAlign(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withValues(alpha: 0.16),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _VehicleModesGrid extends StatelessWidget {
+  const _VehicleModesGrid({
+    required this.visibility,
+    required this.onChanged,
+  });
+
+  final Map<_VehicleModeGroup, bool> visibility;
+  final void Function(_VehicleModeGroup, bool) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const entries = <_VehicleModeGroup, String>{
+      _VehicleModeGroup.train: 'Trains',
+      _VehicleModeGroup.metro: 'Metro',
+      _VehicleModeGroup.tram: 'Tram',
+      _VehicleModeGroup.bus: 'Bus',
+      _VehicleModeGroup.ferry: 'Ferries',
+      _VehicleModeGroup.lift: 'Lifts',
+      _VehicleModeGroup.other: 'Other',
+    };
+
+    IconData iconFor(_VehicleModeGroup mode) {
+      switch (mode) {
+        case _VehicleModeGroup.train:
+          return LucideIcons.trainFront;
+        case _VehicleModeGroup.metro:
+          return LucideIcons.squareArrowDown;
+        case _VehicleModeGroup.tram:
+          return LucideIcons.tramFront;
+        case _VehicleModeGroup.bus:
+          return LucideIcons.busFront;
+        case _VehicleModeGroup.ferry:
+          return LucideIcons.ship;
+        case _VehicleModeGroup.lift:
+          return LucideIcons.cableCar;
+        case _VehicleModeGroup.other:
+          return LucideIcons.sparkles;
+      }
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final width = (constraints.maxWidth - spacing) / 2;
+        final totalWidth = constraints.maxWidth;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final entry in entries.entries)
+              SizedBox(
+                width: entry.key == _VehicleModeGroup.other
+                    ? totalWidth
+                    : width,
+                child: _QuickModeCard(
+                  label: entry.value,
+                  icon: iconFor(entry.key),
+                  selected: visibility[entry.key] ?? true,
+                  onTap: () {
+                    final current = visibility[entry.key] ?? true;
+                    onChanged(entry.key, !current);
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _JourneyStop {
+  const _JourneyStop({
+    required this.name,
+    required this.lat,
+    required this.lon,
+    required this.arrival,
+    required this.departure,
+    required this.scheduledArrival,
+    required this.scheduledDeparture,
+    required this.track,
+    required this.scheduledTrack,
+    required this.cancelled,
+    required this.alerts,
+  });
+
+  final String name;
+  final double lat;
+  final double lon;
+  final DateTime? arrival;
+  final DateTime? departure;
+  final DateTime? scheduledArrival;
+  final DateTime? scheduledDeparture;
+  final String? track;
+  final String? scheduledTrack;
+  final bool cancelled;
+  final List<Alert> alerts;
+}
+
+class _TimelineItem {
+  final _JourneyStop? stop;
+  final bool isVehicle;
+
+  _TimelineItem({this.stop, required this.isVehicle});
+}
+
+class _IndicatorBox extends StatelessWidget {
+  const _IndicatorBox({
+    required this.child,
+    required this.lineColor,
+    this.centerGap = 0.0,
+    this.cutTop = false,
+    this.cutBottom = false,
+  });
+
+  final Widget child;
+  final Color lineColor;
+  final double centerGap;
+  final bool cutTop;
+  final bool cutBottom;
+
+  @override
+  Widget build(BuildContext context) {
+    final double gap = centerGap.clamp(0.0, 28.0);
+    final double sideLen = (28.0 - gap) / 2.0;
+
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (!cutTop && sideLen > 0)
+            Positioned(
+              top: 0,
+              child: SizedBox(
+                width: 2.5,
+                height: sideLen,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: lineColor),
+                ),
+              ),
+            ),
+          if (!cutBottom && sideLen > 0)
+            Positioned(
+              bottom: 0,
+              child: SizedBox(
+                width: 2.5,
+                height: sideLen,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: lineColor),
+                ),
+              ),
+            ),
+          child,
         ],
       ),
     );
   }
-
-  List<_TripStop> _buildStopsForLeg(Leg leg) {
-    final stops = <_TripStop>[];
-    if (leg.fromName.isNotEmpty) {
-      stops.add(_TripStop(leg.fromName));
-    }
-    for (final stop in leg.intermediateStops) {
-      if (stop.name.isNotEmpty) {
-        stops.add(_TripStop(stop.name));
-      }
-    }
-    if (leg.toName.isNotEmpty) {
-      stops.add(_TripStop(leg.toName));
-    }
-    return stops;
-  }
 }
 
-class _TripStop {
-  const _TripStop(this.name);
+class _MapControlIconChip extends StatelessWidget {
+  const _MapControlIconChip({
+    required this.onTap,
+    required this.icon,
+    this.size = 40,
+  });
 
-  final String name;
+  final VoidCallback onTap;
+  final IconData icon;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconSize = 16.0;
+    return PillButton(
+      onTap: onTap,
+      padding: EdgeInsets.all(9),
+      restingColor: AppColors.white,
+      pressedColor: AppColors.white.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(size / 2),
+      borderColor: AppColors.black.withValues(alpha: 0.1),
+      child: SizedBox(
+        width: iconSize,
+        height: iconSize,
+        child: Center(
+          child: Icon(icon, size: iconSize, color: AppColors.black),
+        ),
+      ),
+    );
+  }
 }
 
 class _MapControlChip extends StatelessWidget {
@@ -4554,6 +6356,7 @@ class _StopSelectionModal extends StatefulWidget {
     required this.errorMessage,
     required this.onSelectFrom,
     required this.onSelectTo,
+    required this.onStopTimeTap,
     required this.onViewTimetable,
     required this.onDismissRequested,
     required this.onClosed,
@@ -4566,6 +6369,7 @@ class _StopSelectionModal extends StatefulWidget {
   final String? errorMessage;
   final VoidCallback onSelectFrom;
   final VoidCallback onSelectTo;
+  final ValueChanged<StopTime> onStopTimeTap;
   final VoidCallback onViewTimetable;
   final VoidCallback onDismissRequested;
   final VoidCallback onClosed;
@@ -4647,6 +6451,7 @@ class _StopSelectionModalState extends State<_StopSelectionModal>
                   errorMessage: widget.errorMessage,
                   onSelectFrom: widget.onSelectFrom,
                   onSelectTo: widget.onSelectTo,
+                  onStopTimeTap: widget.onStopTimeTap,
                   onViewTimetable: widget.onViewTimetable,
                   onDismiss: widget.onDismissRequested,
                 ),
@@ -4667,6 +6472,7 @@ class _StopModalCard extends StatelessWidget {
     required this.errorMessage,
     required this.onSelectFrom,
     required this.onSelectTo,
+    required this.onStopTimeTap,
     required this.onViewTimetable,
     required this.onDismiss,
   });
@@ -4677,6 +6483,7 @@ class _StopModalCard extends StatelessWidget {
   final String? errorMessage;
   final VoidCallback onSelectFrom;
   final VoidCallback onSelectTo;
+  final ValueChanged<StopTime> onStopTimeTap;
   final VoidCallback onViewTimetable;
   final VoidCallback onDismiss;
 
@@ -4832,6 +6639,7 @@ class _StopModalCard extends StatelessWidget {
               stopTimes: stopTimes,
               isLoading: isLoading,
               errorMessage: errorMessage,
+              onStopTimeTap: onStopTimeTap,
             ),
             const SizedBox(height: 16),
             Align(
@@ -4953,11 +6761,13 @@ class _StopTimesPreview extends StatelessWidget {
     required this.stopTimes,
     required this.isLoading,
     required this.errorMessage,
+    required this.onStopTimeTap,
   });
 
   final List<StopTime> stopTimes;
   final bool isLoading;
   final String? errorMessage;
+  final ValueChanged<StopTime> onStopTimeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -4987,7 +6797,10 @@ class _StopTimesPreview extends StatelessWidget {
     return Column(
       children: [
         for (int i = 0; i < stopTimes.length; i++) ...[
-          _StopTimePreviewRow(stopTime: stopTimes[i]),
+          _StopTimePreviewRow(
+            stopTime: stopTimes[i],
+            onTap: () => onStopTimeTap(stopTimes[i]),
+          ),
           if (i != stopTimes.length - 1) const SizedBox(height: 12),
         ],
       ],
@@ -5088,9 +6901,10 @@ class _StopTimesSkeletonRow extends StatelessWidget {
 }
 
 class _StopTimePreviewRow extends StatelessWidget {
-  const _StopTimePreviewRow({required this.stopTime});
+  const _StopTimePreviewRow({required this.stopTime, this.onTap});
 
   final StopTime stopTime;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -5106,7 +6920,7 @@ class _StopTimePreviewRow extends StatelessWidget {
         ? stopTime.displayName
         : stopTime.routeShortName;
 
-    return Row(
+    final content = Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
@@ -5165,6 +6979,12 @@ class _StopTimePreviewRow extends StatelessWidget {
           ],
         ),
       ],
+    );
+    if (onTap == null) return content;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: content,
     );
   }
 }

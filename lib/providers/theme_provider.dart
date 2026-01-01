@@ -20,9 +20,10 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   static ThemeProvider? _instance;
 
-  // Map style URLs
+  // TODO: Host remotely
+  // Map styles
   static const Map<String, String> mapStyleUrls = {
-    'default': 'https://tiles.openfreemap.org/styles/liberty',
+    'default': 'assets/styles/default.json',
     'light': 'assets/styles/light.json',
     'dark': 'assets/styles/dark.json',
   };

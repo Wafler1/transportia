@@ -36,7 +36,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   MapLibreMapController? _controller;
   final List<Line> _lines = [];
   final Set<String> _stopMarkerImages = {};
-  String? _stopMarkerImageId;
   Color? _stopAccentColor;
   bool _didAddStopsLayer = false;
   Future<void>? _stopsLayerInit;
@@ -79,7 +78,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final color = AppColors.accentOf(context);
     if (_stopAccentColor == color) return;
     _stopAccentColor = color;
-    _stopMarkerImageId = null;
     if (_isMapReady) {
       unawaited(_ensureStopMarkerImageForColor(color));
       unawaited(_drawRouteStops());
@@ -477,14 +475,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     if (controller == null) return null;
     final imageId = _stopMarkerImageIdForColor(color);
     if (_stopMarkerImages.contains(imageId)) {
-      _stopMarkerImageId = imageId;
       return imageId;
     }
     try {
       final image = await _buildStopMarkerImage(color);
       await controller.addImage(imageId, image);
       _stopMarkerImages.add(imageId);
-      _stopMarkerImageId = imageId;
       return imageId;
     } catch (_) {
       return null;

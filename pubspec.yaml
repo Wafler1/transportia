@@ -45,6 +45,7 @@ flutter:
   assets:
     - assets/images/welcome-image.png
     - assets/branding/logo_rounded_min.png
+    - assets/styles/default.json
     - assets/styles/dark.json
     - assets/styles/light.json
 
