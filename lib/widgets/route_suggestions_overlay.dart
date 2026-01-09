@@ -100,8 +100,8 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       );
     }
 
-    final label = title ??
-        (field == RouteFieldKind.to ? 'Destination' : 'Origin');
+    final label =
+        title ?? (field == RouteFieldKind.to ? 'Destination' : 'Origin');
     final allowDismissTap = !showSaved && !hasResults && !showLoading;
 
     final card = SizedBox(

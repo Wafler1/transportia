@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:transportia/screens/appearance_screen.dart';
+import 'package:transportia/screens/developer_info_screen.dart';
 import 'package:transportia/screens/statistics_screen.dart';
 import 'package:transportia/screens/favourites_screen.dart';
 import 'package:transportia/screens/info_screen.dart';
@@ -18,8 +21,41 @@ import '../widgets/settings_section.dart';
 import '../utils/app_version.dart';
 import '../widgets/settings_tile.dart';
 
-class AccountScreen extends StatelessWidget {
+class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
+
+  @override
+  State<AccountScreen> createState() => _AccountScreenState();
+}
+
+class _AccountScreenState extends State<AccountScreen> {
+  Timer? _debugHoldTimer;
+  bool _debugOpened = false;
+
+  @override
+  void dispose() {
+    _debugHoldTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startDebugHold() {
+    _debugHoldTimer?.cancel();
+    _debugOpened = false;
+    _debugHoldTimer = Timer(const Duration(seconds: 5), _openDeveloperInfo);
+  }
+
+  void _cancelDebugHold() {
+    _debugHoldTimer?.cancel();
+    _debugHoldTimer = null;
+  }
+
+  void _openDeveloperInfo() {
+    if (!mounted || _debugOpened) return;
+    _debugOpened = true;
+    Navigator.of(
+      context,
+    ).push(CustomPageRoute(child: const DeveloperInfoScreen()));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -273,13 +309,18 @@ class AccountScreen extends StatelessWidget {
               Center(
                 child: Column(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.asset(
-                        'assets/branding/logo_rounded_min.png',
-                        width: 56,
-                        height: 56,
-                        fit: BoxFit.cover,
+                    GestureDetector(
+                      onTapDown: (_) => _startDebugHold(),
+                      onTapUp: (_) => _cancelDebugHold(),
+                      onTapCancel: _cancelDebugHold,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'assets/branding/logo_rounded_min.png',
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),

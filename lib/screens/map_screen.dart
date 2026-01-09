@@ -130,7 +130,7 @@ class _MapScreenState extends State<MapScreen>
       const <TransitousLocationSuggestion>[];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
-  List<SavedPlace> _savedPlaces = [];
+  List<SavedPlace> _savedSearchPlaces = [];
   bool _suppressFromListener = false;
   bool _suppressToListener = false;
   final LayerLink _routeFieldLink = LayerLink();
@@ -233,7 +233,7 @@ class _MapScreenState extends State<MapScreen>
     super.initState();
     unawaited(_loadShowStopsPreference());
     unawaited(_loadQuickSettingsPreferences());
-    unawaited(_loadSavedPlaces());
+    unawaited(_loadSavedSearchPlaces());
     FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
     _favorites = FavoritesService.favoritesListenable.value;
     if (!widget.deferInit) {
@@ -1939,7 +1939,7 @@ class _MapScreenState extends State<MapScreen>
                                     fromController: _fromCtrl,
                                     toController: _toCtrl,
                                     suggestions: _suggestions,
-                                    savedPlaces: _savedPlaces,
+                                    savedPlaces: _savedSearchPlaces,
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
@@ -2213,9 +2213,9 @@ class _MapScreenState extends State<MapScreen>
   List<TransitousLocationSuggestion> _prioritizeSavedSuggestions(
     List<TransitousLocationSuggestion> results,
   ) {
-    if (_savedPlaces.isEmpty) return results;
+    if (_savedSearchPlaces.isEmpty) return results;
     final importanceByKey = <String, int>{
-      for (final place in _savedPlaces) place.key: place.importance,
+      for (final place in _savedSearchPlaces) place.key: place.importance,
     };
     final indexBySuggestion = <TransitousLocationSuggestion, int>{};
     for (int i = 0; i < results.length; i++) {
@@ -3888,11 +3888,13 @@ class _MapScreenState extends State<MapScreen>
     _clearSuggestions();
   }
 
-  Future<void> _loadSavedPlaces() async {
-    final places = await SavedPlacesService.loadPlaces();
+  Future<void> _loadSavedSearchPlaces() async {
+    final places = await SavedPlacesService.loadPlaces(
+      bucket: SavedPlacesBucket.search,
+    );
     if (!mounted) return;
     setState(() {
-      _savedPlaces = places;
+      _savedSearchPlaces = places;
     });
   }
 
@@ -3910,12 +3912,20 @@ class _MapScreenState extends State<MapScreen>
       city: suggestion.defaultArea,
       countryCode: suggestion.country,
     );
-    final updated = SavedPlacesService.applySelection(_savedPlaces, selected);
+    final updated = SavedPlacesService.applySelection(
+      _savedSearchPlaces,
+      selected,
+    );
     if (!mounted) return;
     setState(() {
-      _savedPlaces = updated;
+      _savedSearchPlaces = updated;
     });
-    unawaited(SavedPlacesService.savePlaces(updated));
+    unawaited(
+      SavedPlacesService.savePlaces(
+        bucket: SavedPlacesBucket.search,
+        places: updated,
+      ),
+    );
   }
 
   Future<void> _loadRecentTrips() async {

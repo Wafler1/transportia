@@ -4,15 +4,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/saved_place.dart';
 
+enum SavedPlacesBucket { search, timetable }
+
 class SavedPlacesService {
-  static const String _storageKey = 'saved_places_v1';
+  static const String _searchKey = 'saved_places_search_v1';
+  static const String _timetableKey = 'saved_places_timetable_v1';
   static const int maxPlaces = 50;
   static const int importanceStep = 3;
   static const int initialImportance = 15;
 
-  static Future<List<SavedPlace>> loadPlaces() async {
+  static Future<List<SavedPlace>> loadPlaces({
+    required SavedPlacesBucket bucket,
+  }) async {
     final prefs = SharedPreferencesAsync();
-    final raw = await prefs.getString(_storageKey);
+    final raw = await prefs.getString(_keyFor(bucket));
     if (raw == null || raw.isEmpty) {
       return <SavedPlace>[];
     }
@@ -31,13 +36,16 @@ class SavedPlacesService {
     return _normalize(places);
   }
 
-  static Future<void> savePlaces(List<SavedPlace> places) async {
+  static Future<void> savePlaces({
+    required SavedPlacesBucket bucket,
+    required List<SavedPlace> places,
+  }) async {
     final prefs = SharedPreferencesAsync();
     final normalized = _normalize(places);
     final encoded = jsonEncode(
       normalized.map((place) => place.toJson()).toList(growable: false),
     );
-    await prefs.setString(_storageKey, encoded);
+    await prefs.setString(_keyFor(bucket), encoded);
   }
 
   static List<SavedPlace> applySelection(
@@ -91,5 +99,12 @@ class SavedPlacesService {
       filtered.removeRange(maxPlaces, filtered.length);
     }
     return filtered;
+  }
+
+  static String _keyFor(SavedPlacesBucket bucket) {
+    return switch (bucket) {
+      SavedPlacesBucket.search => _searchKey,
+      SavedPlacesBucket.timetable => _timetableKey,
+    };
   }
 }

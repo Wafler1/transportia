@@ -46,7 +46,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   List<TransitousLocationSuggestion> _suggestions = [];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
-  List<SavedPlace> _savedPlaces = [];
+  List<SavedPlace> _savedTimetablePlaces = [];
   LatLng? _lastUserLatLng;
   TransitousLocationSuggestion? _selectedStop;
   List<StopTime>? _stopTimes;
@@ -76,7 +76,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     _searchController.addListener(_onSearchTextChanged);
     _searchFocus.addListener(_onFocusChanged);
     _checkLocationPermission();
-    unawaited(_loadSavedPlaces());
+    unawaited(_loadSavedTimetablePlaces());
     _applyInitialStop(widget.initialStop);
   }
 
@@ -114,11 +114,13 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     }
   }
 
-  Future<void> _loadSavedPlaces() async {
-    final places = await SavedPlacesService.loadPlaces();
+  Future<void> _loadSavedTimetablePlaces() async {
+    final places = await SavedPlacesService.loadPlaces(
+      bucket: SavedPlacesBucket.timetable,
+    );
     if (!mounted) return;
     setState(() {
-      _savedPlaces = places;
+      _savedTimetablePlaces = places;
     });
   }
 
@@ -136,12 +138,20 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       city: suggestion.defaultArea,
       countryCode: suggestion.country,
     );
-    final updated = SavedPlacesService.applySelection(_savedPlaces, selected);
+    final updated = SavedPlacesService.applySelection(
+      _savedTimetablePlaces,
+      selected,
+    );
     if (!mounted) return;
     setState(() {
-      _savedPlaces = updated;
+      _savedTimetablePlaces = updated;
     });
-    unawaited(SavedPlacesService.savePlaces(updated));
+    unawaited(
+      SavedPlacesService.savePlaces(
+        bucket: SavedPlacesBucket.timetable,
+        places: updated,
+      ),
+    );
   }
 
   void _onFocusChanged() {
@@ -288,9 +298,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   List<TransitousLocationSuggestion> _prioritizeSavedSuggestions(
     List<TransitousLocationSuggestion> results,
   ) {
-    if (_savedPlaces.isEmpty) return results;
+    if (_savedTimetablePlaces.isEmpty) return results;
     final importanceByKey = <String, int>{
-      for (final place in _savedPlaces) place.key: place.importance,
+      for (final place in _savedTimetablePlaces) place.key: place.importance,
     };
     final indexBySuggestion = <TransitousLocationSuggestion, int>{};
     for (int i = 0; i < results.length; i++) {
@@ -880,7 +890,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               fromController: _searchController,
                               toController: _searchController,
                               suggestions: _suggestions,
-                              savedPlaces: _savedPlaces,
+                              savedPlaces: _savedTimetablePlaces,
                               isLoading: _isFetchingSuggestions,
                               onSuggestionTap: (_, suggestion) =>
                                   _onSuggestionSelected(suggestion),
