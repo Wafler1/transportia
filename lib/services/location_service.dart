@@ -44,15 +44,15 @@ class LocationService {
   }
 
   static Future<void> saveLastLatLng(LatLng v) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setDouble(_kLastLatKey, v.latitude);
     await prefs.setDouble(_kLastLngKey, v.longitude);
   }
 
   static Future<LatLng?> loadLastLatLng() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lat = prefs.getDouble(_kLastLatKey);
-    final lng = prefs.getDouble(_kLastLngKey);
+    final prefs = SharedPreferencesAsync();
+    final lat = await prefs.getDouble(_kLastLatKey);
+    final lng = await prefs.getDouble(_kLastLngKey);
     if (lat == null || lng == null) return null;
     return LatLng(lat, lng);
   }

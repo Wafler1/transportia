@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/route_field_kind.dart';
+import '../models/saved_place.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/haptics.dart';
@@ -13,9 +14,11 @@ class RouteSuggestionsOverlay extends StatelessWidget {
     required this.fromController,
     required this.toController,
     required this.suggestions,
+    required this.savedPlaces,
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
+    this.title,
   });
 
   final double width;
@@ -23,6 +26,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
   final TextEditingController fromController;
   final TextEditingController toController;
   final List<TransitousLocationSuggestion> suggestions;
+  final List<SavedPlace> savedPlaces;
   final bool isLoading;
   final void Function(
     RouteFieldKind field,
@@ -30,6 +34,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
   )
   onSuggestionTap;
   final VoidCallback onDismissRequest;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
@@ -39,13 +44,29 @@ class RouteSuggestionsOverlay extends StatelessWidget {
         ? fromController
         : toController;
     final query = controller.text.trim();
+    final savedMatches = _filterSavedPlaces(savedPlaces, query);
 
     Widget body;
-    final bool hasQuery = query.length >= 3;
-    final bool hasResults = hasQuery && suggestions.isNotEmpty;
-    final bool showLoading = hasQuery && isLoading;
+    final bool hasFullQuery = query.length >= 3;
+    final bool showSaved = !hasFullQuery && savedMatches.isNotEmpty;
+    final bool hasResults = hasFullQuery && suggestions.isNotEmpty;
+    final bool showLoading = hasFullQuery && isLoading;
 
-    if (!hasQuery) {
+    if (showSaved) {
+      body = ListView.separated(
+        padding: EdgeInsets.zero,
+        shrinkWrap: true,
+        itemCount: savedMatches.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final suggestion = _toSuggestion(savedMatches[index]);
+          return _SuggestionTile(
+            suggestion: suggestion,
+            onTap: () => onSuggestionTap(field, suggestion),
+          );
+        },
+      );
+    } else if (!hasFullQuery) {
       body = const Center(
         child: _SuggestionPlaceholder(
           icon: LucideIcons.type,
@@ -79,8 +100,9 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       );
     }
 
-    final label = field == RouteFieldKind.to ? 'Destination' : 'Origin';
-    final allowDismissTap = !hasResults && !showLoading;
+    final label = title ??
+        (field == RouteFieldKind.to ? 'Destination' : 'Origin');
+    final allowDismissTap = !showSaved && !hasResults && !showLoading;
 
     final card = SizedBox(
       width: width,
@@ -129,6 +151,29 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onDismissRequest,
       child: card,
+    );
+  }
+
+  List<SavedPlace> _filterSavedPlaces(List<SavedPlace> places, String query) {
+    if (places.isEmpty) return <SavedPlace>[];
+    final trimmed = query.trim().toLowerCase();
+    final filtered = trimmed.isEmpty
+        ? places
+        : places
+              .where((place) => place.name.toLowerCase().contains(trimmed))
+              .toList();
+    return filtered.take(5).toList(growable: false);
+  }
+
+  TransitousLocationSuggestion _toSuggestion(SavedPlace place) {
+    return TransitousLocationSuggestion(
+      id: 'saved-${place.key}',
+      name: place.name,
+      lat: place.lat,
+      lon: place.lon,
+      type: place.type,
+      country: place.countryCode,
+      defaultArea: place.city,
     );
   }
 }

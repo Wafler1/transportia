@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -7,9 +9,11 @@ import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../models/time_selection.dart';
 import '../models/route_field_kind.dart';
+import '../models/saved_place.dart';
 import '../models/stop_time.dart';
 import '../screens/connection_info_screen.dart';
 import '../services/location_service.dart';
+import '../services/saved_places_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../utils/color_utils.dart';
@@ -42,6 +46,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   List<TransitousLocationSuggestion> _suggestions = [];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
+  List<SavedPlace> _savedPlaces = [];
   LatLng? _lastUserLatLng;
   TransitousLocationSuggestion? _selectedStop;
   List<StopTime>? _stopTimes;
@@ -71,6 +76,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     _searchController.addListener(_onSearchTextChanged);
     _searchFocus.addListener(_onFocusChanged);
     _checkLocationPermission();
+    unawaited(_loadSavedPlaces());
     _applyInitialStop(widget.initialStop);
   }
 
@@ -106,6 +112,36 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
         // Silently fail if location is not available
       }
     }
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    final places = await SavedPlacesService.loadPlaces();
+    if (!mounted) return;
+    setState(() {
+      _savedPlaces = places;
+    });
+  }
+
+  Future<void> _recordSavedPlace(
+    TransitousLocationSuggestion suggestion,
+  ) async {
+    final name = suggestion.name.trim();
+    if (name.isEmpty) return;
+    final selected = SavedPlace(
+      name: name,
+      type: suggestion.type,
+      lat: suggestion.lat,
+      lon: suggestion.lon,
+      importance: SavedPlace.defaultImportance,
+      city: suggestion.defaultArea,
+      countryCode: suggestion.country,
+    );
+    final updated = SavedPlacesService.applySelection(_savedPlaces, selected);
+    if (!mounted) return;
+    setState(() {
+      _savedPlaces = updated;
+    });
+    unawaited(SavedPlacesService.savePlaces(updated));
   }
 
   void _onFocusChanged() {
@@ -235,7 +271,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       if (!mounted) return;
 
       setState(() {
-        _suggestions = results;
+        _suggestions = _prioritizeSavedSuggestions(results);
         _isFetchingSuggestions = false;
       });
     } catch (e) {
@@ -249,7 +285,39 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     }
   }
 
+  List<TransitousLocationSuggestion> _prioritizeSavedSuggestions(
+    List<TransitousLocationSuggestion> results,
+  ) {
+    if (_savedPlaces.isEmpty) return results;
+    final importanceByKey = <String, int>{
+      for (final place in _savedPlaces) place.key: place.importance,
+    };
+    final indexBySuggestion = <TransitousLocationSuggestion, int>{};
+    for (int i = 0; i < results.length; i++) {
+      indexBySuggestion[results[i]] = i;
+    }
+    final ordered = List<TransitousLocationSuggestion>.from(results);
+    ordered.sort((a, b) {
+      final aKey = SavedPlace.buildKey(type: a.type, lat: a.lat, lon: a.lon);
+      final bKey = SavedPlace.buildKey(type: b.type, lat: b.lat, lon: b.lon);
+      final aImportance = importanceByKey[aKey];
+      final bImportance = importanceByKey[bKey];
+      final aSaved = aImportance != null;
+      final bSaved = bImportance != null;
+      if (aSaved != bSaved) {
+        return aSaved ? -1 : 1;
+      }
+      if (aImportance != null && bImportance != null) {
+        final diff = bImportance.compareTo(aImportance);
+        if (diff != 0) return diff;
+      }
+      return indexBySuggestion[a]!.compareTo(indexBySuggestion[b]!);
+    });
+    return ordered;
+  }
+
   void _onSuggestionSelected(TransitousLocationSuggestion suggestion) {
+    unawaited(_recordSavedPlace(suggestion));
     setState(() {
       _searchController.text = suggestion.name;
       _selectedStop = suggestion;
@@ -812,12 +880,14 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               fromController: _searchController,
                               toController: _searchController,
                               suggestions: _suggestions,
+                              savedPlaces: _savedPlaces,
                               isLoading: _isFetchingSuggestions,
                               onSuggestionTap: (_, suggestion) =>
                                   _onSuggestionSelected(suggestion),
                               onDismissRequest: () {
                                 _searchFocus.unfocus();
                               },
+                              title: "Stop suggestions",
                             ),
                     ),
                   ),

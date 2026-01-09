@@ -26,7 +26,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   Future<void> _onContinue() async {
     // Persist that welcome has been seen, then fade overlay away.
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setBool(WelcomeScreen._kWelcomeSeenKey, true);
     if (!mounted) return;
     setState(() => _fading = true);

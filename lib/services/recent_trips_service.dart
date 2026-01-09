@@ -9,7 +9,7 @@ class RecentTripsService {
   /// Save a trip to history
   /// Deduplicates based on from/to coordinates and keeps only the most recent 5
   static Future<void> saveTrip(TripHistoryItem trip) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     final trips = await getRecentTrips();
 
     // Remove any existing trip with the same route (deduplicate)
@@ -30,8 +30,8 @@ class RecentTripsService {
   /// Get recent trips, ordered from most recent to oldest
   static Future<List<TripHistoryItem>> getRecentTrips() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final encoded = prefs.getString(_kRecentTripsKey);
+      final prefs = SharedPreferencesAsync();
+      final encoded = await prefs.getString(_kRecentTripsKey);
       if (encoded == null || encoded.isEmpty) return [];
 
       final decoded = jsonDecode(encoded);
@@ -56,7 +56,7 @@ class RecentTripsService {
 
   /// Clear all recent trips
   static Future<void> clearHistory() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.remove(_kRecentTripsKey);
   }
 }

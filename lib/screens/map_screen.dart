@@ -19,6 +19,7 @@ import '../animations/curves.dart';
 import '../providers/theme_provider.dart';
 import '../models/route_field_kind.dart';
 import '../models/itinerary.dart';
+import '../models/saved_place.dart';
 import '../models/stop_time.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
@@ -28,6 +29,7 @@ import '../screens/timetables_screen.dart';
 import '../services/favorites_service.dart';
 import '../services/location_service.dart';
 import '../services/recent_trips_service.dart';
+import '../services/saved_places_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_map_service.dart';
 import '../services/transitous_geocode_service.dart';
@@ -128,6 +130,7 @@ class _MapScreenState extends State<MapScreen>
       const <TransitousLocationSuggestion>[];
   bool _isFetchingSuggestions = false;
   int _suggestionRequestId = 0;
+  List<SavedPlace> _savedPlaces = [];
   bool _suppressFromListener = false;
   bool _suppressToListener = false;
   final LayerLink _routeFieldLink = LayerLink();
@@ -230,6 +233,7 @@ class _MapScreenState extends State<MapScreen>
     super.initState();
     unawaited(_loadShowStopsPreference());
     unawaited(_loadQuickSettingsPreferences());
+    unawaited(_loadSavedPlaces());
     FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
     _favorites = FavoritesService.favoritesListenable.value;
     if (!widget.deferInit) {
@@ -602,29 +606,29 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _loadShowStopsPreference() async {
-    final prefs = await SharedPreferences.getInstance();
-    final stored = prefs.getBool(_kShowStopsPrefKey);
+    final prefs = SharedPreferencesAsync();
+    final stored = await prefs.getBool(_kShowStopsPrefKey);
     if (stored == null || !mounted) return;
     _setShowStops(stored, persist: false);
   }
 
   Future<void> _persistShowStopsPreference(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setBool(_kShowStopsPrefKey, value);
   }
 
   Future<void> _loadQuickSettingsPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
-    final quickButtonKey = prefs.getString(_kQuickButtonPrefKey);
-    final showVehicles = prefs.getBool(_kShowVehiclesPrefKey);
-    final hideNonRt = prefs.getBool(_kHideNonRtPrefKey);
-    final train = prefs.getBool(_kShowTrainPrefKey);
-    final metro = prefs.getBool(_kShowMetroPrefKey);
-    final tram = prefs.getBool(_kShowTramPrefKey);
-    final bus = prefs.getBool(_kShowBusPrefKey);
-    final ferry = prefs.getBool(_kShowFerryPrefKey);
-    final lift = prefs.getBool(_kShowLiftPrefKey);
-    final other = prefs.getBool(_kShowOtherPrefKey);
+    final prefs = SharedPreferencesAsync();
+    final quickButtonKey = await prefs.getString(_kQuickButtonPrefKey);
+    final showVehicles = await prefs.getBool(_kShowVehiclesPrefKey);
+    final hideNonRt = await prefs.getBool(_kHideNonRtPrefKey);
+    final train = await prefs.getBool(_kShowTrainPrefKey);
+    final metro = await prefs.getBool(_kShowMetroPrefKey);
+    final tram = await prefs.getBool(_kShowTramPrefKey);
+    final bus = await prefs.getBool(_kShowBusPrefKey);
+    final ferry = await prefs.getBool(_kShowFerryPrefKey);
+    final lift = await prefs.getBool(_kShowLiftPrefKey);
+    final other = await prefs.getBool(_kShowOtherPrefKey);
     if (!mounted) return;
     setState(() {
       _quickButtonAction = _quickButtonActionFromKey(quickButtonKey);
@@ -663,17 +667,17 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _persistQuickButtonPreference(_QuickButtonAction action) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setString(_kQuickButtonPrefKey, _quickButtonActionKey(action));
   }
 
   Future<void> _persistShowVehiclesPreference(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setBool(_kShowVehiclesPrefKey, value);
   }
 
   Future<void> _persistHideNonRtPreference(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setBool(_kHideNonRtPrefKey, value);
   }
 
@@ -681,7 +685,7 @@ class _MapScreenState extends State<MapScreen>
     _VehicleModeGroup mode,
     bool value,
   ) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     final key = switch (mode) {
       _VehicleModeGroup.train => _kShowTrainPrefKey,
       _VehicleModeGroup.metro => _kShowMetroPrefKey,
@@ -1935,6 +1939,7 @@ class _MapScreenState extends State<MapScreen>
                                     fromController: _fromCtrl,
                                     toController: _toCtrl,
                                     suggestions: _suggestions,
+                                    savedPlaces: _savedPlaces,
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
@@ -2171,8 +2176,7 @@ class _MapScreenState extends State<MapScreen>
   void _requestSuggestions(RouteFieldKind kind, String text) {
     final query = text.trim();
     if (query.length < 3) {
-      if (_activeSuggestionField == kind &&
-          (_suggestions.isNotEmpty || _isFetchingSuggestions)) {
+      if (_activeSuggestionField == kind) {
         setState(() {
           _suggestions = const <TransitousLocationSuggestion>[];
           _isFetchingSuggestions = false;
@@ -2191,8 +2195,9 @@ class _MapScreenState extends State<MapScreen>
     TransitousGeocodeService.fetchSuggestions(text: query, placeBias: placeBias)
         .then((results) {
           if (!mounted || requestId != _suggestionRequestId) return;
+          final orderedResults = _prioritizeSavedSuggestions(results);
           setState(() {
-            _suggestions = results;
+            _suggestions = orderedResults;
             _isFetchingSuggestions = false;
           });
         })
@@ -2203,6 +2208,37 @@ class _MapScreenState extends State<MapScreen>
             _isFetchingSuggestions = false;
           });
         });
+  }
+
+  List<TransitousLocationSuggestion> _prioritizeSavedSuggestions(
+    List<TransitousLocationSuggestion> results,
+  ) {
+    if (_savedPlaces.isEmpty) return results;
+    final importanceByKey = <String, int>{
+      for (final place in _savedPlaces) place.key: place.importance,
+    };
+    final indexBySuggestion = <TransitousLocationSuggestion, int>{};
+    for (int i = 0; i < results.length; i++) {
+      indexBySuggestion[results[i]] = i;
+    }
+    final ordered = List<TransitousLocationSuggestion>.from(results);
+    ordered.sort((a, b) {
+      final aKey = SavedPlace.buildKey(type: a.type, lat: a.lat, lon: a.lon);
+      final bKey = SavedPlace.buildKey(type: b.type, lat: b.lat, lon: b.lon);
+      final aImportance = importanceByKey[aKey];
+      final bImportance = importanceByKey[bKey];
+      final aSaved = aImportance != null;
+      final bSaved = bImportance != null;
+      if (aSaved != bSaved) {
+        return aSaved ? -1 : 1;
+      }
+      if (aImportance != null && bImportance != null) {
+        final diff = bImportance.compareTo(aImportance);
+        if (diff != 0) return diff;
+      }
+      return indexBySuggestion[a]!.compareTo(indexBySuggestion[b]!);
+    });
+    return ordered;
   }
 
   LatLng? _placeBiasLatLng() {
@@ -2231,6 +2267,7 @@ class _MapScreenState extends State<MapScreen>
     RouteFieldKind field,
     TransitousLocationSuggestion suggestion,
   ) {
+    unawaited(_recordSavedPlace(suggestion));
     _setControllerText(field, suggestion.name);
     _setSelection(field, suggestion, notify: true);
     _unfocusInputs();
@@ -3631,6 +3668,7 @@ class _MapScreenState extends State<MapScreen>
   void _onStopChoice(RouteFieldKind kind, MapStop stop) {
     Haptics.lightTick();
     final suggestion = _suggestionFromStop(stop);
+    unawaited(_recordSavedPlace(suggestion));
     _setControllerText(kind, suggestion.name);
     _setSelection(kind, suggestion, notify: true);
     _clearSuggestions();
@@ -3651,6 +3689,7 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
     final suggestion = _suggestionFromStop(stop);
+    unawaited(_recordSavedPlace(suggestion));
     _dismissStopOverlay();
     if (widget.onTimetableRequested != null) {
       widget.onTimetableRequested!(suggestion);
@@ -3847,6 +3886,36 @@ class _MapScreenState extends State<MapScreen>
     _dismissStopOverlay();
     _dismissLongPressOverlay();
     _clearSuggestions();
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    final places = await SavedPlacesService.loadPlaces();
+    if (!mounted) return;
+    setState(() {
+      _savedPlaces = places;
+    });
+  }
+
+  Future<void> _recordSavedPlace(
+    TransitousLocationSuggestion suggestion,
+  ) async {
+    final name = suggestion.name.trim();
+    if (name.isEmpty) return;
+    final selected = SavedPlace(
+      name: name,
+      type: suggestion.type,
+      lat: suggestion.lat,
+      lon: suggestion.lon,
+      importance: SavedPlace.defaultImportance,
+      city: suggestion.defaultArea,
+      countryCode: suggestion.country,
+    );
+    final updated = SavedPlacesService.applySelection(_savedPlaces, selected);
+    if (!mounted) return;
+    setState(() {
+      _savedPlaces = updated;
+    });
+    unawaited(SavedPlacesService.savePlaces(updated));
   }
 
   Future<void> _loadRecentTrips() async {

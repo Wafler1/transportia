@@ -66,18 +66,18 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
 
     // Load accent color
-    final colorValue = prefs.getInt(_accentColorKey);
+    final colorValue = await prefs.getInt(_accentColorKey);
     if (colorValue != null) {
       _accentColor = Color(colorValue);
     }
 
     // Load map style
-    _mapStyle = prefs.getString(_mapStyleKey) ?? defaultMapStyle;
+    _mapStyle = await prefs.getString(_mapStyleKey) ?? defaultMapStyle;
 
-    final savedTheme = prefs.getString(_appThemeKey);
+    final savedTheme = await prefs.getString(_appThemeKey);
     if (savedTheme != null) {
       _appThemeMode = AppThemeMode.values.firstWhere(
         (mode) => mode.name == savedTheme,
@@ -95,7 +95,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     _accentColor = color;
     notifyListeners();
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setInt(_accentColorKey, color.toARGB32());
   }
 
@@ -105,7 +105,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     _accentColor = defaultAccentColor;
     notifyListeners();
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.remove(_accentColorKey);
   }
 
@@ -116,7 +116,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     _mapStyle = style;
     notifyListeners();
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setString(_mapStyleKey, style);
   }
 
@@ -126,7 +126,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
     _appThemeMode = mode;
     notifyListeners();
 
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = SharedPreferencesAsync();
     await prefs.setString(_appThemeKey, mode.name);
   }
 

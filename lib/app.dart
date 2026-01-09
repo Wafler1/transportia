@@ -79,7 +79,7 @@ class _RootGateState extends State<_RootGate> {
   static const _kIgnoredUpdateKey = 'ignored_update_version';
   bool? _seen;
   String? _availableUpdateVersion;
-  SharedPreferences? _prefs;
+  SharedPreferencesAsync? _prefs;
   StreamSubscription<Uri>? _appLinkSubscription;
 
   @override
@@ -114,9 +114,9 @@ class _RootGateState extends State<_RootGate> {
   }
 
   Future<void> _init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final seen = prefs.getBool(_kWelcomeSeenKey) ?? false;
-    final ignored = prefs.getString(_kIgnoredUpdateKey);
+    final prefs = SharedPreferencesAsync();
+    final seen = await prefs.getBool(_kWelcomeSeenKey) ?? false;
+    final ignored = await prefs.getString(_kIgnoredUpdateKey);
     _prefs = prefs;
     if (!mounted) return;
     setState(() {
@@ -158,7 +158,7 @@ class _RootGateState extends State<_RootGate> {
       _dismissUpdateOverlay();
       return;
     }
-    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    final prefs = _prefs ?? SharedPreferencesAsync();
     await prefs.setString(_kIgnoredUpdateKey, version);
     if (!mounted) return;
     setState(() {
