@@ -172,6 +172,7 @@ class _MapScreenState extends State<MapScreen>
   bool _didAddFocusedStopsLayer = false;
   bool _didAddFocusedRouteLayer = false;
   Future<void>? _vehicleLayerInit;
+  Future<void>? _stopsLayerInit;
   Future<void>? _focusedVehiclesLayerInit;
   Future<void>? _focusedStopsLayerInit;
   Future<void>? _focusedRouteLayerInit;
@@ -468,6 +469,7 @@ class _MapScreenState extends State<MapScreen>
     _didAddFocusedStopsLayer = false;
     _didAddFocusedRouteLayer = false;
     _vehicleLayerInit = null;
+    _stopsLayerInit = null;
     _focusedVehiclesLayerInit = null;
     _focusedStopsLayerInit = null;
     _focusedRouteLayerInit = null;
@@ -2783,18 +2785,44 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _ensureStopsLayer() async {
     if (_didAddStopsLayer) return;
+    final inFlight = _stopsLayerInit;
+    if (inFlight != null) return inFlight;
+    final completer = Completer<void>();
+    _stopsLayerInit = completer.future;
     final controller = _controller;
-    if (controller == null || !_isMapReady) return;
-    await _ensureVehicleLayer();
-    final color = _stopAccentColor ?? AppColors.accentOf(context);
-    final imageId = await _ensureStopMarkerImageForColor(color);
-    if (imageId == null) return;
     try {
-      await controller.addGeoJsonSource(
-        _kStopsSourceId,
-        _emptyFeatureCollection(),
-        promoteId: 'id',
-      );
+      if (controller == null || !_isMapReady) return;
+      await _ensureVehicleLayer();
+      final color = _stopAccentColor ?? AppColors.accentOf(context);
+      final imageId = await _ensureStopMarkerImageForColor(color);
+      if (imageId == null) return;
+      Set<String> sourceIds;
+      Set<String> layerIds;
+      try {
+        sourceIds = (await controller.getSourceIds()).cast<String>().toSet();
+        layerIds = (await controller.getLayerIds()).cast<String>().toSet();
+      } catch (_) {
+        return;
+      }
+      final hasSource = sourceIds.contains(_kStopsSourceId);
+      final hasLayer = layerIds.contains(_kStopsLayerId);
+      if (hasSource && hasLayer) {
+        _didAddStopsLayer = true;
+        _applyStopsLayerVisibility();
+        return;
+      }
+      if (!hasSource) {
+        await controller.addGeoJsonSource(
+          _kStopsSourceId,
+          _emptyFeatureCollection(),
+          promoteId: 'id',
+        );
+      }
+      if (hasLayer) {
+        _didAddStopsLayer = true;
+        _applyStopsLayerVisibility();
+        return;
+      }
       await controller.addSymbolLayer(
         _kStopsSourceId,
         _kStopsLayerId,
@@ -2813,6 +2841,9 @@ class _MapScreenState extends State<MapScreen>
       _applyStopsLayerVisibility();
     } catch (_) {
       _didAddStopsLayer = false;
+    } finally {
+      _stopsLayerInit = null;
+      if (!completer.isCompleted) completer.complete();
     }
   }
 
