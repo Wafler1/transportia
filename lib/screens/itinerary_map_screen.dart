@@ -538,7 +538,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final controller = _controller;
     try {
       if (controller == null || !_isMapReady) return;
-      final color = _stopAccentColor ?? AppColors.accentOf(context);
+      final color = _stopAccentColor ?? _currentAccentColor();
       final imageId = await _ensureStopMarkerImageForColor(color);
       if (imageId == null) return;
       Set<String> sourceIds;
@@ -621,28 +621,9 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     return points;
   }
 
-  Color _getLegColorFromLeg(Leg leg, int index) {
-    if (leg.routeColor != null) {
-      final parsed = parseHexColor(leg.routeColor);
-      if (parsed != null) return parsed;
-    }
-    if (leg.mode == 'WALK') {
-      return const Color(0xFF666666);
-    }
-    return _getDefaultColor(index);
-  }
-
-  Color _getDefaultColor(int index) {
-    final baseColor = AppColors.accentOf(context);
-    final shadeFactors = [1.0, 0.7, 0.5, 0.3];
-    final shadeFactor = shadeFactors[index % shadeFactors.length];
-
-    return Color.fromARGB(
-      255,
-      ((baseColor.r * 255.0).round() * shadeFactor).round(),
-      ((baseColor.g * 255.0).round() * shadeFactor).round(),
-      ((baseColor.b * 255.0).round() * shadeFactor).round(),
-    );
+  Color _getLegColorFromLeg(Leg leg, int _) {
+    final parsed = parseHexColor(leg.routeColor?.trim());
+    return parsed ?? _currentAccentColor();
   }
 
   String _colorToHex(Color color) {
@@ -650,6 +631,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final g = (color.g * 255.0).round();
     final b = (color.b * 255.0).round();
     return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+  }
+
+  Color _currentAccentColor() {
+    return ThemeProvider.instance?.accentColor ?? AppColors.accent;
   }
 
   Future<void> _fitCameraToBounds() async {

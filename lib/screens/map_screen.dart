@@ -43,6 +43,7 @@ import '../utils/time_utils.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/info_chip.dart';
 import '../widgets/pressable_highlight.dart';
+import '../widgets/quick_button_picker_sheet.dart';
 import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/validation_toast.dart';
@@ -1318,13 +1319,9 @@ class _MapScreenState extends State<MapScreen>
     return points;
   }
 
-  Color _segmentColorForIndex(MapTripSegment segment, int index) {
-    final parsed = parseHexColor(segment.routeColor);
-    if (parsed != null) return parsed;
-    if (segment.mode == 'WALK') {
-      return const Color(0xFF666666);
-    }
-    return _defaultRouteColor(index);
+  Color _segmentColorForIndex(MapTripSegment segment, int _) {
+    final parsed = parseHexColor(segment.routeColor?.trim());
+    return parsed ?? _currentAccentColor();
   }
 
   Color _focusedRouteColor(Itinerary itinerary) {
@@ -1333,7 +1330,7 @@ class _MapScreenState extends State<MapScreen>
       final parsed = parseHexColor(leg.routeColor);
       if (parsed != null) return parsed;
     }
-    return AppColors.accentOf(context);
+    return _currentAccentColor();
   }
 
   Set<String> _buildFocusedRouteKeys(Itinerary itinerary) {
@@ -1385,19 +1382,6 @@ class _MapScreenState extends State<MapScreen>
     final shortName = segment.routeShortName?.trim();
     if (shortName != null && shortName.isNotEmpty) return shortName;
     return segment.tripId;
-  }
-
-  Color _defaultRouteColor(int index) {
-    final baseColor = AppColors.accentOf(context);
-    final shadeFactors = [1.0, 0.7, 0.5, 0.3];
-    final shadeFactor = shadeFactors[index % shadeFactors.length];
-
-    return Color.fromARGB(
-      255,
-      ((baseColor.r * 255.0).round() * shadeFactor).round(),
-      ((baseColor.g * 255.0).round() * shadeFactor).round(),
-      ((baseColor.b * 255.0).round() * shadeFactor).round(),
-    );
   }
 
   String _viewKey(LatLngBounds bounds, double zoom) {
@@ -1472,6 +1456,10 @@ class _MapScreenState extends State<MapScreen>
     return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
   }
 
+  Color _currentAccentColor() {
+    return ThemeProvider.instance?.accentColor ?? AppColors.accent;
+  }
+
   void _onTimeSelectionChanged(TimeSelection newSelection) {
     setState(() {
       _timeSelection = newSelection;
@@ -1479,9 +1467,8 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _notifyOverlayVisibility() {
-    // Check if any overlay is currently visible
-    final overlaysVisible =
-        _showTimeSelectionOverlay || _activeSuggestionField != null;
+    // Route suggestions should hide the navbar; time selection should not.
+    final overlaysVisible = _activeSuggestionField != null;
     widget.onOverlayVisibilityChanged?.call(overlaysVisible);
   }
 
@@ -1492,14 +1479,38 @@ class _MapScreenState extends State<MapScreen>
       _showTimeSelectionOverlay = true;
     });
     _notifyOverlayVisibility();
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Time selection',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return TimeSelectionOverlay(
+          currentSelection: _timeSelection,
+          onSelectionChanged: _onTimeSelectionChanged,
+          onDismiss: _closeTimeSelectionOverlay,
+          showDepartArriveToggle: true,
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+    ).then((_) {
+      if (!mounted) return;
+      if (_showTimeSelectionOverlay) {
+        setState(() => _showTimeSelectionOverlay = false);
+        _notifyOverlayVisibility();
+      }
+    });
   }
 
   void _closeTimeSelectionOverlay() {
     if (!_showTimeSelectionOverlay) return;
-    setState(() {
-      _showTimeSelectionOverlay = false;
-    });
-    _notifyOverlayVisibility();
+    Navigator.of(context, rootNavigator: true).maybePop();
   }
 
   void _toggleTimeSelectionOverlay() {
@@ -1921,41 +1932,6 @@ class _MapScreenState extends State<MapScreen>
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
-                                  ),
-                          ),
-                        ),
-                      if (!_isTripFocus && !_isQuickSettings)
-                        CompositedTransformFollower(
-                          link: _timeSelectionLayerLink,
-                          showWhenUnlinked: false,
-                          targetAnchor: Alignment.bottomLeft,
-                          followerAnchor: Alignment.topLeft,
-                          offset: const Offset(0, 8),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 180),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            transitionBuilder: (child, animation) {
-                              final offsetTween = Tween<Offset>(
-                                begin: const Offset(0, -0.05),
-                                end: Offset.zero,
-                              );
-                              return FadeTransition(
-                                opacity: animation,
-                                child: SlideTransition(
-                                  position: animation.drive(offsetTween),
-                                  child: child,
-                                ),
-                              );
-                            },
-                            child: !_showTimeSelectionOverlay
-                                ? const SizedBox.shrink()
-                                : TimeSelectionOverlay(
-                                    width: overlayWidth,
-                                    currentSelection: _timeSelection,
-                                    onSelectionChanged: _onTimeSelectionChanged,
-                                    onDismiss: _closeTimeSelectionOverlay,
-                                    showDepartArriveToggle: true,
                                   ),
                           ),
                         ),
@@ -3140,11 +3116,13 @@ class _MapScreenState extends State<MapScreen>
     if (controller == null || !_isMapReady) return;
     await _ensureFocusedRouteLayer();
     if (!_didAddFocusedRouteLayer) return;
-    final routeColor = _focusedRouteColor(itinerary);
-    final colorHex = _colorToHex(routeColor);
     final features = <Map<String, dynamic>>[];
     for (int i = 0; i < itinerary.legs.length; i++) {
       final leg = itinerary.legs[i];
+      final legColor =
+          parseHexColor(leg.routeColor?.trim()) ??
+          _currentAccentColor();
+      final colorHex = _colorToHex(legColor);
       final geometry = leg.legGeometry;
       List<LatLng> points = [];
       if (geometry != null && geometry.points.isNotEmpty) {
@@ -5331,15 +5309,36 @@ class _QuickButtonSelectFieldState extends State<_QuickButtonSelectField> {
   }
 
   void _openPicker() {
-    showCupertinoModalPopup<void>(
+    final pickerOptions = widget.options
+        .map(
+          (option) => QuickButtonPickerOption<_QuickButtonAction>(
+            value: option.action,
+            label: option.label,
+            icon: option.icon,
+            subtitle: option.subtitle,
+            enabled: option.enabled,
+          ),
+        )
+        .toList();
+    showGeneralDialog<void>(
       context: context,
-      builder: (context) {
-        return _QuickButtonPickerSheet(
+      barrierDismissible: false,
+      barrierLabel: 'Quick button',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return QuickButtonPickerSheet<_QuickButtonAction>(
           selected: widget.value,
-          options: widget.options,
+          options: pickerOptions,
           onSelected: (action) {
             widget.onChanged(action);
           },
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
         );
       },
     );
@@ -5394,218 +5393,6 @@ class _QuickButtonSelectFieldState extends State<_QuickButtonSelectField> {
               size: 16,
               color: AppColors.black.withValues(alpha: 0.5),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickButtonPickerSheet extends StatelessWidget {
-  const _QuickButtonPickerSheet({
-    required this.selected,
-    required this.options,
-    required this.onSelected,
-  });
-
-  final _QuickButtonAction selected;
-  final List<_QuickButtonOption> options;
-  final ValueChanged<_QuickButtonAction> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final maxHeight = MediaQuery.of(context).size.height * 0.6;
-    final accent = AppColors.accentOf(context);
-    return SafeArea(
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => Navigator.of(context).pop(),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: GestureDetector(
-            onTap: () {},
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 30,
-                    offset: Offset(0, 20),
-                  ),
-                ],
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Quick button',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black,
-                          ),
-                        ),
-                        const Spacer(),
-                        PressableHighlight(
-                          onPressed: () => Navigator.of(context).pop(),
-                          highlightColor: accent,
-                          borderRadius: BorderRadius.circular(10),
-                          enableHaptics: false,
-                          child: Icon(
-                            LucideIcons.x,
-                            size: 16,
-                            color: AppColors.black.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            for (int i = 0; i < options.length; i++) ...[
-                              _QuickButtonOptionTile(
-                                option: options[i],
-                                selected: options[i].action == selected,
-                                onTap: options[i].enabled
-                                    ? () {
-                                        Navigator.of(context).pop();
-                                        onSelected(options[i].action);
-                                      }
-                                    : null,
-                              ),
-                              if (i != options.length - 1)
-                                const SizedBox(height: 10),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickButtonOptionTile extends StatelessWidget {
-  const _QuickButtonOptionTile({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _QuickButtonOption option;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = AppColors.accentOf(context);
-    final enabled = option.enabled;
-    final textColor = enabled
-        ? (selected ? accent : AppColors.black)
-        : AppColors.black.withValues(alpha: 0.4);
-    final subtitleColor = enabled
-        ? AppColors.black.withValues(alpha: 0.55)
-        : AppColors.black.withValues(alpha: 0.35);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.12) : AppColors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? accent : const Color(0x14000000),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                option.icon,
-                size: 16,
-                color: enabled
-                    ? accent
-                    : accent.withValues(alpha: 0.45),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    option.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
-                  ),
-                  if (option.subtitle != null)
-                    Text(
-                      option.subtitle!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: subtitleColor,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            if (!enabled)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.black.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  'Soon',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.black.withValues(alpha: 0.4),
-                  ),
-                ),
-              )
-            else
-              Icon(
-                selected ? LucideIcons.check : LucideIcons.plus,
-                size: 16,
-                color: selected ? accent : const Color(0x33000000),
-              ),
           ],
         ),
       ),
@@ -6909,7 +6696,7 @@ class _StopTimePreviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final routeColor =
-        parseHexColor(stopTime.routeColor) ?? AppColors.black;
+        parseHexColor(stopTime.routeColor) ?? AppColors.accentOf(context);
     final routeTextColor =
         parseHexColor(stopTime.routeTextColor) ?? AppColors.solidWhite;
     final arrival =

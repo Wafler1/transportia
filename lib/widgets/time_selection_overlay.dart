@@ -4,19 +4,18 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/time_selection.dart';
 import '../theme/app_colors.dart';
+import 'bottom_overlay_card.dart';
 import 'pressable_highlight.dart';
 
 class TimeSelectionOverlay extends StatefulWidget {
   const TimeSelectionOverlay({
     super.key,
-    required this.width,
     required this.currentSelection,
     required this.onSelectionChanged,
     required this.onDismiss,
     this.showDepartArriveToggle = true,
   });
 
-  final double width;
   final TimeSelection currentSelection;
   final void Function(TimeSelection) onSelectionChanged;
   final VoidCallback onDismiss;
@@ -35,15 +34,14 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
     final initial = widget.currentSelection.dateTime;
     _selectedDate = DateTime(
-      initial.isBefore(now) ? now.year : initial.year,
-      initial.isBefore(now) ? now.month : initial.month,
-      initial.isBefore(now) ? now.day : initial.day,
+      initial.year,
+      initial.month,
+      initial.day,
     );
-    _selectedHour = initial.isBefore(now) ? now.hour : initial.hour;
-    _selectedMinute = initial.isBefore(now) ? now.minute : initial.minute;
+    _selectedHour = initial.hour;
+    _selectedMinute = initial.minute;
     _isArriveBy = widget.currentSelection.isArriveBy;
   }
 
@@ -74,124 +72,100 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final card = SizedBox(
-      width: widget.width,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 20,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Depart/Arrive toggle
+        if (widget.showDepartArriveToggle)
+          Row(
             children: [
-              // Header
-              Text(
-                'Set time',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black,
+              Expanded(
+                child: _ToggleButton(
+                  label: 'Depart at',
+                  isSelected: !_isArriveBy,
+                  onTap: () {
+                    setState(() => _isArriveBy = false);
+                  },
                 ),
               ),
-              const SizedBox(height: 10),
-
-              // Depart/Arrive toggle
-              if (widget.showDepartArriveToggle)
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ToggleButton(
-                        label: 'Depart at',
-                        isSelected: !_isArriveBy,
-                        onTap: () {
-                          setState(() => _isArriveBy = false);
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _ToggleButton(
-                        label: 'Arrive by',
-                        isSelected: _isArriveBy,
-                        onTap: () {
-                          setState(() => _isArriveBy = true);
-                        },
-                      ),
-                    ),
-                  ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ToggleButton(
+                  label: 'Arrive by',
+                  isSelected: _isArriveBy,
+                  onTap: () {
+                    setState(() => _isArriveBy = true);
+                  },
                 ),
-              if (widget.showDepartArriveToggle) const SizedBox(height: 10),
-
-              // Date Selection
-              _DateSelector(
-                selectedDate: _selectedDate,
-                onDateChanged: (date) {
-                  setState(() => _selectedDate = date);
-                },
               ),
-              const SizedBox(height: 10),
+            ],
+          ),
+        if (widget.showDepartArriveToggle) const SizedBox(height: 10),
 
-              // Time Selection
-              _TimeSelector(
-                selectedHour: _selectedHour,
-                selectedMinute: _selectedMinute,
-                onHourChanged: (hour) {
-                  setState(() => _selectedHour = hour);
-                },
-                onMinuteChanged: (minute) {
-                  setState(() => _selectedMinute = minute);
-                },
-              ),
-              const SizedBox(height: 10),
+        // Date Selection
+        _DateSelector(
+          selectedDate: _selectedDate,
+          onDateChanged: (date) {
+            setState(() => _selectedDate = date);
+          },
+        ),
+        const SizedBox(height: 10),
 
-              // Action buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Time Selection
+        _TimeSelector(
+          selectedHour: _selectedHour,
+          selectedMinute: _selectedMinute,
+          onHourChanged: (hour) {
+            setState(() => _selectedHour = hour);
+          },
+          onMinuteChanged: (minute) {
+            setState(() => _selectedMinute = minute);
+          },
+        ),
+        const SizedBox(height: 10),
+
+        // Action buttons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _ActionButton(
+              label: 'Now',
+              isPrimary: false,
+              onTap: _handleSetNow,
+            ),
+            PressableHighlight(
+              onPressed: _handleConfirm,
+              highlightColor: AppColors.accentOf(context),
+              borderRadius: BorderRadius.circular(14),
+              enableHaptics: false,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _ActionButton(
-                    label: 'Now',
-                    isPrimary: false,
-                    onTap: _handleSetNow,
-                  ),
-                  PressableHighlight(
-                    onPressed: _handleConfirm,
-                    highlightColor: AppColors.accentOf(context),
-                    borderRadius: BorderRadius.circular(14),
-                    enableHaptics: false,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(width: 8),
-                        Text(
-                          'Confirm',
-                          style: TextStyle(
-                            color: AppColors.accentOf(context),
-                            fontWeight: FontWeight.w500,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
+                  SizedBox(width: 8),
+                  Text(
+                    'Confirm',
+                    style: TextStyle(
+                      color: AppColors.accentOf(context),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
                     ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
 
-    return TapRegion(onTapOutside: (_) => widget.onDismiss(), child: card);
+    return BottomOverlayCard(
+      title: 'Set time',
+      maxHeightFactor: 0.8,
+      padding: const EdgeInsets.all(16),
+      onDismiss: widget.onDismiss,
+      child: content,
+    );
   }
 }
 
@@ -286,8 +260,7 @@ class _DateSelectorState extends State<_DateSelector> {
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 30));
 
-    if (newDate.isAfter(now.subtract(const Duration(days: 1))) &&
-        newDate.isBefore(maxDate.add(const Duration(days: 1)))) {
+    if (newDate.isBefore(maxDate.add(const Duration(days: 1)))) {
       widget.onDateChanged(newDate);
     }
   }

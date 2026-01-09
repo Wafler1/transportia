@@ -136,13 +136,37 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     setState(() {
       _showTimeSelectionOverlay = true;
     });
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Time selection',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return TimeSelectionOverlay(
+          currentSelection: _timeSelection,
+          onSelectionChanged: _onTimeSelectionChanged,
+          onDismiss: _closeTimeSelectionOverlay,
+          showDepartArriveToggle: false,
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+    ).then((_) {
+      if (!mounted) return;
+      if (_showTimeSelectionOverlay) {
+        setState(() => _showTimeSelectionOverlay = false);
+      }
+    });
   }
 
   void _closeTimeSelectionOverlay() {
     if (!_showTimeSelectionOverlay) return;
-    setState(() {
-      _showTimeSelectionOverlay = false;
-    });
+    Navigator.of(context, rootNavigator: true).maybePop();
   }
 
   void _handleTimeButtonTapDown() {
@@ -781,40 +805,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               },
                             ),
                     ),
-                  ),
-                ),
-                CompositedTransformFollower(
-                  link: _timeSelectionLayerLink,
-                  showWhenUnlinked: false,
-                  targetAnchor: Alignment.bottomLeft,
-                  followerAnchor: Alignment.topLeft,
-                  offset: const Offset(0, 8),
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 180),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (child, animation) {
-                      final offsetTween = Tween<Offset>(
-                        begin: const Offset(0, -0.05),
-                        end: Offset.zero,
-                      );
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: animation.drive(offsetTween),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: !_showTimeSelectionOverlay
-                        ? const SizedBox.shrink()
-                        : TimeSelectionOverlay(
-                            width: MediaQuery.of(context).size.width - 40,
-                            currentSelection: _timeSelection,
-                            onSelectionChanged: _onTimeSelectionChanged,
-                            onDismiss: _closeTimeSelectionOverlay,
-                            showDepartArriveToggle: false,
-                          ),
                   ),
                 ),
               ],

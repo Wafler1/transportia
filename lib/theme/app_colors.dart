@@ -7,9 +7,17 @@ class AppColors {
   static Color accentOf(BuildContext context) {
     try {
       return context.watch<ThemeProvider>().accentColor;
-    } catch (e) {
-      // Fallback if provider is not available
-      return accent;
+    } catch (_) {
+      final provider = ThemeProvider.instance;
+      if (provider != null) {
+        return provider.accentColor;
+      }
+      try {
+        return context.read<ThemeProvider>().accentColor;
+      } catch (_) {
+        // Fallback if provider is not available
+        return accent;
+      }
     }
   }
 
