@@ -13,10 +13,10 @@ packages:
     dependency: "direct main"
     description:
       name: app_links
-      sha256: "5f88447519add627fe1cbcab4fd1da3d4fed15b9baf29f28b22535c95ecee3e8"
+      sha256: "3462d9defc61565fde4944858b59bec5be2b9d5b05f20aed190adb3ad08a7abc"
       url: "https://pub.dev"
     source: hosted
-    version: "6.4.1"
+    version: "7.0.0"
   app_links_linux:
     dependency: transitive
     description:
@@ -173,10 +173,10 @@ packages:
     dependency: transitive
     description:
       name: ffi
-      sha256: "289279317b4b16eb2bb7e271abccd4bf84ec9bdcbe999e278a94b804f5630418"
+      sha256: d07d37192dbf97461359c1518788f203b0c9102cfd2c35a716b823741219542c
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.4"
+    version: "2.1.5"
   file:
     dependency: transitive
     description:
@@ -344,14 +344,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.7.2"
-  js:
-    dependency: transitive
-    description:
-      name: js
-      sha256: "53385261521cc4a0c4658fd0ad07a7d14591cf8fc33abbceae306ddb974888dc"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.7.2"
   json_annotation:
     dependency: transitive
     description:
@@ -404,26 +396,26 @@ packages:
     dependency: "direct main"
     description:
       name: maplibre_gl
-      sha256: a66be9a877081b3316cf540e80355e823353e29f736a1f7d62317bf3150fef4f
+      sha256: d9773555ae4ebab94bbc3ae2176b077cfda486ec729eefe01e1613f164cb8410
       url: "https://pub.dev"
     source: hosted
-    version: "0.24.1"
+    version: "0.25.0"
   maplibre_gl_platform_interface:
     dependency: transitive
     description:
       name: maplibre_gl_platform_interface
-      sha256: f423e6c4b0add1ddc423bc36096e29b5d09e8fc720beeac76a21b23259e5a421
+      sha256: bd7de401dea24dd7e8a6f2fa736ddee7dbbee3e24a9027f0afdd619994702047
       url: "https://pub.dev"
     source: hosted
-    version: "0.24.1"
+    version: "0.25.0"
   maplibre_gl_web:
     dependency: transitive
     description:
       name: maplibre_gl_web
-      sha256: "969f3a61e51f404e5500e5085405496e1f2ecf4d1e63b2105402dd9a088a4f8b"
+      sha256: af0e48bf96e8dd99f8b958a1953126971eb8a0527b9735441d4f24df3913f5a2
       url: "https://pub.dev"
     source: hosted
-    version: "0.24.1"
+    version: "0.25.0"
   matcher:
     dependency: transitive
     description:
@@ -636,18 +628,18 @@ packages:
     dependency: "direct main"
     description:
       name: share_plus
-      sha256: fce43200aa03ea87b91ce4c3ac79f0cecd52e2a7a56c7a4185023c271fbfa6da
+      sha256: "14c8860d4de93d3a7e53af51bff479598c4e999605290756bbbe45cf65b37840"
       url: "https://pub.dev"
     source: hosted
-    version: "10.1.4"
+    version: "12.0.1"
   share_plus_platform_interface:
     dependency: transitive
     description:
       name: share_plus_platform_interface
-      sha256: cc012a23fc2d479854e6c80150696c4a5f5bb62cb89af4de1c505cf78d0a5d0b
+      sha256: "88023e53a13429bd65d8e85e11a9b484f49d4c190abbd96c7932b74d6927cc9a"
       url: "https://pub.dev"
     source: hosted
-    version: "5.0.2"
+    version: "6.1.0"
   shared_preferences:
     dependency: "direct main"
     description:
@@ -942,5 +934,5 @@ packages:
     source: hosted
     version: "3.1.3"
 sdks:
-  dart: ">=3.9.2 <4.0.0"
-  flutter: ">=3.35.0"
+  dart: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.1"

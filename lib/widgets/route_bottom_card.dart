@@ -550,16 +550,10 @@ class _RecentTripTileState extends State<_RecentTripTile> {
           decoration: BoxDecoration(
             color: AppColors.black.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: AppColors.black.withValues(alpha: 0.07),
-            ),
+            border: Border.all(color: AppColors.black.withValues(alpha: 0.07)),
           ),
           alignment: Alignment.center,
-          child: Icon(
-            LucideIcons.route,
-            size: 18,
-            color: AppColors.black,
-          ),
+          child: Icon(LucideIcons.route, size: 18, color: AppColors.black),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -684,8 +678,9 @@ class _FavoriteShortcut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
-    final textColor =
-        enabled ? AppColors.black : AppColors.black.withValues(alpha: 0.6);
+    final textColor = enabled
+        ? AppColors.black
+        : AppColors.black.withValues(alpha: 0.6);
 
     return Opacity(
       opacity: enabled ? 1.0 : 0.6,

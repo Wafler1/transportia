@@ -21,7 +21,7 @@ class UpdatePromptOverlay extends StatelessWidget {
   final VoidCallback onDismiss;
   final VoidCallback onSkipVersion;
 
-  static final Uri _downloadUri = Uri.parse('https://entaria.net/app/download');
+  static final Uri _downloadUri = Uri.parse('https://wafler.one/transportia/download');
 
   void _handleUpdateTap() {
     unawaited(launchUrl(_downloadUri, mode: LaunchMode.externalApplication));

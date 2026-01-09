@@ -113,7 +113,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: AppColors.black.withValues(alpha: 0.64),
+                                  color: AppColors.black.withValues(
+                                    alpha: 0.64,
+                                  ),
                                   height: 1.35,
                                 ),
                               ),

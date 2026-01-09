@@ -35,11 +35,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
   void initState() {
     super.initState();
     final initial = widget.currentSelection.dateTime;
-    _selectedDate = DateTime(
-      initial.year,
-      initial.month,
-      initial.day,
-    );
+    _selectedDate = DateTime(initial.year, initial.month, initial.day);
     _selectedHour = initial.hour;
     _selectedMinute = initial.minute;
     _isArriveBy = widget.currentSelection.isArriveBy;
@@ -129,11 +125,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _ActionButton(
-              label: 'Now',
-              isPrimary: false,
-              onTap: _handleSetNow,
-            ),
+            _ActionButton(label: 'Now', isPrimary: false, onTap: _handleSetNow),
             PressableHighlight(
               onPressed: _handleConfirm,
               highlightColor: AppColors.accentOf(context),

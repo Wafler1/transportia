@@ -88,7 +88,9 @@ class AccountScreen extends StatelessWidget {
                 child: GestureDetector(
                   onTap: () async {
                     try {
-                      final uri = Uri.parse('http://wafler.one?ref=transportia');
+                      final uri = Uri.parse(
+                        'http://wafler.one?ref=transportia',
+                      );
                       await launchUrl(
                         uri,
                         mode: LaunchMode.externalApplication,
@@ -135,7 +137,9 @@ class AccountScreen extends StatelessWidget {
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.black.withValues(alpha: 0.5),
+                                      color: AppColors.black.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
                                   ),
                                   Text(

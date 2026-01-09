@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class VersionService {
   const VersionService._();
 
-  static const String _endpoint = 'https://entaria.net/app/version';
+  static const String _endpoint = 'https://wafler.one/transportia/version';
 
   static Future<String?> fetchLatestVersion() async {
     try {

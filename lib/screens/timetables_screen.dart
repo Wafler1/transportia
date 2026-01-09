@@ -151,10 +151,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
         );
       },
       transitionBuilder: (context, animation, _, child) {
-        return FadeTransition(
-          opacity: animation,
-          child: child,
-        );
+        return FadeTransition(opacity: animation, child: child);
       },
     ).then((_) {
       if (!mounted) return;
@@ -533,7 +530,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
-                                      color: AppColors.black.withValues(alpha: 0.4),
+                                      color: AppColors.black.withValues(
+                                        alpha: 0.4,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -554,7 +553,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                   color: AppColors.white,
                                   borderRadius: BorderRadius.circular(14),
                                   border: Border.all(
-                                    color: AppColors.black.withValues(alpha: 0.1),
+                                    color: AppColors.black.withValues(
+                                      alpha: 0.1,
+                                    ),
                                   ),
                                   boxShadow: const [
                                     BoxShadow(
@@ -573,7 +574,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                     Icon(
                                       LucideIcons.search,
                                       size: 20,
-                                      color: AppColors.black.withValues(alpha: 0.4),
+                                      color: AppColors.black.withValues(
+                                        alpha: 0.4,
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -582,7 +585,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                         focusNode: _searchFocus,
                                         placeholder: 'Search for a stop...',
                                         placeholderStyle: TextStyle(
-                                          color: AppColors.black.withValues(alpha: 0.4),
+                                          color: AppColors.black.withValues(
+                                            alpha: 0.4,
+                                          ),
                                           fontSize: 16,
                                         ),
                                         style: TextStyle(
@@ -607,11 +612,15 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                           _searchController.clear();
                                         },
                                         child: Padding(
-                                          padding: const EdgeInsets.only(left: 8),
+                                          padding: const EdgeInsets.only(
+                                            left: 8,
+                                          ),
                                           child: Icon(
                                             LucideIcons.x,
                                             size: 20,
-                                            color: AppColors.black.withValues(alpha: 0.4),
+                                            color: AppColors.black.withValues(
+                                              alpha: 0.4,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -721,13 +730,17 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       width: 80,
                                       height: 80,
                                       decoration: BoxDecoration(
-                                        color: AppColors.black.withValues(alpha: 0.04),
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.04,
+                                        ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Icon(
                                         LucideIcons.trainFront,
                                         size: 40,
-                                        color: AppColors.black.withValues(alpha: 0.2),
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.2,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(height: 24),
@@ -746,7 +759,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w500,
-                                        color: AppColors.black.withValues(alpha: 0.4),
+                                        color: AppColors.black.withValues(
+                                          alpha: 0.4,
+                                        ),
                                         height: 1.4,
                                       ),
                                     ),
@@ -860,9 +875,7 @@ class _TimeButtonState extends State<_TimeButton> {
             color: _pressed
                 ? AppColors.black.withValues(alpha: 0.08)
                 : AppColors.black.withValues(alpha: 0.06),
-            border: Border.all(
-              color: AppColors.black.withValues(alpha: 0.07),
-            ),
+            border: Border.all(color: AppColors.black.withValues(alpha: 0.07)),
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1063,8 +1076,9 @@ class _TimeWithDelayText extends StatelessWidget {
     final delay = (scheduled != null && actual != null)
         ? computeDelay(scheduled!, actual!)
         : null;
-    final baseColor =
-        subdued ? AppColors.black.withValues(alpha: 0.6) : AppColors.black;
+    final baseColor = subdued
+        ? AppColors.black.withValues(alpha: 0.6)
+        : AppColors.black;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

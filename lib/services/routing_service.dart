@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import '../models/itinerary.dart';
 import '../models/time_selection.dart';
@@ -62,12 +63,23 @@ class RoutingService {
         final data = json.decode(response.body) as Map<String, dynamic>;
         return ItineraryResponse.fromJson(data);
       } else {
-        print('API Error - Status: ${response.statusCode}');
-        print('API Error - Body: ${response.body}');
+        developer.log(
+          'API error status: ${response.statusCode}',
+          name: 'RoutingService',
+        );
+        developer.log(
+          'API error body: ${response.body}',
+          name: 'RoutingService',
+        );
         throw Exception('Failed to load routes: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Exception in findRoutesPaginated: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Exception in findRoutesPaginated',
+        name: 'RoutingService',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }

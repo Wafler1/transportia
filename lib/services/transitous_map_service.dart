@@ -117,9 +117,7 @@ class MapTripSegment {
       displayName: displayName,
       routeColor: json['routeColor'] as String?,
       realTime:
-          (json['realTime'] as bool?) ??
-          (json['realtime'] as bool?) ??
-          false,
+          (json['realTime'] as bool?) ?? (json['realtime'] as bool?) ?? false,
       mode: json['mode'] as String?,
       fromName: from?['name'] as String?,
       toName: to?['name'] as String?,

@@ -116,8 +116,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                           onSelect: _editFavorite,
                           onRemove: (favorite) => _removeFavorite(favorite.id),
                           onReorder: (oldIndex, newIndex) {
-                            final updated =
-                                List<FavoritePlace>.from(favorites);
+                            final updated = List<FavoritePlace>.from(favorites);
                             final item = updated.removeAt(oldIndex);
                             updated.insert(newIndex, item);
                             unawaited(
@@ -238,9 +237,7 @@ class _FavouriteListEntry extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.black.withValues(alpha: 0.07),
-          ),
+          border: Border.all(color: AppColors.black.withValues(alpha: 0.07)),
         ),
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -254,7 +251,11 @@ class _FavouriteListEntry extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               alignment: Alignment.center,
-              child: Icon(_getIconData(favorite.iconName), size: 24, color: accent),
+              child: Icon(
+                _getIconData(favorite.iconName),
+                size: 24,
+                color: accent,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -333,11 +334,9 @@ class _FavoritesReorderListState extends State<_FavoritesReorderList> {
 
         for (var i = 0; i < favorites.length; i++) {
           children.add(_buildDropZone(context, index: i, width: width));
-          children.add(_buildDraggableTile(
-            context,
-            favorite: favorites[i],
-            width: width,
-          ));
+          children.add(
+            _buildDraggableTile(context, favorite: favorites[i], width: width),
+          );
         }
         children.add(
           _buildDropZone(
@@ -365,7 +364,9 @@ class _FavoritesReorderListState extends State<_FavoritesReorderList> {
     final favorites = widget.favorites;
     final bool isTop = index == 0;
     final bool isBottom = isTerminal;
-    final double baseHeight = isTop ? _baseGap : (isBottom ? _baseGap : _baseGap);
+    final double baseHeight = isTop
+        ? _baseGap
+        : (isBottom ? _baseGap : _baseGap);
 
     return DragTarget<FavoritePlace>(
       onWillAcceptWithDetails: (details) {
@@ -399,8 +400,7 @@ class _FavoritesReorderListState extends State<_FavoritesReorderList> {
       builder: (context, candidateData, rejectedData) {
         final highlight =
             candidateData.isNotEmpty || _currentDropIndex == index;
-        final double gapHeight =
-            highlight ? _gapExtentFor(index) : baseHeight;
+        final double gapHeight = highlight ? _gapExtentFor(index) : baseHeight;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOutCubic,
@@ -458,9 +458,7 @@ class _FavoritesReorderListState extends State<_FavoritesReorderList> {
           ),
         ),
       ),
-      childWhenDragging: SizedBox(
-        height: (entryHeight ?? 112.0) + _baseGap,
-      ),
+      childWhenDragging: SizedBox(height: (entryHeight ?? 112.0) + _baseGap),
       onDragStarted: () {
         setState(() {
           _draggingId = favorite.id;

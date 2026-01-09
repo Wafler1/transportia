@@ -88,8 +88,8 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   const double itemExtent = 56;
                   const double spacing = 12;
                   final availableWidth = constraints.maxWidth;
-                  int crossAxisCount =
-                      (availableWidth / (itemExtent + spacing)).floor();
+                  int crossAxisCount = (availableWidth / (itemExtent + spacing))
+                      .floor();
                   if (crossAxisCount < 1) {
                     crossAxisCount = 1;
                   } else if (crossAxisCount > _accentColors.length) {
@@ -118,9 +118,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                             color: color,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: isSelected
-                                  ? AppColors.solidWhite
-                                  : color,
+                              color: isSelected ? AppColors.solidWhite : color,
                               width: isSelected ? 3 : 0,
                             ),
                           ),
@@ -180,10 +178,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                       'White',
                       AppThemeMode.light,
                       LucideIcons.sun,
-                      const [
-                        ThemeProvider.lightBackground,
-                        Color(0xFFECECEC),
-                      ],
+                      const [ThemeProvider.lightBackground, Color(0xFFECECEC)],
                       selectedAppThemeMode,
                     ),
                   ),
@@ -193,10 +188,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                       'Dark',
                       AppThemeMode.dark,
                       LucideIcons.moon,
-                      const [
-                        ThemeProvider.darkBackground,
-                        Color(0xFF1D1D1D),
-                      ],
+                      const [ThemeProvider.darkBackground, Color(0xFF1D1D1D)],
                       selectedAppThemeMode,
                     ),
                   ),
@@ -292,8 +284,9 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.white,
-          borderRadius:
-              isSelected ? BorderRadius.circular(15) : BorderRadius.circular(14),
+          borderRadius: isSelected
+              ? BorderRadius.circular(15)
+              : BorderRadius.circular(14),
           border: Border.all(
             color: isSelected
                 ? selectedAccentColor
@@ -345,8 +338,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color:
-                          isSelected ? selectedAccentColor : AppColors.black,
+                      color: isSelected ? selectedAccentColor : AppColors.black,
                     ),
                   ),
                 ],

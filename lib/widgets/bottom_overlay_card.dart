@@ -153,10 +153,7 @@ class _BottomOverlayCardState extends State<BottomOverlayCard> {
         SafeArea(
           child: Align(
             alignment: Alignment.bottomCenter,
-            child: GestureDetector(
-              onTap: () {},
-              child: card,
-            ),
+            child: GestureDetector(onTap: () {}, child: card),
           ),
         ),
       ],

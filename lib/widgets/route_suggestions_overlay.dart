@@ -156,9 +156,7 @@ class _SuggestionPlaceholder extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.black.withValues(alpha: 0.06),
             shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.black.withValues(alpha: 0.07),
-            ),
+            border: Border.all(color: AppColors.black.withValues(alpha: 0.07)),
           ),
           alignment: Alignment.center,
           child: Icon(icon, color: AppColors.black, size: 20),

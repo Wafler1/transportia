@@ -37,7 +37,8 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Color get accentColor => _accentColor;
   String get mapStyle => _mapStyle;
-  String get mapStyleUrl => mapStyleUrls[_mapStyle] ?? mapStyleUrls[defaultMapStyle]!;
+  String get mapStyleUrl =>
+      mapStyleUrls[_mapStyle] ?? mapStyleUrls[defaultMapStyle]!;
   AppThemeMode get appThemeMode => _appThemeMode;
   bool get isInitialized => _isInitialized;
 
@@ -54,11 +55,9 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get isDark => _effectiveAppThemeMode == AppThemeMode.dark;
 
-  Color get backgroundColor =>
-      isDark ? darkBackground : lightBackground;
+  Color get backgroundColor => isDark ? darkBackground : lightBackground;
 
-  Color get textColor =>
-      isDark ? darkText : lightText;
+  Color get textColor => isDark ? darkText : lightText;
 
   ThemeProvider() {
     _instance = this;

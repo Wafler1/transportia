@@ -447,10 +447,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       features.add({
         'type': 'Feature',
         'id': i,
-        'properties': {
-          'iconId': imageId,
-          'order': stop.order,
-        },
+        'properties': {'iconId': imageId, 'order': stop.order},
         'geometry': {
           'type': 'Point',
           'coordinates': [stop.point.longitude, stop.point.latitude],
@@ -458,10 +455,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       });
     }
     try {
-      await controller.setGeoJsonSource(
-        _kStopsSourceId,
-        {'type': 'FeatureCollection', 'features': features},
-      );
+      await controller.setGeoJsonSource(_kStopsSourceId, {
+        'type': 'FeatureCollection',
+        'features': features,
+      });
     } catch (_) {}
   }
 
@@ -509,8 +506,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final canvas = Canvas(recorder);
     final center = Offset(size / 2, size / 2);
 
-    final outerPaint = Paint()
-      ..color = AppColors.black.withValues(alpha: 0.2);
+    final outerPaint = Paint()..color = AppColors.black.withValues(alpha: 0.2);
     canvas.drawCircle(center, size / 2, outerPaint);
 
     final ringPaint = Paint()..color = AppColors.white;
@@ -980,7 +976,10 @@ class _TransferCarouselCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
-              style: TextStyle(fontSize: 12, color: AppColors.black.withValues(alpha: 0.6)),
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.black.withValues(alpha: 0.6),
+              ),
             ),
           ],
           const SizedBox(height: 6),

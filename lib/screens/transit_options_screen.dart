@@ -123,7 +123,10 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
         const SizedBox(height: 12),
         Text(
           subtitle,
-          style: TextStyle(fontSize: 14, color: AppColors.black.withValues(alpha: 0.6)),
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.black.withValues(alpha: 0.6),
+          ),
         ),
         const SizedBox(height: 12),
         LayoutBuilder(

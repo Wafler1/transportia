@@ -132,9 +132,9 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       });
 
       final encoded = base64Url.encode(utf8.encode(payload));
-      final shareUrl = 'https://link.entaria.net/trip/$encoded';
+      final shareUrl = 'https://transportia.wafler.one/trip/$encoded';
 
-      await Share.share(shareUrl);
+      await SharePlus.instance.share(ShareParams(text: shareUrl));
     } catch (error, stackTrace) {
       debugPrint('Failed to share itinerary: $error');
       debugPrint('$stackTrace');

@@ -46,93 +46,98 @@ class LegalScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 32),
-          _buildLegalCard(
-            context: context,
-            icon: LucideIcons.fileText,
-            title: 'Terms of Service',
-            description: 'Review our terms and conditions for using Transportia',
-            onTap: () => _openUrl(context, 'https://wafler.one/transportia/terms'),
-          ),
-          const SizedBox(height: 12),
-          _buildLegalCard(
-            context: context,
-            icon: LucideIcons.shieldCheck,
-            title: 'Privacy Policy',
-            description: 'Learn how we collect, use, and protect your data',
-            onTap: () =>
-                _openUrl(context, 'https://wafler.one/transportia/privacy'),
-          ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.black.withValues(alpha: 0.02),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.black.withValues(alpha: 0.04),
+              _buildLegalCard(
+                context: context,
+                icon: LucideIcons.fileText,
+                title: 'Terms of Service',
+                description:
+                    'Review our terms and conditions for using Transportia',
+                onTap: () =>
+                    _openUrl(context, 'https://wafler.one/transportia/terms'),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(height: 12),
+              _buildLegalCard(
+                context: context,
+                icon: LucideIcons.shieldCheck,
+                title: 'Privacy Policy',
+                description: 'Learn how we collect, use, and protect your data',
+                onTap: () =>
+                    _openUrl(context, 'https://wafler.one/transportia/privacy'),
+              ),
+              const SizedBox(height: 32),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.black.withValues(alpha: 0.04),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      LucideIcons.database,
-                      size: 20,
-                      color: AppColors.accentOf(context),
+                    Row(
+                      children: [
+                        Icon(
+                          LucideIcons.database,
+                          size: 20,
+                          color: AppColors.accentOf(context),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Data We Collect',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(height: 12),
+                    _buildDataItem(
+                      'That\'s the best part, we don\'t!',
+                      context,
+                    ),
+                    _buildDataItem(
+                      'Third-party services may collect data as per their policies',
+                      context,
+                    ),
+                    _buildDataItem(
+                      'For more details, refer to our Privacy Policy',
+                      context,
+                    ),
+                    const SizedBox(height: 8),
                     Text(
-                      'Data We Collect',
+                      'We never sell your data to third parties.',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.black,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentOf(context),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildDataItem('That\'s the best part, we don\'t!', context),
-                _buildDataItem(
-                  'Third-party services may collect data as per their policies',
-                  context,
+              ),
+              const SizedBox(height: 32),
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      '© ${year} Wafler.one. All rights reserved.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.black.withValues(alpha: 0.4),
+                      ),
+                    ),
+                  ],
                 ),
-                _buildDataItem(
-                  'For more details, refer to our Privacy Policy',
-                  context,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'We never sell your data to third parties.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accentOf(context),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  '© ${year} Wafler.one. All rights reserved.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.black.withValues(alpha: 0.4),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
+              ),
+              const SizedBox(height: 32),
             ],
-          )
+          ),
         ],
       ),
     );

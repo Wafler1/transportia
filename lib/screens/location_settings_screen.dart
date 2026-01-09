@@ -71,7 +71,10 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
           ? Center(
               child: Text(
                 'Checking location status...',
-                style: TextStyle(fontSize: 14, color: AppColors.black.withValues(alpha: 0.4)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
               ),
             )
           : _buildContent(),
@@ -92,62 +95,62 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 32),
-        const SectionTitle(text: 'Status Details'),
-        const SizedBox(height: 16),
-        _buildStatusCard(
-          'Location Services',
-          _isLocationServiceEnabled ? 'Enabled' : 'Disabled',
-          _isLocationServiceEnabled ? LucideIcons.check : LucideIcons.x,
-          _isLocationServiceEnabled ? accent : const Color(0xFFFF3B30),
-        ),
-        const SizedBox(height: 12),
-        _buildStatusCard(
-          'App Permission',
-          _getPermissionStatusText(),
-          _getPermissionStatusIcon(),
-          _getPermissionStatusColor(),
-        ),
-        const SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            PressableHighlight(
-              onPressed: _openAppSettings,
-              enableHaptics: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Open settings',
-                    style: TextStyle(fontSize: 16, color: accent),
+            const SectionTitle(text: 'Status Details'),
+            const SizedBox(height: 16),
+            _buildStatusCard(
+              'Location Services',
+              _isLocationServiceEnabled ? 'Enabled' : 'Disabled',
+              _isLocationServiceEnabled ? LucideIcons.check : LucideIcons.x,
+              _isLocationServiceEnabled ? accent : const Color(0xFFFF3B30),
+            ),
+            const SizedBox(height: 12),
+            _buildStatusCard(
+              'App Permission',
+              _getPermissionStatusText(),
+              _getPermissionStatusIcon(),
+              _getPermissionStatusColor(),
+            ),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                PressableHighlight(
+                  onPressed: _openAppSettings,
+                  enableHaptics: false,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Open settings',
+                        style: TextStyle(fontSize: 16, color: accent),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(LucideIcons.settings, size: 20, color: accent),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Icon(LucideIcons.settings, size: 20, color: accent),
-                ],
-              ),
-            ),
-            Container(
-              height: 20,
-              width: 1,
-              color: AppColors.black.withValues(alpha: 0.1),
-            ),
-            PressableHighlight(
-              onPressed: _isLoading ? () {} : _checkLocationStatus,
-              enableHaptics: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Refresh status',
-                    style: TextStyle(fontSize: 16, color: accent),
+                ),
+                Container(
+                  height: 20,
+                  width: 1,
+                  color: AppColors.black.withValues(alpha: 0.1),
+                ),
+                PressableHighlight(
+                  onPressed: _isLoading ? () {} : _checkLocationStatus,
+                  enableHaptics: false,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Refresh status',
+                        style: TextStyle(fontSize: 16, color: accent),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(LucideIcons.refreshCw, size: 20, color: accent),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Icon(LucideIcons.refreshCw, size: 20, color: accent),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
           ],
         ),
       ],

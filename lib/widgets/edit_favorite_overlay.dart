@@ -101,7 +101,9 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: AppColors.accentOf(context).withValues(alpha: 0.12),
+                          color: AppColors.accentOf(
+                            context,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(

@@ -38,14 +38,15 @@ class Transportia extends StatelessWidget {
               supportedLocales: const [Locale('en', 'US'), Locale('en')],
               pageRouteBuilder:
                   <T>(RouteSettings settings, WidgetBuilder builder) {
-                return PageRouteBuilder<T>(
-                  settings: settings,
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      builder(context),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) => child,
-                );
-              },
+                    return PageRouteBuilder<T>(
+                      settings: settings,
+                      pageBuilder: (context, animation, secondaryAnimation) =>
+                          builder(context),
+                      transitionsBuilder:
+                          (context, animation, secondaryAnimation, child) =>
+                              child,
+                    );
+                  },
               textStyle: baseTextStyle,
               builder: (context, child) {
                 final content = child ?? const SizedBox.shrink();
@@ -79,7 +80,7 @@ class _RootGateState extends State<_RootGate> {
   bool? _seen;
   String? _availableUpdateVersion;
   SharedPreferences? _prefs;
-  StreamSubscription<Uri?>? _appLinkSubscription;
+  StreamSubscription<Uri>? _appLinkSubscription;
 
   @override
   void initState() {
@@ -100,7 +101,7 @@ class _RootGateState extends State<_RootGate> {
       _appLinkSubscription = appLinks.uriLinkStream.listen(
         (uri) {
           _handleIncomingDeepLink(uri);
-                },
+        },
         onError: (Object error, StackTrace stackTrace) {
           debugPrint('Failed to process incoming app link: $error');
           debugPrint('$stackTrace');

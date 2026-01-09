@@ -343,7 +343,10 @@ class ItineraryCard extends StatelessWidget {
           ),
           // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 10.0,
+            ),
             child: SizedBox(
               height: 1,
               child: DecoratedBox(

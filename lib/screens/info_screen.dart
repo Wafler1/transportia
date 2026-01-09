@@ -21,7 +21,7 @@ class InfoScreen extends StatefulWidget {
 }
 
 class _InfoScreenState extends State<InfoScreen> {
-  static final Uri _downloadUri = Uri.parse('https://entaria.net/app/download');
+  static final Uri _downloadUri = Uri.parse('https://wafler.one/transportia/download');
 
   String? _remoteVersion;
   bool _fetchAttempted = false;

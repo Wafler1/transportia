@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 class FareInfo {
   final double amount;
   final String currency;
@@ -327,8 +329,13 @@ class Leg {
             (json['legGeometry'] as Map).isNotEmpty) {
           legGeometry = EncodedPolyline.fromJson(json['legGeometry']);
         }
-      } catch (e) {
-        print('Error parsing legGeometry: $e');
+      } catch (e, stackTrace) {
+        developer.log(
+          'Error parsing legGeometry',
+          name: 'Itinerary',
+          error: e,
+          stackTrace: stackTrace,
+        );
       }
 
       return Leg(
@@ -372,9 +379,14 @@ class Leg {
         legGeometry: legGeometry,
         interlineWithPreviousLeg: json['interlineWithPreviousLeg'] ?? false,
       );
-    } catch (e) {
-      print('Error parsing Leg: $e');
-      print('Leg JSON: $json');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Error parsing Leg',
+        name: 'Itinerary',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      developer.log('Leg JSON: $json', name: 'Itinerary');
       rethrow;
     }
   }
