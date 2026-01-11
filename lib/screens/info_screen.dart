@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../enviroment.dart';
 import '../providers/theme_provider.dart';
 import '../services/version_service.dart';
 import '../theme/app_colors.dart';
@@ -56,9 +57,10 @@ class _InfoScreenState extends State<InfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final appName = Environment.appName;
     context.watch<ThemeProvider>();
     return AppPageScaffold(
-      title: 'About Transportia',
+      title: 'About $appName',
       scrollable: true,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       body: Column(
@@ -66,7 +68,7 @@ class _InfoScreenState extends State<InfoScreen> {
         children: [
           AppIconHeader(
             icon: LucideIcons.info,
-            title: 'Transportia',
+            title: appName,
             subtitle: 'Version ${AppVersion.current}',
             iconSize: 40,
           ),
@@ -82,7 +84,7 @@ class _InfoScreenState extends State<InfoScreen> {
               const SizedBox(height: 12),
               _buildCard(
                 child: Text(
-                  'Transportia is a modern travel companion designed to make public transportation easier and more accessible. Transportia aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.',
+                  '$appName is a modern travel companion designed to make public transportation easier and more accessible. $appName aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.',
                   style: TextStyle(
                     fontSize: 15,
                     height: 1.5,
@@ -111,7 +113,7 @@ class _InfoScreenState extends State<InfoScreen> {
               const SectionTitle(text: 'Open Source Credits'),
               const SizedBox(height: 12),
               Text(
-                'Transportia is built with the help of amazing open-source projects and APIs:',
+                '$appName is built with the help of amazing open-source projects and APIs:',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.5),

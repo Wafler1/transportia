@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../enviroment.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
@@ -51,7 +52,7 @@ class LegalScreen extends StatelessWidget {
                 icon: LucideIcons.fileText,
                 title: 'Terms of Service',
                 description:
-                    'Review our terms and conditions for using Transportia',
+                    'Review our terms and conditions for using ${Environment.appName}',
                 onTap: () =>
                     _openUrl(context, 'https://wafler.one/transportia/terms'),
               ),

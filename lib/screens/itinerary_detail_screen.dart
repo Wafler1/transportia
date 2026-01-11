@@ -797,8 +797,15 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   // Build the title widget, applying background and text colours if provided.
   Widget _buildTitleWidget() {
     if (widget.leg.displayName != null) {
-      final bg = parseHexColor(widget.leg.routeColor);
-      final txt = parseHexColor(widget.leg.routeTextColor) ?? AppColors.black;
+      final routeColor = parseHexColor(widget.leg.routeColor);
+      final isWalkLeg = widget.leg.mode == 'WALK';
+      final bg =
+          routeColor ?? (isWalkLeg ? null : AppColors.accentOf(context));
+      final txt =
+          parseHexColor(widget.leg.routeTextColor) ??
+          (routeColor == null && !isWalkLeg
+              ? AppColors.solidWhite
+              : AppColors.black);
       return Align(
         alignment: Alignment.centerLeft,
         child: Container(

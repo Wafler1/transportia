@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../enviroment.dart';
 
 class TransitousGeocodeException implements Exception {
   TransitousGeocodeException(this.message, [this.cause]);
@@ -86,10 +87,6 @@ class TransitousLocationSuggestion {
 }
 
 class TransitousGeocodeService {
-  static const _host = 'api.transitous.org';
-  static const _path = '/api/v1/geocode';
-  static const _reversePath = '/api/v1/reverse-geocode';
-
   static Future<List<TransitousLocationSuggestion>> fetchSuggestions({
     required String text,
     LatLng? placeBias,
@@ -112,9 +109,16 @@ class TransitousGeocodeService {
       params['type'] = type;
     }
 
-    final uri = Uri.https(_host, _path, params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v1/geocode',
+      params,
+    );
     try {
-      final resp = await http.get(uri, headers: {'accept': 'application/json'});
+      final resp = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
       if (resp.statusCode != 200) {
         throw TransitousGeocodeException(
           'Unexpected status ${resp.statusCode}',
@@ -163,9 +167,16 @@ class TransitousGeocodeService {
       'place':
           '${place.latitude.toStringAsFixed(6)},${place.longitude.toStringAsFixed(6)}',
     };
-    final uri = Uri.https(_host, _reversePath, params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v1/reverse-geocode',
+      params,
+    );
     try {
-      final resp = await http.get(uri, headers: {'accept': 'application/json'});
+      final resp = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
       if (resp.statusCode != 200) {
         throw TransitousGeocodeException(
           'Unexpected status ${resp.statusCode}',

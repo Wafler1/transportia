@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
+import 'enviroment.dart';
 import 'providers/theme_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -28,7 +29,7 @@ class Transportia extends StatelessWidget {
               fontSize: 14,
             );
             return WidgetsApp(
-              title: 'Transportia',
+              title: Environment.appName,
               color: themeProvider.backgroundColor,
               debugShowCheckedModeBanner: false,
               localizationsDelegates: const [
@@ -170,7 +171,9 @@ class _RootGateState extends State<_RootGate> {
     if (uri.scheme != 'transportia' || uri.host != 'trip') {
       return;
     }
-    debugPrint('Received Transportia trip link: ${uri.toString()}');
+    debugPrint(
+      'Received ${Environment.appName} trip link: ${uri.toString()}',
+    );
     // Trip link payload will be handled in a future iteration.
   }
 

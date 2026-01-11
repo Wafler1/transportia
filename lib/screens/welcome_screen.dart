@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import '../enviroment.dart';
 import '../widgets/pressable_highlight.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
@@ -98,7 +99,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                               const SizedBox(height: 32),
                               Text(
-                                "Welcome to Transportia, \na free transportation app",
+                                "Welcome to ${Environment.appName}, \na free transportation app",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 24,
@@ -109,7 +110,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                "With Transportia, you can find your way \nfrom one city to another easily.",
+                                "With ${Environment.appName}, you can find your way \nfrom one city to another easily.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 14,

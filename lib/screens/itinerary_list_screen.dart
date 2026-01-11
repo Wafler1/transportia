@@ -485,6 +485,17 @@ class LegWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     IconData icon = getLegIcon(leg.mode);
+    final routeColor = parseHexColor(leg.routeColor);
+    final badgeColor =
+        routeColor ??
+        (leg.mode == 'WALK'
+            ? const Color(0x00000000)
+            : AppColors.accentOf(context));
+    final labelColor =
+        parseHexColor(leg.routeTextColor) ??
+        (routeColor == null && leg.mode != 'WALK'
+            ? AppColors.solidWhite
+            : AppColors.black);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -505,7 +516,7 @@ class LegWidget extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: parseHexColor(leg.routeColor) ?? const Color(0x00000000),
+              color: badgeColor,
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
@@ -515,7 +526,7 @@ class LegWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: parseHexColor(leg.routeTextColor) ?? AppColors.black,
+                color: labelColor,
               ),
             ),
           ),

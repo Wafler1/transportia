@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
+import '../enviroment.dart';
 import '../models/itinerary.dart';
 import '../models/time_selection.dart';
 import '../models/itinerary_response.dart';
 
 class RoutingService {
-  static const String _baseUrl = 'https://api.transitous.org/api/v5/plan';
-
   static Future<List<Itinerary>> findRoutes({
     required double fromLat,
     required double fromLon,
@@ -55,10 +54,17 @@ class RoutingService {
       }
     }
 
-    final uri = Uri.parse(_baseUrl).replace(queryParameters: params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v5/plan',
+      params,
+    );
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
         return ItineraryResponse.fromJson(data);

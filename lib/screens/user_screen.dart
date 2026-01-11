@@ -10,6 +10,7 @@ import 'package:transportia/screens/location_settings_screen.dart';
 import 'package:transportia/utils/custom_page_route.dart';
 import 'package:transportia/screens/transit_options_screen.dart';
 import 'package:transportia/widgets/validation_toast.dart';
+import 'package:transportia/enviroment.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -282,7 +283,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 children: [
                   SettingsTile(
                     icon: LucideIcons.info,
-                    title: 'About Transportia',
+                    title: 'About ${Environment.appName}',
                     subtitle: 'About, credits, and more',
                     onPressed: () {
                       Navigator.of(
@@ -325,7 +326,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Transportia',
+                      Environment.appName,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

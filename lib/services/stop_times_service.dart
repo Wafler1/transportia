@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../enviroment.dart';
 import '../models/stop_time.dart';
 
 class StopTimesServiceException implements Exception {
@@ -10,9 +11,6 @@ class StopTimesServiceException implements Exception {
 }
 
 class StopTimesService {
-  static const _host = 'api.transitous.org';
-  static const _path = '/api/v5/stoptimes';
-
   static Future<StopTimesResponse> fetchStopTimes({
     required String stopId,
     int n = 25,
@@ -38,10 +36,17 @@ class StopTimesService {
       params['arriveBy'] = 'true';
     }
 
-    final uri = Uri.https(_host, _path, params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v5/stoptimes',
+      params,
+    );
 
     try {
-      final resp = await http.get(uri, headers: {'accept': 'application/json'});
+      final resp = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
 
       if (resp.statusCode != 200) {
         throw StopTimesServiceException('Unexpected status ${resp.statusCode}');

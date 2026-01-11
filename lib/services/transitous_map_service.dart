@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
+import '../enviroment.dart';
 
 class TransitousMapServiceException implements Exception {
   TransitousMapServiceException(this.message);
@@ -137,10 +138,6 @@ class MapTripSegment {
 }
 
 class TransitousMapService {
-  static const _host = 'api.transitous.org';
-  static const _tripsPath = '/api/v5/map/trips';
-  static const _stopsPath = '/api/v1/map/stops';
-
   static Future<List<MapTripSegment>> fetchTripSegments({
     required double zoom,
     required LatLngBounds bounds,
@@ -172,9 +169,16 @@ class TransitousMapService {
       'endTime': _formatIso8601Millis(endTime),
     };
 
-    final uri = Uri.https(_host, _tripsPath, params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v5/map/trips',
+      params,
+    );
     try {
-      final resp = await http.get(uri, headers: {'accept': 'application/json'});
+      final resp = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
       if (resp.statusCode != 200) {
         throw TransitousMapServiceException(
           'Unexpected status ${resp.statusCode}',
@@ -223,9 +227,16 @@ class TransitousMapService {
       'max': '${north.toStringAsFixed(6)},${west.toStringAsFixed(6)}',
     };
 
-    final uri = Uri.https(_host, _stopsPath, params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/v1/map/stops',
+      params,
+    );
     try {
-      final resp = await http.get(uri, headers: {'accept': 'application/json'});
+      final resp = await http.get(
+        uri,
+        headers: Environment.transitousHeaders(),
+      );
       if (resp.statusCode != 200) {
         throw TransitousMapServiceException(
           'Unexpected status ${resp.statusCode}',

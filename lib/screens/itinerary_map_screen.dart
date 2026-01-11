@@ -49,6 +49,9 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   static const double _transferDistanceThresholdMeters = 80.0;
   static const String _kStopsSourceId = 'itinerary-stops-source';
   static const String _kStopsLayerId = 'itinerary-stops-layer';
+  static const double _walkLineWidth = 3.0;
+  static const double _nonWalkLineWidth = 3.4;
+  static const Color _walkLegColor = Color(0xFF9E9E9E);
 
   List<DisplayLegInfo> get _mapLegs {
     if (_displayLegs.isNotEmpty) return _displayLegs;
@@ -368,7 +371,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           LineOptions(
             geometry: storedGeometry,
             lineColor: _colorToHex(color),
-            lineWidth: leg.mode == 'WALK' ? 3.0 : 5.0,
+            lineWidth: leg.mode == 'WALK' ? _walkLineWidth : _nonWalkLineWidth,
             lineOpacity: 0.8,
           ),
         );
@@ -618,6 +621,9 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   }
 
   Color _getLegColorFromLeg(Leg leg, int _) {
+    if (leg.mode == 'WALK') {
+      return _walkLegColor;
+    }
     final parsed = parseHexColor(leg.routeColor?.trim());
     return parsed ?? _currentAccentColor();
   }
