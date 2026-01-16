@@ -53,6 +53,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                     rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                     compassEnabled: false,
+                    onMapClick: _onMapTap,
                     onMapLongClick: _onMapLongClick,
                   ),
                 ),
@@ -76,7 +77,15 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     await _centerOnUserIfPossible();
   }
 
+  void _onMapTap(math.Point<double> point, LatLng coordinates) {
+    _selectLocation(coordinates);
+  }
+
   void _onMapLongClick(math.Point<double> point, LatLng coordinates) {
+    _selectLocation(coordinates);
+  }
+
+  void _selectLocation(LatLng coordinates) {
     setState(() {
       _selectedLocation = coordinates;
       _selectedLocationName = null;

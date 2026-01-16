@@ -361,8 +361,13 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       return;
     }
 
-    // Check if user selected a stop from the list
-    if (_selectedStop?.id == null) {
+    var selectedStop = _selectedStop;
+    if (selectedStop?.id == null && query.length >= 3) {
+      selectedStop = await _resolveStopFromQuery(query);
+    }
+
+    final stopId = selectedStop?.id;
+    if (stopId == null) {
       showValidationToast(context, 'Please select a stop from the list');
       return;
     }
@@ -384,7 +389,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
     try {
       final response = await StopTimesService.fetchStopTimes(
-        stopId: _selectedStop?.id ?? '',
+        stopId: stopId,
         n: 20,
         startTime: _startTimeParam,
         arriveBy: _timeSelection.isArriveBy,
@@ -409,6 +414,34 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       });
 
       showValidationToast(context, 'Failed to load stop times');
+    }
+  }
+
+  Future<TransitousLocationSuggestion?> _resolveStopFromQuery(
+    String query,
+  ) async {
+    if (query.trim().length < 3) return null;
+    try {
+      final results = await TransitousGeocodeService.fetchSuggestions(
+        text: query,
+        type: 'STOP',
+        placeBias: _lastUserLatLng,
+      );
+      final ordered = _prioritizeSavedSuggestions(results);
+      if (ordered.isEmpty) return null;
+      final suggestion = ordered.first;
+      if (!mounted) return suggestion;
+      unawaited(_recordSavedPlace(suggestion));
+      setState(() {
+        _searchController.text = suggestion.name;
+        _selectedStop = suggestion;
+        _searchFocus.unfocus();
+        _suggestions = [];
+        _isFetchingSuggestions = false;
+      });
+      return suggestion;
+    } catch (_) {
+      return null;
     }
   }
 

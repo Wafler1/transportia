@@ -1965,8 +1965,10 @@ class _MapScreenState extends State<MapScreen>
 
     _unfocusInputs();
     final needsFrom = !_hasLocationPermission;
-    final fromEmpty = _fromCtrl.text.trim().isEmpty;
-    final toEmpty = _toCtrl.text.trim().isEmpty;
+    final fromText = _fromCtrl.text.trim();
+    final toText = _toCtrl.text.trim();
+    final fromEmpty = fromText.isEmpty;
+    final toEmpty = toText.isEmpty;
     final invalid = (needsFrom && fromEmpty) || toEmpty;
     if (invalid) {
       final msg = _hasLocationPermission
@@ -1979,15 +1981,38 @@ class _MapScreenState extends State<MapScreen>
     setState(() => _isSearching = true);
     Haptics.mediumTick();
 
+    TransitousLocationSuggestion? resolvedFrom = _fromSelection;
+    TransitousLocationSuggestion? resolvedTo = _toSelection;
+
+    if (resolvedFrom == null && fromText.length >= 3) {
+      resolvedFrom = await _resolveSelectionFromQuery(RouteFieldKind.from);
+    }
+
+    if (resolvedTo == null && toText.length >= 3) {
+      resolvedTo = await _resolveSelectionFromQuery(RouteFieldKind.to);
+    }
+
+    if (needsFrom && resolvedFrom == null) {
+      showValidationToast(context, 'Please select a starting point');
+      setState(() => _isSearching = false);
+      return;
+    }
+
+    if (resolvedTo == null) {
+      showValidationToast(context, 'Please select a destination');
+      setState(() => _isSearching = false);
+      return;
+    }
+
     Future<Position>? positionFuture;
     FutureOr<double> fromLatSource;
     FutureOr<double> fromLonSource;
     double? fromLatHistory;
     double? fromLonHistory;
 
-    if (_fromSelection != null) {
-      fromLatHistory = _fromSelection!.lat;
-      fromLonHistory = _fromSelection!.lon;
+    if (resolvedFrom != null) {
+      fromLatHistory = resolvedFrom.lat;
+      fromLonHistory = resolvedFrom.lon;
     } else if (_lastUserLatLng != null) {
       fromLatHistory = _lastUserLatLng!.latitude;
       fromLonHistory = _lastUserLatLng!.longitude;
@@ -1995,14 +2020,8 @@ class _MapScreenState extends State<MapScreen>
       positionFuture = LocationService.currentPosition();
     }
 
-    if (_toSelection == null) {
-      showValidationToast(context, 'Please select a destination');
-      setState(() => _isSearching = false);
-      return;
-    }
-
-    final toLat = _toSelection!.lat;
-    final toLon = _toSelection!.lon;
+    final toLat = resolvedTo.lat;
+    final toLon = resolvedTo.lon;
 
     if (positionFuture != null) {
       fromLatSource = positionFuture.then((position) => position.latitude);
@@ -2021,8 +2040,8 @@ class _MapScreenState extends State<MapScreen>
               toLat: toLat,
               toLon: toLon,
               timeSelection: timeSelection,
-              fromSelection: _fromSelection,
-              toSelection: _toSelection,
+              fromSelection: resolvedFrom,
+              toSelection: resolvedTo,
             ),
           ),
         )
@@ -2049,14 +2068,41 @@ class _MapScreenState extends State<MapScreen>
       }
 
       final trip = TripHistoryItem.fromSelections(
-        from: _fromSelection,
-        to: _toSelection!,
+        from: resolvedFrom,
+        to: resolvedTo,
         userLat: resolvedFromLat,
         userLon: resolvedFromLon,
       );
       await RecentTripsService.saveTrip(trip);
     } catch (_) {
       // Silently fail if history save fails
+    }
+  }
+
+  Future<TransitousLocationSuggestion?> _resolveSelectionFromQuery(
+    RouteFieldKind kind,
+  ) async {
+    final current = _selectionFor(kind);
+    if (current != null) return current;
+    final query = _controllerFor(kind).text.trim();
+    if (query.length < 3) return null;
+
+    try {
+      final placeBias = _placeBiasLatLng();
+      final results = await TransitousGeocodeService.fetchSuggestions(
+        text: query,
+        placeBias: placeBias,
+      );
+      final ordered = _prioritizeSavedSuggestions(results);
+      if (ordered.isEmpty) return null;
+      final suggestion = ordered.first;
+      if (!mounted) return suggestion;
+      _setControllerText(kind, suggestion.name);
+      _setSelection(kind, suggestion, notify: true);
+      unawaited(_recordSavedPlace(suggestion));
+      return suggestion;
+    } catch (_) {
+      return null;
     }
   }
 

@@ -12,6 +12,7 @@ import 'screens/welcome_screen.dart';
 import 'services/version_service.dart';
 import 'utils/app_version.dart';
 import 'utils/version_utils.dart';
+import 'widgets/offline_banner_shell.dart';
 import 'widgets/update_prompt_overlay.dart';
 
 class Transportia extends StatelessWidget {
@@ -55,7 +56,7 @@ class Transportia extends StatelessWidget {
                   color: themeProvider.backgroundColor,
                   child: IconTheme(
                     data: IconThemeData(color: themeProvider.textColor),
-                    child: content,
+                    child: OfflineBannerShell(child: content),
                   ),
                 );
               },
