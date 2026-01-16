@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:transportia/widgets/time_selection_overlay.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-
 import 'package:geolocator/geolocator.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -210,8 +209,8 @@ class _MapScreenState extends State<MapScreen>
 
   static const Duration _tripWindowPast = Duration(minutes: 2);
   static const Duration _tripWindowFuture = Duration(minutes: 10);
-  static const int _maxVehicleCount = 120;
-  static const int _maxStopCount = 240;
+  static const int _maxVehicleCount = 180;
+  static const int _maxStopCount = 280;
   static const double _focusedTransferZoomLevel = 16.5;
   static const double _focusedTransferDistanceThresholdMeters = 80.0;
   static const Duration _mapRefreshDebounce = Duration(milliseconds: 250);
@@ -507,11 +506,18 @@ class _MapScreenState extends State<MapScreen>
     );
     _scheduleTripRefresh();
     _scheduleStopRefresh();
+    unawaited(_applySymbolOverlapSettings());
+  }
+
+  Future<void> _applySymbolOverlapSettings() async {
     final controller = _controller;
-    if (controller != null) {
-      unawaited(controller.setSymbolIconAllowOverlap(true));
-      unawaited(controller.setSymbolTextAllowOverlap(true));
-    }
+    if (controller == null) return;
+    try {
+      await controller.setSymbolIconAllowOverlap(true);
+    } catch (_) {}
+    try {
+      await controller.setSymbolTextAllowOverlap(true);
+    } catch (_) {}
   }
 
   void _scheduleTripRefresh() {
@@ -837,6 +843,11 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _onCameraIdle() {
+    final controller = _controller;
+    final cameraPosition = controller?.cameraPosition;
+    if (cameraPosition != null) {
+      _lastCam = cameraPosition;
+    }
     _scheduleTripRefresh();
     _scheduleStopRefresh();
   }
@@ -1148,6 +1159,12 @@ class _MapScreenState extends State<MapScreen>
       _applyStopsLayerVisibility();
       return;
     }
+    if (_lastCam.zoom < 10.0) {
+      _lastStopsRequestKey = null;
+      _dismissStopOverlay();
+      await _clearStopMarkers();
+      return;
+    }
     final token = ++_stopRequestId;
     LatLngBounds bounds;
     try {
@@ -1425,17 +1442,17 @@ class _MapScreenState extends State<MapScreen>
 
   int _maxVehiclesForZoom(double zoom) {
     if (zoom >= 15.5) return _maxVehicleCount;
-    if (zoom >= 14.0) return 100;
-    if (zoom >= 12.5) return 80;
-    return 60;
+    if (zoom >= 14.0) return 150;
+    if (zoom >= 12.5) return 120;
+    return 90;
   }
 
   int _maxStopsForZoom(double zoom) {
     if (zoom >= 16.0) return _maxStopCount;
-    if (zoom >= 14.5) return 200;
-    if (zoom >= 13.0) return 160;
-    if (zoom >= 12.0) return 120;
-    return 90;
+    if (zoom >= 14.5) return 230;
+    if (zoom >= 13.0) return 190;
+    if (zoom >= 12.0) return 150;
+    return 120;
   }
 
   List<MapStop> _selectStopsForView(
@@ -1659,6 +1676,7 @@ class _MapScreenState extends State<MapScreen>
                         ? MyLocationRenderMode.compass
                         : MyLocationRenderMode.normal,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
+                    trackCameraPosition: true,
                     rotateGesturesEnabled: false,
                     tiltGesturesEnabled: false,
                     initialCameraPosition: _startCam,

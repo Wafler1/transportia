@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 class LocationService {
   static const _kLastLatKey = 'last_gps_lat';
   static const _kLastLngKey = 'last_gps_lng';
+  static Future<bool>? _pendingPermissionRequest;
 
   static Future<bool> hasPermission() async {
     final status = await Permission.locationWhenInUse.status;
@@ -15,8 +16,17 @@ class LocationService {
   static Future<bool> ensurePermission() async {
     final status = await Permission.locationWhenInUse.status;
     if (status.isGranted) return true;
-    final result = await Permission.locationWhenInUse.request();
-    return result.isGranted;
+    final pending = _pendingPermissionRequest;
+    if (pending != null) return pending;
+    final request =
+        Permission.locationWhenInUse
+            .request()
+            .then((result) => result.isGranted)
+            .catchError((_) => false);
+    _pendingPermissionRequest = request;
+    final granted = await request;
+    _pendingPermissionRequest = null;
+    return granted;
   }
 
   static Stream<Position> positionStream({
