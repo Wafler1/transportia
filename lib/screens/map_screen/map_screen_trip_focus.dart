@@ -80,32 +80,20 @@ class _TripFocusContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return Shimmer.fromColors(
-        baseColor: const Color(0x1A000000),
-        highlightColor: const Color(0x0D000000),
+      return SkeletonShimmer(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 16),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Container(
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
+              const SkeletonCard(
+                height: 140,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+                margin: EdgeInsets.all(12),
               ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Container(
-                  height: 420,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
+              const SkeletonCard(
+                height: 420,
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+                margin: EdgeInsets.all(12),
               ),
               SizedBox(height: bottomSpacer),
             ],
@@ -126,10 +114,11 @@ class _TripFocusContent extends StatelessWidget {
     final itinerary = this.itinerary;
     if (itinerary == null || itinerary.legs.isEmpty) {
       return Center(
-        child: Text(
-          'No trip data available',
-          style: TextStyle(
+        child: EmptyState(
+          title: 'No trip data available',
+          titleStyle: TextStyle(
             fontSize: 15,
+            fontWeight: FontWeight.w600,
             color: AppColors.black.withValues(alpha: 0.5),
           ),
         ),
@@ -153,7 +142,7 @@ class _TripFocusContent extends StatelessWidget {
     final headsign = focusLeg.headsign?.trim().isNotEmpty == true
         ? focusLeg.headsign
         : null;
-    final stops = _buildJourneyStops(focusLeg);
+    final stops = buildJourneyStops(focusLeg);
     final (vehicleStopIndex, isVehicleAtStation, isBeforeStart, isAfterEnd) =
         _estimateVehiclePosition(stops);
     final showVehicle =
@@ -411,10 +400,12 @@ class _TripFocusContent extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 if (stops.isEmpty)
-                  Text(
-                    'No stops available',
-                    style: TextStyle(
+                  EmptyState(
+                    title: 'No stops available',
+                    padding: EdgeInsets.zero,
+                    titleStyle: TextStyle(
                       fontSize: 14,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.black.withValues(alpha: 0.6),
                     ),
                   )
@@ -440,13 +431,13 @@ class _TripFocusContent extends StatelessWidget {
                         final isPassed = stopIndex <= currentStopIndex;
                         final isUpcoming = stopIndex == upcomingStopIndex;
 
-                        final arrRow = _buildStopScheduleRow(
+                        final arrRow = buildStopScheduleRow(
                           'Arr',
                           stop.scheduledArrival,
                           stop.arrival,
                           isPassed,
                         );
-                        final depRow = _buildStopScheduleRow(
+                        final depRow = buildStopScheduleRow(
                           'Dep',
                           stop.scheduledDeparture,
                           stop.departure,
@@ -544,7 +535,7 @@ class _TripFocusContent extends StatelessWidget {
                       indicatorBuilder: (context, index) {
                         final item = timelineItems[index];
                         if (item.isVehicle && item.stop == null) {
-                          return _IndicatorBox(
+                          return TimelineIndicatorBox(
                             lineColor: routeColor,
                             child: DecoratedBox(
                               decoration: BoxDecoration(
@@ -579,7 +570,7 @@ class _TripFocusContent extends StatelessWidget {
                         final bool isLastStop = stopIndex == stops.length - 1;
 
                         if (isVehicleHere) {
-                          return _IndicatorBox(
+                          return TimelineIndicatorBox(
                             lineColor: dotColor,
                             centerGap: 28.0,
                             cutTop: isFirstStop,
@@ -606,7 +597,7 @@ class _TripFocusContent extends StatelessWidget {
                           );
                         }
 
-                        return _IndicatorBox(
+                        return TimelineIndicatorBox(
                           lineColor: dotColor,
                           centerGap: dotSize,
                           cutTop: isFirstStop,
@@ -655,7 +646,7 @@ class _TripFocusContent extends StatelessWidget {
         aLocal.minute == bLocal.minute;
   }
 
-  (int, bool, bool, bool) _estimateVehiclePosition(List<_JourneyStop> stops) {
+  (int, bool, bool, bool) _estimateVehiclePosition(List<JourneyStop> stops) {
     if (stops.isEmpty) return (-1, false, false, false);
     final now = DateTime.now();
 
@@ -700,188 +691,11 @@ class _TripFocusContent extends StatelessWidget {
 
     return (stops.length - 1, true, false, true);
   }
-
-  List<_JourneyStop> _buildJourneyStops(Leg leg) {
-    final stops = <_JourneyStop>[];
-
-    stops.add(
-      _JourneyStop(
-        name: leg.fromName,
-        lat: leg.fromLat,
-        lon: leg.fromLon,
-        arrival: null,
-        departure: leg.startTime,
-        scheduledArrival: null,
-        scheduledDeparture: leg.scheduledStartTime,
-        track: leg.fromTrack,
-        scheduledTrack: leg.fromScheduledTrack,
-        cancelled: leg.cancelled,
-        alerts: const [],
-      ),
-    );
-
-    for (final stop in leg.intermediateStops) {
-      stops.add(
-        _JourneyStop(
-          name: stop.name,
-          lat: stop.lat,
-          lon: stop.lon,
-          arrival: stop.arrival,
-          departure: stop.departure,
-          scheduledArrival: stop.scheduledArrival,
-          scheduledDeparture: stop.scheduledDeparture,
-          track: stop.track,
-          scheduledTrack: stop.scheduledTrack,
-          cancelled: stop.cancelled,
-          alerts: stop.alerts,
-        ),
-      );
-    }
-
-    stops.add(
-      _JourneyStop(
-        name: leg.toName,
-        lat: leg.toLat,
-        lon: leg.toLon,
-        arrival: leg.endTime,
-        departure: null,
-        scheduledArrival: leg.scheduledEndTime,
-        scheduledDeparture: null,
-        track: leg.toTrack,
-        scheduledTrack: leg.toScheduledTrack,
-        cancelled: leg.cancelled,
-        alerts: const [],
-      ),
-    );
-
-    return stops;
-  }
-
-  Widget? _buildStopScheduleRow(
-    String label,
-    DateTime? scheduled,
-    DateTime? actual,
-    bool isPassed,
-  ) {
-    if (scheduled == null && actual == null) return null;
-    final display = formatTime(scheduled ?? actual);
-    final delay = (scheduled != null && actual != null)
-        ? computeDelay(scheduled, actual)
-        : null;
-    final baseColor = isPassed
-        ? AppColors.black.withValues(alpha: 0.4)
-        : AppColors.black.withValues(alpha: 0.6);
-    return Row(
-      children: [
-        Text(
-          '$label $display',
-          style: TextStyle(fontSize: 13, color: baseColor),
-        ),
-        if (delay != null) ...[
-          const SizedBox(width: 6),
-          Text(
-            formatDelay(delay),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: _delayColor(delay),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Color _delayColor(Duration delay) =>
-      delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
-}
-
-class _JourneyStop {
-  const _JourneyStop({
-    required this.name,
-    required this.lat,
-    required this.lon,
-    required this.arrival,
-    required this.departure,
-    required this.scheduledArrival,
-    required this.scheduledDeparture,
-    required this.track,
-    required this.scheduledTrack,
-    required this.cancelled,
-    required this.alerts,
-  });
-
-  final String name;
-  final double lat;
-  final double lon;
-  final DateTime? arrival;
-  final DateTime? departure;
-  final DateTime? scheduledArrival;
-  final DateTime? scheduledDeparture;
-  final String? track;
-  final String? scheduledTrack;
-  final bool cancelled;
-  final List<Alert> alerts;
 }
 
 class _TimelineItem {
-  final _JourneyStop? stop;
+  final JourneyStop? stop;
   final bool isVehicle;
 
   _TimelineItem({this.stop, required this.isVehicle});
-}
-
-class _IndicatorBox extends StatelessWidget {
-  const _IndicatorBox({
-    required this.child,
-    required this.lineColor,
-    this.centerGap = 0.0,
-    this.cutTop = false,
-    this.cutBottom = false,
-  });
-
-  final Widget child;
-  final Color lineColor;
-  final double centerGap;
-  final bool cutTop;
-  final bool cutBottom;
-
-  @override
-  Widget build(BuildContext context) {
-    final double gap = centerGap.clamp(0.0, 28.0);
-    final double sideLen = (28.0 - gap) / 2.0;
-
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          if (!cutTop && sideLen > 0)
-            Positioned(
-              top: 0,
-              child: SizedBox(
-                width: 2.5,
-                height: sideLen,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: lineColor),
-                ),
-              ),
-            ),
-          if (!cutBottom && sideLen > 0)
-            Positioned(
-              bottom: 0,
-              child: SizedBox(
-                width: 2.5,
-                height: sideLen,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(color: lineColor),
-                ),
-              ),
-            ),
-          child,
-        ],
-      ),
-    );
-  }
 }

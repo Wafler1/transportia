@@ -5,7 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../enviroment.dart';
+import '../environment.dart';
+import '../constants/prefs_keys.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/validation_toast.dart';
 import '../providers/theme_provider.dart';
@@ -15,7 +16,7 @@ import 'map_screen.dart';
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key, this.onFinished});
 
-  static const _kWelcomeSeenKey = 'welcome_seen_v1';
+  static const _kWelcomeSeenKey = PrefsKeys.welcomeSeen;
   final VoidCallback? onFinished;
 
   @override
@@ -34,9 +35,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void initState() {
     super.initState();
     _privacyTapRecognizer = TapGestureRecognizer()
-      ..onTap = () => _openUrl('https://wafler.one/transportia/privacy');
+      ..onTap = () => _openUrl(Environment.privacyUrl);
     _termsTapRecognizer = TapGestureRecognizer()
-      ..onTap = () => _openUrl('https://wafler.one/transportia/terms');
+      ..onTap = () => _openUrl(Environment.termsUrl);
   }
 
   Future<void> _onContinue() async {
@@ -209,28 +210,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     final accent = AppColors.accentOf(context);
     return Text.rich(
       TextSpan(
-        style: TextStyle(
-          fontSize: 12,
-          color: subtle,
-          height: 1.4,
-        ),
+        style: TextStyle(fontSize: 12, color: subtle, height: 1.4),
         children: [
           const TextSpan(text: 'By continuing, you agree to the '),
           TextSpan(
             text: 'Privacy Policy',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w600),
             recognizer: _privacyTapRecognizer,
           ),
           const TextSpan(text: ' and '),
           TextSpan(
             text: 'Terms of Service',
-            style: TextStyle(
-              color: accent,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(color: accent, fontWeight: FontWeight.w600),
             recognizer: _termsTapRecognizer,
           ),
           const TextSpan(text: '.'),

@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../enviroment.dart';
+import '../environment.dart';
 import '../models/stop_time.dart';
+import '../utils/time_utils.dart';
 
 class StopTimesServiceException implements Exception {
   final String message;
@@ -29,7 +30,7 @@ class StopTimesService {
     }
 
     if (startTime != null) {
-      params['time'] = _formatIso8601Millis(startTime);
+      params['time'] = formatIso8601Millis(startTime);
     }
 
     if (arriveBy) {
@@ -67,15 +68,4 @@ class StopTimesService {
       throw StopTimesServiceException('Failed to fetch stop times: $e');
     }
   }
-}
-
-String _formatIso8601Millis(DateTime dateTime) {
-  final utc = dateTime.toUtc();
-  final base = utc.toIso8601String();
-  final dot = base.indexOf('.');
-  if (dot == -1) {
-    return base;
-  }
-  final millis = utc.millisecond.toString().padLeft(3, '0');
-  return '${base.substring(0, dot)}.${millis}Z';
 }

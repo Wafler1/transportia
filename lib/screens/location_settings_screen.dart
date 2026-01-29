@@ -10,6 +10,8 @@ import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/section_title.dart';
+import '../widgets/icon_badge.dart';
+import '../widgets/custom_card.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   const LocationSettingsScreen({super.key});
@@ -163,30 +165,20 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
     IconData icon,
     Color color,
   ) {
-    return Container(
+    return CustomCard.elevated(
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
+      borderRadius: BorderRadius.circular(12),
+      borderColor: AppColors.black.withValues(alpha: 0.1),
       child: Row(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 24, color: color),
+          IconBadge(
+            icon: icon,
+            size: 48,
+            iconSize: 24,
+            backgroundColor: color.withValues(alpha: 0.12),
+            iconColor: color,
+            borderRadius: BorderRadius.circular(12),
           ),
           const SizedBox(width: 16),
           Expanded(

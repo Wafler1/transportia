@@ -7,6 +7,10 @@ class Environment {
   static const String appName = 'Transportia';
   static const String contactEmail = 'contact@wafler.one';
   static const String contactUrl = 'https://wafler.one';
+  static const String privacyUrl = 'https://wafler.one/transportia/privacy';
+  static const String termsUrl = 'https://wafler.one/transportia/terms';
+  static const String downloadUrl = 'https://wafler.one/transportia/download';
+  static const String sponsorUrl = 'http://wafler.one?ref=transportia';
 
   static const String transitousHost = 'api.transitous.org';
 

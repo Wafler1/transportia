@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../environment.dart';
 import '../theme/app_colors.dart';
 import 'pressable_highlight.dart';
 
@@ -21,9 +22,7 @@ class UpdatePromptOverlay extends StatelessWidget {
   final VoidCallback onDismiss;
   final VoidCallback onSkipVersion;
 
-  static final Uri _downloadUri = Uri.parse(
-    'https://wafler.one/transportia/download',
-  );
+  static final Uri _downloadUri = Uri.parse(Environment.downloadUrl);
 
   void _handleUpdateTap() {
     unawaited(launchUrl(_downloadUri, mode: LaunchMode.externalApplication));

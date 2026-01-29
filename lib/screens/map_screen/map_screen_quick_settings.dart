@@ -173,7 +173,7 @@ class _QuickSettingsContent extends StatelessWidget {
                   children: [
                     SizedBox(
                       width: width,
-                      child: _QuickModeCard(
+                      child: SelectableIconCard(
                         label: 'Vehicles',
                         icon: LucideIcons.busFront,
                         selected: showVehicles,
@@ -182,7 +182,7 @@ class _QuickSettingsContent extends StatelessWidget {
                     ),
                     SizedBox(
                       width: width,
-                      child: _QuickModeCard(
+                      child: SelectableIconCard(
                         label: 'Stops',
                         icon: LucideIcons.mapPin,
                         selected: showStops,
@@ -377,68 +377,6 @@ class _QuickButtonSelectFieldState extends State<_QuickButtonSelectField> {
   }
 }
 
-class _QuickModeCard extends StatelessWidget {
-  const _QuickModeCard({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = AppColors.accentOf(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? accent.withValues(alpha: 0.12) : AppColors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? accent : const Color(0x14000000),
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 16, color: accent),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? accent : AppColors.black,
-                ),
-              ),
-            ),
-            Icon(
-              selected ? LucideIcons.check : LucideIcons.plus,
-              size: 16,
-              color: selected ? accent : const Color(0x33000000),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _QuickToggleRow extends StatelessWidget {
   const _QuickToggleRow({
     required this.label,
@@ -580,7 +518,7 @@ class _VehicleModesGrid extends StatelessWidget {
                 width: entry.key == _VehicleModeGroup.other
                     ? totalWidth
                     : width,
-                child: _QuickModeCard(
+                child: SelectableIconCard(
                   label: entry.value,
                   icon: iconFor(entry.key),
                   selected: visibility[entry.key] ?? true,

@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart';
 import '../widgets/validation_toast.dart';
 import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
+import 'skeletons/skeleton_shimmer.dart';
 
 // Toast helpers moved to lib/widgets/validation_toast.dart
 
@@ -307,7 +307,7 @@ class _InlineField extends StatelessWidget {
                           alignment: textAlign == TextAlign.right
                               ? Alignment.centerRight
                               : Alignment.centerLeft,
-                          child: Shimmer.fromColors(
+                          child: SkeletonShimmer(
                             baseColor: const Color(0xFFE2E7EC),
                             highlightColor: const Color(0xFFF7F9FC),
                             period: const Duration(milliseconds: 1100),

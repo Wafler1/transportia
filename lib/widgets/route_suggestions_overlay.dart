@@ -43,7 +43,82 @@ class RouteSuggestionsOverlay extends StatelessWidget {
     final controller = field == RouteFieldKind.from
         ? fromController
         : toController;
-    final query = controller.text.trim();
+    final label =
+        title ?? (field == RouteFieldKind.to ? 'Destination' : 'Origin');
+
+    return _SuggestionsOverlayCard(
+      width: width,
+      label: label,
+      query: controller.text.trim(),
+      suggestions: suggestions,
+      savedPlaces: savedPlaces,
+      isLoading: isLoading,
+      onSuggestionTap: (suggestion) => onSuggestionTap(field, suggestion),
+      onDismissRequest: onDismissRequest,
+    );
+  }
+}
+
+class SingleFieldSuggestionsOverlay extends StatelessWidget {
+  const SingleFieldSuggestionsOverlay({
+    super.key,
+    required this.width,
+    required this.controller,
+    required this.suggestions,
+    required this.savedPlaces,
+    required this.isLoading,
+    required this.onSuggestionTap,
+    required this.onDismissRequest,
+    this.title,
+  });
+
+  final double width;
+  final TextEditingController controller;
+  final List<TransitousLocationSuggestion> suggestions;
+  final List<SavedPlace> savedPlaces;
+  final bool isLoading;
+  final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
+  final VoidCallback onDismissRequest;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    return _SuggestionsOverlayCard(
+      width: width,
+      label: title ?? 'Suggestions',
+      query: controller.text.trim(),
+      suggestions: suggestions,
+      savedPlaces: savedPlaces,
+      isLoading: isLoading,
+      onSuggestionTap: onSuggestionTap,
+      onDismissRequest: onDismissRequest,
+    );
+  }
+}
+
+class _SuggestionsOverlayCard extends StatelessWidget {
+  const _SuggestionsOverlayCard({
+    required this.width,
+    required this.label,
+    required this.query,
+    required this.suggestions,
+    required this.savedPlaces,
+    required this.isLoading,
+    required this.onSuggestionTap,
+    required this.onDismissRequest,
+  });
+
+  final double width;
+  final String label;
+  final String query;
+  final List<TransitousLocationSuggestion> suggestions;
+  final List<SavedPlace> savedPlaces;
+  final bool isLoading;
+  final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
+  final VoidCallback onDismissRequest;
+
+  @override
+  Widget build(BuildContext context) {
     final savedMatches = _filterSavedPlaces(savedPlaces, query);
 
     Widget body;
@@ -62,7 +137,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
           final suggestion = _toSuggestion(savedMatches[index]);
           return _SuggestionTile(
             suggestion: suggestion,
-            onTap: () => onSuggestionTap(field, suggestion),
+            onTap: () => onSuggestionTap(suggestion),
           );
         },
       );
@@ -94,14 +169,12 @@ class RouteSuggestionsOverlay extends StatelessWidget {
           final suggestion = suggestions[index];
           return _SuggestionTile(
             suggestion: suggestion,
-            onTap: () => onSuggestionTap(field, suggestion),
+            onTap: () => onSuggestionTap(suggestion),
           );
         },
       );
     }
 
-    final label =
-        title ?? (field == RouteFieldKind.to ? 'Destination' : 'Origin');
     final allowDismissTap = !showSaved && !hasResults && !showLoading;
 
     final card = SizedBox(
@@ -153,29 +226,29 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       child: card,
     );
   }
+}
 
-  List<SavedPlace> _filterSavedPlaces(List<SavedPlace> places, String query) {
-    if (places.isEmpty) return <SavedPlace>[];
-    final trimmed = query.trim().toLowerCase();
-    final filtered = trimmed.isEmpty
-        ? places
-        : places
-              .where((place) => place.name.toLowerCase().contains(trimmed))
-              .toList();
-    return filtered.take(5).toList(growable: false);
-  }
+List<SavedPlace> _filterSavedPlaces(List<SavedPlace> places, String query) {
+  if (places.isEmpty) return <SavedPlace>[];
+  final trimmed = query.trim().toLowerCase();
+  final filtered = trimmed.isEmpty
+      ? places
+      : places
+            .where((place) => place.name.toLowerCase().contains(trimmed))
+            .toList();
+  return filtered.take(5).toList(growable: false);
+}
 
-  TransitousLocationSuggestion _toSuggestion(SavedPlace place) {
-    return TransitousLocationSuggestion(
-      id: 'saved-${place.key}',
-      name: place.name,
-      lat: place.lat,
-      lon: place.lon,
-      type: place.type,
-      country: place.countryCode,
-      defaultArea: place.city,
-    );
-  }
+TransitousLocationSuggestion _toSuggestion(SavedPlace place) {
+  return TransitousLocationSuggestion(
+    id: 'saved-${place.key}',
+    name: place.name,
+    lat: place.lat,
+    lon: place.lon,
+    type: place.type,
+    country: place.countryCode,
+    defaultArea: place.city,
+  );
 }
 
 class _SuggestionPlaceholder extends StatelessWidget {

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart';
-
 import '../theme/app_colors.dart';
 import '../widgets/pressable_highlight.dart';
+import 'skeletons/skeleton_shimmer.dart';
 
 /// A reusable button widget for loading more items.
 ///
@@ -39,7 +38,7 @@ class LoadMoreButton extends StatelessWidget {
               IgnorePointer(
                 child: Align(
                   alignment: Alignment.centerRight,
-                  child: Shimmer.fromColors(
+                  child: SkeletonShimmer(
                     baseColor: const Color(0xFFE2E7EC),
                     highlightColor: const Color(0xFFF7F9FC),
                     period: const Duration(milliseconds: 1100),

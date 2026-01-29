@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../widgets/route_field_box.dart';
 import '../theme/app_colors.dart';
+import '../utils/favorite_icons.dart';
+import 'buttons/pill_button.dart';
+import 'buttons/primary_button.dart';
+import 'skeletons/skeleton_shimmer.dart';
 
 class BottomCard extends StatefulWidget {
   const BottomCard({
@@ -401,117 +404,6 @@ class _BottomCardState extends State<BottomCard> {
   }
 }
 
-class PillButton extends StatefulWidget {
-  const PillButton({
-    super.key,
-    required this.onTap,
-    required this.child,
-    this.onTapDown,
-    this.onTapUp,
-    this.onTapCancel,
-    this.restingColor,
-    this.pressedColor,
-    this.borderRadius = const BorderRadius.all(Radius.circular(12)),
-    this.borderColor,
-    this.padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  });
-  final VoidCallback onTap;
-  final VoidCallback? onTapDown;
-  final VoidCallback? onTapUp;
-  final VoidCallback? onTapCancel;
-  final Widget child;
-  final Color? restingColor;
-  final Color? pressedColor;
-  final BorderRadius borderRadius;
-  final Color? borderColor;
-  final EdgeInsetsGeometry padding;
-  @override
-  State<PillButton> createState() => _PillButtonState();
-}
-
-class _PillButtonState extends State<PillButton> {
-  bool _pressed = false;
-  @override
-  Widget build(BuildContext context) {
-    final restingColor =
-        widget.restingColor ?? AppColors.black.withValues(alpha: 0.06);
-    final pressedColor =
-        widget.pressedColor ?? AppColors.black.withValues(alpha: 0.08);
-    final borderColor =
-        widget.borderColor ?? AppColors.black.withValues(alpha: 0.07);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) {
-        widget.onTapDown?.call();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) {
-        widget.onTapUp?.call();
-        setState(() => _pressed = false);
-      },
-      onTapCancel: () {
-        widget.onTapCancel?.call();
-        setState(() => _pressed = false);
-      },
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 90),
-        scale: _pressed ? 0.97 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed ? pressedColor : restingColor,
-            border: Border.all(color: borderColor),
-            borderRadius: widget.borderRadius,
-          ),
-          padding: widget.padding,
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-class PrimaryButton extends StatefulWidget {
-  const PrimaryButton({super.key, required this.onTap, required this.child});
-  final VoidCallback onTap;
-  final Widget child;
-  @override
-  State<PrimaryButton> createState() => _PrimaryButtonState();
-}
-
-class _PrimaryButtonState extends State<PrimaryButton> {
-  bool _pressed = false;
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 80),
-        scale: _pressed ? 0.985 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed
-                ? AppColors.accentOf(context).withValues(alpha: 0.85)
-                : AppColors.accentOf(context),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
 class _RecentTripTile extends StatefulWidget {
   const _RecentTripTile({required this.trip, required this.onTap});
 
@@ -602,13 +494,7 @@ class _RecentTripTileState extends State<_RecentTripTile> {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _handleTap,
-      child: _isLoading
-          ? Shimmer.fromColors(
-              baseColor: const Color(0x1A000000),
-              highlightColor: const Color(0x0D000000),
-              child: content,
-            )
-          : content,
+      child: _isLoading ? SkeletonShimmer(child: content) : content,
     );
   }
 }
@@ -657,24 +543,6 @@ class _FavoriteShortcut extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
-  IconData _getIconData(String iconName) {
-    const iconMap = {
-      'mapPin': LucideIcons.mapPin,
-      'home': LucideIcons.house,
-      'briefcase': LucideIcons.briefcase,
-      'school': LucideIcons.school,
-      'shoppingBag': LucideIcons.shoppingBag,
-      'coffee': LucideIcons.coffee,
-      'utensils': LucideIcons.utensils,
-      'dumbbell': LucideIcons.dumbbell,
-      'heart': LucideIcons.heart,
-      'star': LucideIcons.star,
-      'music': LucideIcons.music,
-      'plane': LucideIcons.plane,
-    };
-    return iconMap[iconName] ?? LucideIcons.mapPin;
-  }
-
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
@@ -708,7 +576,7 @@ class _FavoriteShortcut extends StatelessWidget {
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  _getIconData(favorite.iconName),
+                  iconForFavorite(favorite.iconName),
                   size: 22,
                   color: enabled ? accent : accent.withValues(alpha: 0.6),
                 ),

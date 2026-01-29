@@ -11,9 +11,11 @@ import '../providers/theme_provider.dart';
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/custom_page_route.dart';
+import '../utils/favorite_icons.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/edit_favorite_overlay.dart';
+import '../widgets/empty_state.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -140,32 +142,10 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   }
 
   Widget _buildEmptyState() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'No favourites yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Add the places you care about and they will show up here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.black.withValues(alpha: 0.4),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      title: 'No favourites yet',
+      subtitle: 'Add the places you care about and they will show up here.',
+      padding: EdgeInsets.symmetric(vertical: 32),
     );
   }
 
@@ -209,24 +189,6 @@ class _FavouriteListEntry extends StatelessWidget {
   final VoidCallback onSelect;
   final VoidCallback onRemove;
 
-  IconData _getIconData(String iconName) {
-    const iconMap = {
-      'mapPin': LucideIcons.mapPin,
-      'home': LucideIcons.house,
-      'briefcase': LucideIcons.briefcase,
-      'school': LucideIcons.school,
-      'shoppingBag': LucideIcons.shoppingBag,
-      'coffee': LucideIcons.coffee,
-      'utensils': LucideIcons.utensils,
-      'dumbbell': LucideIcons.dumbbell,
-      'heart': LucideIcons.heart,
-      'star': LucideIcons.star,
-      'music': LucideIcons.music,
-      'plane': LucideIcons.plane,
-    };
-    return iconMap[iconName] ?? LucideIcons.mapPin;
-  }
-
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
@@ -252,7 +214,7 @@ class _FavouriteListEntry extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Icon(
-                _getIconData(favorite.iconName),
+                iconForFavorite(favorite.iconName),
                 size: 24,
                 color: accent,
               ),

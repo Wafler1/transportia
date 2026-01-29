@@ -1,12 +1,13 @@
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/prefs_keys.dart';
 
 enum AppThemeMode { light, dark, system }
 
 class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
-  static const String _accentColorKey = 'accent_color';
-  static const String _mapStyleKey = 'map_style';
-  static const String _appThemeKey = 'app_theme';
+  static const String _accentColorKey = PrefsKeys.accentColor;
+  static const String _mapStyleKey = PrefsKeys.mapStyle;
+  static const String _appThemeKey = PrefsKeys.appTheme;
 
   // Default values
   static const Color defaultAccentColor = Color.fromARGB(255, 0, 113, 133);

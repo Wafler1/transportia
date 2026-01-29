@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/favorite_icons.dart';
 
 class EditFavoriteOverlay extends StatefulWidget {
   final FavoritePlace favorite;
@@ -22,21 +23,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
   late TextEditingController _nameController;
   late String _selectedIcon;
 
-  // Available icons for favorites
-  final List<Map<String, dynamic>> _availableIcons = [
-    {'name': 'mapPin', 'icon': LucideIcons.mapPin},
-    {'name': 'home', 'icon': LucideIcons.house},
-    {'name': 'briefcase', 'icon': LucideIcons.briefcase},
-    {'name': 'school', 'icon': LucideIcons.school},
-    {'name': 'shoppingBag', 'icon': LucideIcons.shoppingBag},
-    {'name': 'coffee', 'icon': LucideIcons.coffee},
-    {'name': 'utensils', 'icon': LucideIcons.utensils},
-    {'name': 'dumbbell', 'icon': LucideIcons.dumbbell},
-    {'name': 'heart', 'icon': LucideIcons.heart},
-    {'name': 'star', 'icon': LucideIcons.star},
-    {'name': 'music', 'icon': LucideIcons.music},
-    {'name': 'plane', 'icon': LucideIcons.plane},
-  ];
+  final List<FavoriteIconOption> _availableIcons = favoriteIconOptions;
 
   @override
   void initState() {
@@ -187,8 +174,8 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                         ),
                         itemBuilder: (context, index) {
                           final iconData = _availableIcons[index];
-                          final iconName = iconData['name'] as String;
-                          final icon = iconData['icon'] as IconData;
+                          final iconName = iconData.name;
+                          final icon = iconData.icon;
                           final isSelected = _selectedIcon == iconName;
 
                           return GestureDetector(

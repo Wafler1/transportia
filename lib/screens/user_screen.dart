@@ -10,7 +10,7 @@ import 'package:transportia/screens/location_settings_screen.dart';
 import 'package:transportia/utils/custom_page_route.dart';
 import 'package:transportia/screens/transit_options_screen.dart';
 import 'package:transportia/widgets/validation_toast.dart';
-import 'package:transportia/enviroment.dart';
+import 'package:transportia/environment.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +21,8 @@ import '../theme/app_colors.dart';
 import '../widgets/settings_section.dart';
 import '../utils/app_version.dart';
 import '../widgets/settings_tile.dart';
+import '../widgets/icon_badge.dart';
+import '../widgets/custom_card.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -73,20 +75,15 @@ class _AccountScreenState extends State<AccountScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Row(
                   children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.accentOf(
-                          context,
-                        ).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        LucideIcons.user,
-                        size: 24,
-                        color: AppColors.accentOf(context),
-                      ),
+                    IconBadge(
+                      icon: LucideIcons.user,
+                      size: 48,
+                      iconSize: 24,
+                      backgroundColor: AppColors.accentOf(
+                        context,
+                      ).withValues(alpha: 0.12),
+                      iconColor: AppColors.accentOf(context),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     const SizedBox(width: 16),
                     Column(
@@ -125,9 +122,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 child: GestureDetector(
                   onTap: () async {
                     try {
-                      final uri = Uri.parse(
-                        'http://wafler.one?ref=transportia',
-                      );
+                      final uri = Uri.parse(Environment.sponsorUrl);
                       await launchUrl(
                         uri,
                         mode: LaunchMode.externalApplication,
@@ -136,31 +131,20 @@ class _AccountScreenState extends State<AccountScreen> {
                       showValidationToast(context, "Unable to open link.");
                     }
                   },
-                  child: Container(
+                  child: CustomCard(
+                    margin: EdgeInsets.zero,
                     padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppColors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.black.withValues(alpha: 0.1),
-                      ),
-                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    borderColor: AppColors.black.withValues(alpha: 0.1),
                     child: Row(
                       children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFFFC970A,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            LucideIcons.sparkles,
-                            size: 22,
-                            color: Color(0xFFFC970A),
-                          ),
+                        const IconBadge(
+                          icon: LucideIcons.sparkles,
+                          size: 44,
+                          iconSize: 22,
+                          backgroundColor: Color(0x1FFC970A),
+                          iconColor: Color(0xFFFC970A),
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         const SizedBox(width: 14),
                         Expanded(

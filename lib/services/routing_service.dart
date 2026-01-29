@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
-import '../enviroment.dart';
+import '../environment.dart';
 import '../models/itinerary.dart';
 import '../models/time_selection.dart';
 import '../models/itinerary_response.dart';
@@ -54,11 +54,7 @@ class RoutingService {
       }
     }
 
-    final uri = Uri.https(
-      Environment.transitousHost,
-      '/api/v5/plan',
-      params,
-    );
+    final uri = Uri.https(Environment.transitousHost, '/api/v5/plan', params);
 
     try {
       final response = await http.get(

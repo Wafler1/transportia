@@ -3,12 +3,14 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../enviroment.dart';
+import '../environment.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/custom_card.dart';
 import '../widgets/validation_toast.dart';
+import '../widgets/icon_badge.dart';
 
 class LegalScreen extends StatelessWidget {
   const LegalScreen({super.key});
@@ -53,8 +55,7 @@ class LegalScreen extends StatelessWidget {
                 title: 'Terms of Service',
                 description:
                     'Review our terms and conditions for using ${Environment.appName}',
-                onTap: () =>
-                    _openUrl(context, 'https://wafler.one/transportia/terms'),
+                onTap: () => _openUrl(context, Environment.termsUrl),
               ),
               const SizedBox(height: 12),
               _buildLegalCard(
@@ -62,8 +63,7 @@ class LegalScreen extends StatelessWidget {
                 icon: LucideIcons.shieldCheck,
                 title: 'Privacy Policy',
                 description: 'Learn how we collect, use, and protect your data',
-                onTap: () =>
-                    _openUrl(context, 'https://wafler.one/transportia/privacy'),
+                onTap: () => _openUrl(context, Environment.privacyUrl),
               ),
               const SizedBox(height: 32),
               Container(
@@ -153,23 +153,22 @@ class LegalScreen extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: CustomCard(
+        margin: EdgeInsets.zero,
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
-        ),
+        borderRadius: BorderRadius.circular(12),
+        borderColor: AppColors.black.withValues(alpha: 0.1),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.accentOf(context).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 24, color: AppColors.accentOf(context)),
+            IconBadge(
+              icon: icon,
+              size: 48,
+              iconSize: 24,
+              backgroundColor: AppColors.accentOf(
+                context,
+              ).withValues(alpha: 0.12),
+              iconColor: AppColors.accentOf(context),
+              borderRadius: BorderRadius.circular(12),
             ),
             const SizedBox(width: 16),
             Expanded(

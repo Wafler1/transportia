@@ -12,6 +12,7 @@ import '../theme/app_colors.dart';
 import '../utils/app_version.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/custom_card.dart';
+import '../constants/prefs_keys.dart';
 
 class DeveloperInfoScreen extends StatefulWidget {
   const DeveloperInfoScreen({super.key});
@@ -22,24 +23,24 @@ class DeveloperInfoScreen extends StatefulWidget {
 
 class _DeveloperInfoScreenState extends State<DeveloperInfoScreen> {
   static const Set<String> _prefsAllowList = {
-    'welcome_seen_v1',
-    'ignored_update_version',
-    'accent_color',
-    'map_style',
-    'app_theme',
-    'map_show_stops',
-    'map_quick_button',
-    'map_show_vehicles',
-    'map_hide_non_rt_vehicles',
-    'map_show_train',
-    'map_show_metro',
-    'map_show_tram',
-    'map_show_bus',
-    'map_show_ferry',
-    'map_show_lift',
-    'map_show_other',
-    'last_gps_lat',
-    'last_gps_lng',
+    PrefsKeys.welcomeSeen,
+    PrefsKeys.ignoredUpdateVersion,
+    PrefsKeys.accentColor,
+    PrefsKeys.mapStyle,
+    PrefsKeys.appTheme,
+    PrefsKeys.mapShowStops,
+    PrefsKeys.mapQuickButton,
+    PrefsKeys.mapShowVehicles,
+    PrefsKeys.mapHideNonRtVehicles,
+    PrefsKeys.mapShowTrain,
+    PrefsKeys.mapShowMetro,
+    PrefsKeys.mapShowTram,
+    PrefsKeys.mapShowBus,
+    PrefsKeys.mapShowFerry,
+    PrefsKeys.mapShowLift,
+    PrefsKeys.mapShowOther,
+    PrefsKeys.lastGpsLat,
+    PrefsKeys.lastGpsLng,
   };
 
   static const String _cacheLastOpenedKey = 'debug_cache_last_opened';

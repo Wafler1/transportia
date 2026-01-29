@@ -1,15 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../enviroment.dart';
+import '../environment.dart';
 import '../models/itinerary.dart';
 
 class TripDetailsService {
   static Future<Itinerary> fetchTripDetails({required String tripId}) async {
-    final uri = Uri.https(
-      Environment.transitousHost,
-      '/api/v5/trip',
-      {'tripId': tripId},
-    );
+    final uri = Uri.https(Environment.transitousHost, '/api/v5/trip', {
+      'tripId': tripId,
+    });
 
     final response = await http.get(
       uri,

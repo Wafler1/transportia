@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/prefs_keys.dart';
 
 class FavoritePlace {
   final String id;
@@ -61,7 +62,7 @@ class FavoritePlace {
 }
 
 class FavoritesService {
-  static const String _favoritesKey = 'favorite_places';
+  static const String _favoritesKey = PrefsKeys.favoritePlaces;
   static final ValueNotifier<List<FavoritePlace>> favoritesListenable =
       ValueNotifier<List<FavoritePlace>>(<FavoritePlace>[]);
 

@@ -4,11 +4,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../models/time_selection.dart';
-import '../models/route_field_kind.dart';
 import '../models/saved_place.dart';
 import '../models/stop_time.dart';
 import '../screens/connection_info_screen.dart';
@@ -19,7 +17,12 @@ import '../services/transitous_geocode_service.dart';
 import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart' show getLegIcon;
+import '../utils/stop_time_utils.dart';
 import '../utils/time_utils.dart';
+import '../widgets/buttons/pill_button.dart';
+import '../widgets/buttons/primary_button.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/skeletons/skeleton_list.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/time_selection_overlay.dart';
@@ -336,24 +339,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     });
   }
 
-  List<StopTime> _deduplicateStopTimes(List<StopTime> stopTimes) {
-    final seen = <String>{};
-    final deduplicated = <StopTime>[];
-
-    for (final stopTime in stopTimes) {
-      // Create a unique key based on tripId, departure time, and headsign
-      final departureTime = stopTime.place.departure?.toIso8601String() ?? '';
-      final key = '${stopTime.tripId}|$departureTime|${stopTime.headsign}';
-
-      if (!seen.contains(key)) {
-        seen.add(key);
-        deduplicated.add(stopTime);
-      }
-    }
-
-    return deduplicated;
-  }
-
   Future<void> _onSearch() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
@@ -398,7 +383,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       if (!mounted) return;
 
       setState(() {
-        _stopTimes = _deduplicateStopTimes(response.stopTimes);
+        _stopTimes = deduplicateStopTimes(response.stopTimes);
         _nextPageCursor = _normalizeCursor(response.nextPageCursor);
         _previousPageCursor = _normalizeCursor(response.previousPageCursor);
         _isLoadingStopTimes = false;
@@ -469,7 +454,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
       setState(() {
         // Deduplicate the combined list to avoid duplicates across pages
-        _stopTimes = _deduplicateStopTimes([
+        _stopTimes = deduplicateStopTimes([
           ...?_stopTimes,
           ...response.stopTimes,
         ]);
@@ -511,7 +496,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       if (!mounted) return;
 
       setState(() {
-        _stopTimes = _deduplicateStopTimes([
+        _stopTimes = deduplicateStopTimes([
           ...response.stopTimes,
           ...?_stopTimes,
         ]);
@@ -546,28 +531,12 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   }
 
   Widget _buildLoadingSkeleton() {
-    return Shimmer.fromColors(
-      baseColor: const Color(0x1A000000),
-      highlightColor: const Color(0x0D000000),
-      child: ListView.builder(
-        padding: const EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 12,
-          bottom: 96,
-        ),
-        itemCount: 8,
-        itemBuilder: (context, index) {
-          return Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-          );
-        },
-      ),
+    return const SkeletonList(
+      itemCount: 8,
+      itemHeight: 80,
+      listPadding: EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 96),
+      itemMargin: EdgeInsets.only(bottom: 12),
+      borderRadius: BorderRadius.all(Radius.circular(14)),
     );
   }
 
@@ -748,15 +717,43 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                             children: [
                               CompositedTransformTarget(
                                 link: _timeSelectionLayerLink,
-                                child: _TimeButton(
-                                  timeSelection: _timeSelection,
+                                child: PillButton(
                                   onTapDown: _handleTimeButtonTapDown,
                                   onTapCancel: _handleTimeButtonTapCancel,
                                   onTap: _handleTimeButtonTap,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        LucideIcons.clock,
+                                        size: 16,
+                                        color: AppColors.black,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _timeSelection.toDisplayString(),
+                                        style: TextStyle(
+                                          color: AppColors.black,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               const Spacer(),
-                              _SearchButton(onTap: _onSearch),
+                              PrimaryButton(
+                                onTap: _onSearch,
+                                child: const Text(
+                                  'Search',
+                                  style: TextStyle(
+                                    color: AppColors.solidWhite,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -837,37 +834,35 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Container(
-                                      width: 80,
-                                      height: 80,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.black.withValues(
-                                          alpha: 0.04,
+                                    EmptyState(
+                                      icon: Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.black.withValues(
+                                            alpha: 0.04,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
                                         ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Icon(
-                                        LucideIcons.trainFront,
-                                        size: 40,
-                                        color: AppColors.black.withValues(
-                                          alpha: 0.2,
+                                        child: Icon(
+                                          LucideIcons.trainFront,
+                                          size: 40,
+                                          color: AppColors.black.withValues(
+                                            alpha: 0.2,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 24),
-                                    Text(
-                                      'Search for a stop',
-                                      style: TextStyle(
+                                      title: 'Search for a stop',
+                                      subtitle:
+                                          'Enter a stop name above to view\\ndepartures and arrivals',
+                                      titleStyle: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w700,
                                         color: AppColors.black,
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Enter a stop name above to view\ndepartures and arrivals',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
+                                      subtitleStyle: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w500,
                                         color: AppColors.black.withValues(
@@ -875,6 +870,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                         ),
                                         height: 1.4,
                                       ),
+                                      padding: EdgeInsets.zero,
                                     ),
                                     // Add padding at bottom for navbar
                                     const SizedBox(height: 96),
@@ -916,17 +912,14 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                       },
                       child: !showSuggestions
                           ? const SizedBox.shrink()
-                          : RouteSuggestionsOverlay(
+                          : SingleFieldSuggestionsOverlay(
                               key: const ValueKey('suggestions'),
                               width: MediaQuery.of(context).size.width - 40,
-                              activeField: RouteFieldKind.from, // Dummy value
-                              fromController: _searchController,
-                              toController: _searchController,
+                              controller: _searchController,
                               suggestions: _suggestions,
                               savedPlaces: _savedTimetablePlaces,
                               isLoading: _isFetchingSuggestions,
-                              onSuggestionTap: (_, suggestion) =>
-                                  _onSuggestionSelected(suggestion),
+                              onSuggestionTap: _onSuggestionSelected,
                               onDismissRequest: () {
                                 _searchFocus.unfocus();
                               },
@@ -936,122 +929,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TimeButton extends StatefulWidget {
-  const _TimeButton({
-    required this.timeSelection,
-    required this.onTap,
-    this.onTapDown,
-    this.onTapCancel,
-  });
-
-  final TimeSelection timeSelection;
-  final VoidCallback onTap;
-  final VoidCallback? onTapDown;
-  final VoidCallback? onTapCancel;
-
-  @override
-  State<_TimeButton> createState() => _TimeButtonState();
-}
-
-class _TimeButtonState extends State<_TimeButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) {
-        widget.onTapDown?.call();
-        setState(() => _pressed = true);
-      },
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () {
-        widget.onTapCancel?.call();
-        setState(() => _pressed = false);
-      },
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 90),
-        scale: _pressed ? 0.97 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed
-                ? AppColors.black.withValues(alpha: 0.08)
-                : AppColors.black.withValues(alpha: 0.06),
-            border: Border.all(color: AppColors.black.withValues(alpha: 0.07)),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(LucideIcons.clock, size: 16, color: AppColors.black),
-              const SizedBox(width: 8),
-              Text(
-                widget.timeSelection.toDisplayString(),
-                style: TextStyle(
-                  color: AppColors.black,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchButton extends StatefulWidget {
-  const _SearchButton({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  State<_SearchButton> createState() => _SearchButtonState();
-}
-
-class _SearchButtonState extends State<_SearchButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) => setState(() => _pressed = false),
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 80),
-        scale: _pressed ? 0.985 : 1.0,
-        curve: Curves.easeOut,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: _pressed
-                ? AppColors.accentOf(context).withValues(alpha: 0.85)
-                : AppColors.accentOf(context),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: const Text(
-            'Search',
-            style: TextStyle(
-              color: AppColors.solidWhite,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ),
@@ -1211,7 +1088,7 @@ class _TimeWithDelayText extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: _delayColor(delay),
+              color: delayColor(delay),
             ),
           ),
         ],
@@ -1219,8 +1096,5 @@ class _TimeWithDelayText extends StatelessWidget {
     );
   }
 }
-
-Color _delayColor(Duration delay) =>
-    delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
 
 // LoadMoreButton widget has been moved to lib/widgets/load_more_button.dart

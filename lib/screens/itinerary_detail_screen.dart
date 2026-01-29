@@ -699,7 +699,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: _delayColor(delay),
+                    color: delayColor(delay),
                   ),
                 ),
               ],
@@ -787,9 +787,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   Duration? get _arrivalDelay =>
       computeDelay(widget.leg.scheduledEndTime, widget.leg.endTime);
 
-  Color _delayColor(Duration delay) =>
-      delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);
-
   Widget _buildLegIcon() {
     return Icon(getLegIcon(widget.leg.mode), size: 24, color: AppColors.black);
   }
@@ -799,8 +796,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     if (widget.leg.displayName != null) {
       final routeColor = parseHexColor(widget.leg.routeColor);
       final isWalkLeg = widget.leg.mode == 'WALK';
-      final bg =
-          routeColor ?? (isWalkLeg ? null : AppColors.accentOf(context));
+      final bg = routeColor ?? (isWalkLeg ? null : AppColors.accentOf(context));
       final txt =
           parseHexColor(widget.leg.routeTextColor) ??
           (routeColor == null && !isWalkLeg

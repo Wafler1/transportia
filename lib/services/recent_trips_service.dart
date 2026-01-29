@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/prefs_keys.dart';
 import '../models/trip_history_item.dart';
 
 class RecentTripsService {
-  static const _kRecentTripsKey = 'recent_trips';
+  static const _kRecentTripsKey = PrefsKeys.recentTrips;
   static const int _maxRecentTrips = 5;
 
   /// Save a trip to history

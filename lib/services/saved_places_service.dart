@@ -2,13 +2,14 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/prefs_keys.dart';
 import '../models/saved_place.dart';
 
 enum SavedPlacesBucket { search, timetable }
 
 class SavedPlacesService {
-  static const String _searchKey = 'saved_places_search_v1';
-  static const String _timetableKey = 'saved_places_timetable_v1';
+  static const String _searchKey = PrefsKeys.savedPlacesSearch;
+  static const String _timetableKey = PrefsKeys.savedPlacesTimetable;
   static const int maxPlaces = 50;
   static const int importanceStep = 3;
   static const int initialImportance = 15;

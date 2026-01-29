@@ -135,7 +135,7 @@ class _OfflineBanner extends StatelessWidget {
           children: [
             const Expanded(
               child: Text(
-                'No internet connection. Please reconnect to continue.',
+                'No internet connection, please reconnect.',
                 style: TextStyle(
                   color: AppColors.solidWhite,
                   fontSize: 12,

@@ -3,7 +3,8 @@ import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
-import '../enviroment.dart';
+import '../environment.dart';
+import '../utils/time_utils.dart';
 
 class TransitousMapServiceException implements Exception {
   TransitousMapServiceException(this.message);
@@ -165,8 +166,8 @@ class TransitousMapService {
       'zoom': zoom.toStringAsFixed(2),
       'min': '${south.toStringAsFixed(6)},${east.toStringAsFixed(6)}',
       'max': '${north.toStringAsFixed(6)},${west.toStringAsFixed(6)}',
-      'startTime': _formatIso8601Millis(startTime),
-      'endTime': _formatIso8601Millis(endTime),
+      'startTime': formatIso8601Millis(startTime),
+      'endTime': formatIso8601Millis(endTime),
     };
 
     final uri = Uri.https(
@@ -259,15 +260,4 @@ class TransitousMapService {
       throw TransitousMapServiceException('Failed to fetch stops: $e');
     }
   }
-}
-
-String _formatIso8601Millis(DateTime dateTime) {
-  final utc = dateTime.toUtc();
-  final base = utc.toIso8601String();
-  final dot = base.indexOf('.');
-  if (dot == -1) {
-    return base;
-  }
-  final millis = utc.millisecond.toString().padLeft(3, '0');
-  return '${base.substring(0, dot)}.${millis}Z';
 }

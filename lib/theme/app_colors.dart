@@ -22,7 +22,7 @@ class AppColors {
   }
 
   // Static accent color for places where context is not available
-  static const Color accent = Color.fromARGB(255, 0, 113, 133);
+  static Color get accent => ThemeProvider.defaultAccentColor;
   static const Color solidBlack = Color(0xFF000000);
   static const Color solidWhite = Color(0xFFFFFFFF);
 

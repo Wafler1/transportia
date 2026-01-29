@@ -1,7 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -15,6 +12,8 @@ import '../utils/duration_formatter.dart';
 import '../utils/geo_utils.dart';
 import '../utils/itinerary_leg_utils.dart';
 import '../utils/leg_helper.dart';
+import '../utils/map_marker_utils.dart';
+import '../utils/polyline_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
 
@@ -347,7 +346,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       List<LatLng> geometry;
       if (leg.legGeometry != null && leg.legGeometry!.points.isNotEmpty) {
         try {
-          geometry = _decodePolyline(
+          geometry = decodePolyline(
             leg.legGeometry!.points,
             leg.legGeometry!.precision,
           );
@@ -370,7 +369,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         final line = await controller.addLine(
           LineOptions(
             geometry: storedGeometry,
-            lineColor: _colorToHex(color),
+            lineColor: colorToHex(color),
             lineWidth: leg.mode == 'WALK' ? _walkLineWidth : _nonWalkLineWidth,
             lineOpacity: 0.8,
           ),
@@ -466,7 +465,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   }
 
   String _stopMarkerImageIdForColor(Color color) {
-    final hex = _colorToHex(color).replaceAll('#', '');
+    final hex = colorToHex(color).replaceAll('#', '');
     return 'itinerary-stop-marker-$hex';
   }
 
@@ -478,7 +477,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       return imageId;
     }
     try {
-      final image = await _buildStopMarkerImage(color);
+      final image = await buildStopMarkerImage(color);
       await controller.addImage(imageId, image);
       _stopMarkerImages.add(imageId);
       return imageId;
@@ -501,27 +500,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       17.0,
       1.0,
     ];
-  }
-
-  Future<Uint8List> _buildStopMarkerImage(Color accentColor) async {
-    const double size = 32;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final center = Offset(size / 2, size / 2);
-
-    final outerPaint = Paint()..color = AppColors.black.withValues(alpha: 0.2);
-    canvas.drawCircle(center, size / 2, outerPaint);
-
-    final ringPaint = Paint()..color = AppColors.white;
-    canvas.drawCircle(center, size / 2 - 2, ringPaint);
-
-    final innerPaint = Paint()..color = accentColor;
-    canvas.drawCircle(center, size / 2 - 8, innerPaint);
-
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData!.buffer.asUint8List();
   }
 
   Map<String, dynamic> _emptyFeatureCollection() {
@@ -581,58 +559,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     }
   }
 
-  /// Decode an encoded polyline string to a list of LatLng coordinates
-  /// Uses the Encoded Polyline Algorithm Format
-  List<LatLng> _decodePolyline(String encoded, int precision) {
-    final List<LatLng> points = [];
-    int index = 0;
-    int lat = 0;
-    int lng = 0;
-    // Use power of 10 for precision, not power of 2
-    final double factor = math.pow(10, -precision).toDouble();
-
-    while (index < encoded.length) {
-      // Decode latitude
-      int result = 0;
-      int shift = 0;
-      int b;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      // Decode longitude
-      result = 0;
-      shift = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.add(LatLng(lat * factor, lng * factor));
-    }
-    return points;
-  }
-
   Color _getLegColorFromLeg(Leg leg, int _) {
     if (leg.mode == 'WALK') {
       return _walkLegColor;
     }
     final parsed = parseHexColor(leg.routeColor?.trim());
     return parsed ?? _currentAccentColor();
-  }
-
-  String _colorToHex(Color color) {
-    final r = (color.r * 255.0).round();
-    final g = (color.g * 255.0).round();
-    final b = (color.b * 255.0).round();
-    return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
   }
 
   Color _currentAccentColor() {
@@ -957,7 +889,7 @@ class _TransferCarouselCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _delayColor(depDelay),
+                          color: delayColor(depDelay),
                         ),
                       ),
                     ],
@@ -1010,7 +942,7 @@ class _TransferCarouselCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: _delayColor(arrDelay),
+                          color: delayColor(arrDelay),
                         ),
                       ),
                     ],
@@ -1086,7 +1018,7 @@ class _JourneyTimeTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: _delayColor(delay),
+                  color: delayColor(delay),
                 ),
               ),
             ],
@@ -1135,7 +1067,7 @@ class _LegStopRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: _delayColor(delay),
+                    color: delayColor(delay),
                   ),
                 ),
             ],
@@ -1204,6 +1136,3 @@ class _CarouselIndicator extends StatelessWidget {
     );
   }
 }
-
-Color _delayColor(Duration delay) =>
-    delay.isNegative ? const Color(0xFF2E7D32) : const Color(0xFFB26A00);

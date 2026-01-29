@@ -31,3 +31,10 @@ Color parseHexColorOr(String? hex, Color fallback) {
 Color parseHexColorOrAccent(BuildContext context, String? hex) {
   return parseHexColor(hex) ?? AppColors.accentOf(context);
 }
+
+String colorToHex(Color color) {
+  final r = (color.r * 255.0).round();
+  final g = (color.g * 255.0).round();
+  final b = (color.b * 255.0).round();
+  return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
+}

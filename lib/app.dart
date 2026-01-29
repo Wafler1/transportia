@@ -5,7 +5,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
-import 'enviroment.dart';
+import 'environment.dart';
+import 'constants/prefs_keys.dart';
 import 'providers/theme_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -77,8 +78,8 @@ class _RootGate extends StatefulWidget {
 }
 
 class _RootGateState extends State<_RootGate> {
-  static const _kWelcomeSeenKey = 'welcome_seen_v1';
-  static const _kIgnoredUpdateKey = 'ignored_update_version';
+  static const _kWelcomeSeenKey = PrefsKeys.welcomeSeen;
+  static const _kIgnoredUpdateKey = PrefsKeys.ignoredUpdateVersion;
   bool? _seen;
   String? _availableUpdateVersion;
   SharedPreferencesAsync? _prefs;
@@ -172,9 +173,7 @@ class _RootGateState extends State<_RootGate> {
     if (uri.scheme != 'transportia' || uri.host != 'trip') {
       return;
     }
-    debugPrint(
-      'Received ${Environment.appName} trip link: ${uri.toString()}',
-    );
+    debugPrint('Received ${Environment.appName} trip link: ${uri.toString()}');
     // Trip link payload will be handled in a future iteration.
   }
 

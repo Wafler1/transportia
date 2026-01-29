@@ -2,10 +2,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../constants/prefs_keys.dart';
 
 class LocationService {
-  static const _kLastLatKey = 'last_gps_lat';
-  static const _kLastLngKey = 'last_gps_lng';
+  static const _kLastLatKey = PrefsKeys.lastGpsLat;
+  static const _kLastLngKey = PrefsKeys.lastGpsLng;
   static Future<bool>? _pendingPermissionRequest;
 
   static Future<bool> hasPermission() async {
@@ -18,11 +19,10 @@ class LocationService {
     if (status.isGranted) return true;
     final pending = _pendingPermissionRequest;
     if (pending != null) return pending;
-    final request =
-        Permission.locationWhenInUse
-            .request()
-            .then((result) => result.isGranted)
-            .catchError((_) => false);
+    final request = Permission.locationWhenInUse
+        .request()
+        .then((result) => result.isGranted)
+        .catchError((_) => false);
     _pendingPermissionRequest = request;
     final granted = await request;
     _pendingPermissionRequest = null;

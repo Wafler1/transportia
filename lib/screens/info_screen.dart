@@ -3,7 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../enviroment.dart';
+import '../environment.dart';
 import '../providers/theme_provider.dart';
 import '../services/version_service.dart';
 import '../theme/app_colors.dart';
@@ -11,8 +11,10 @@ import '../utils/app_version.dart';
 import '../utils/version_utils.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/custom_card.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/section_title.dart';
+import '../widgets/icon_badge.dart';
 
 class InfoScreen extends StatefulWidget {
   const InfoScreen({super.key});
@@ -22,9 +24,7 @@ class InfoScreen extends StatefulWidget {
 }
 
 class _InfoScreenState extends State<InfoScreen> {
-  static final Uri _downloadUri = Uri.parse(
-    'https://wafler.one/transportia/download',
-  );
+  static final Uri _downloadUri = Uri.parse(Environment.downloadUrl);
 
   String? _remoteVersion;
   bool _fetchAttempted = false;
@@ -98,16 +98,16 @@ class _InfoScreenState extends State<InfoScreen> {
               _buildContactItem(
                 context,
                 'Email',
-                'contact@wafler.one',
+                Environment.contactEmail,
                 LucideIcons.mail,
-                'mailto:contact@wafler.one',
+                'mailto:${Environment.contactEmail}',
               ),
               _buildContactItem(
                 context,
                 'Website',
                 'wafler.one',
                 LucideIcons.globe,
-                'https://wafler.one?ref=transportia',
+                Environment.sponsorUrl,
               ),
               const SizedBox(height: 24),
               const SectionTitle(text: 'Open Source Credits'),
@@ -212,13 +212,12 @@ class _InfoScreenState extends State<InfoScreen> {
   }
 
   Widget _buildCard({required Widget child}) {
-    return Container(
+    return CustomCard(
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0x05000000),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x0A000000)),
-      ),
+      borderRadius: BorderRadius.circular(12),
+      backgroundColor: const Color(0x05000000),
+      borderColor: const Color(0x0A000000),
       child: child,
     );
   }
@@ -239,24 +238,23 @@ class _InfoScreenState extends State<InfoScreen> {
           // Handle error silently
         }
       },
-      child: Container(
+      child: CustomCard(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0x05000000),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0x0A000000)),
-        ),
+        borderRadius: BorderRadius.circular(8),
+        backgroundColor: const Color(0x05000000),
+        borderColor: const Color(0x0A000000),
         child: Row(
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.accentOf(context).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 18, color: AppColors.accentOf(context)),
+            IconBadge(
+              icon: icon,
+              size: 36,
+              iconSize: 18,
+              backgroundColor: AppColors.accentOf(
+                context,
+              ).withValues(alpha: 0.12),
+              iconColor: AppColors.accentOf(context),
+              borderRadius: BorderRadius.circular(8),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -299,24 +297,23 @@ class _InfoScreenState extends State<InfoScreen> {
     String description,
     IconData icon,
   ) {
-    return Container(
+    return CustomCard(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.black.withValues(alpha: 0.02),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.black.withValues(alpha: 0.04)),
-      ),
+      borderRadius: BorderRadius.circular(8),
+      backgroundColor: AppColors.black.withValues(alpha: 0.02),
+      borderColor: AppColors.black.withValues(alpha: 0.04),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.accentOf(context).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, size: 18, color: AppColors.accentOf(context)),
+          IconBadge(
+            icon: icon,
+            size: 36,
+            iconSize: 18,
+            backgroundColor: AppColors.accentOf(
+              context,
+            ).withValues(alpha: 0.12),
+            iconColor: AppColors.accentOf(context),
+            borderRadius: BorderRadius.circular(8),
           ),
           const SizedBox(width: 12),
           Expanded(

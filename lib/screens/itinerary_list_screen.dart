@@ -6,9 +6,9 @@ import 'package:transportia/utils/leg_helper.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import '../models/time_selection.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/empty_state.dart';
 import '../models/itinerary.dart';
 import '../providers/theme_provider.dart';
 import '../services/routing_service.dart';
@@ -19,6 +19,7 @@ import '../utils/duration_formatter.dart';
 import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
+import '../widgets/skeletons/skeleton_list.dart';
 // Pagination response model imported via RoutingService; no direct reference needed.
 
 class ItineraryListScreen extends StatefulWidget {
@@ -196,10 +197,11 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                     ? _buildLoadingSkeleton()
                     : _itineraries.isEmpty
                     ? Center(
-                        child: Text(
-                          'No routes found.',
-                          style: TextStyle(
+                        child: EmptyState(
+                          title: 'No routes found.',
+                          titleStyle: TextStyle(
                             fontSize: 15,
+                            fontWeight: FontWeight.w600,
                             color: AppColors.black.withValues(alpha: 0.5),
                           ),
                         ),
@@ -268,27 +270,10 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   }
 
   Widget _buildLoadingSkeleton() {
-    return Shimmer.fromColors(
-      baseColor: const Color(0x1A000000),
-      highlightColor: const Color(0x0D000000),
-      child: ListView.builder(
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
-            ),
-            child: Container(
-              height: 100,
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          );
-        },
-      ),
+    return const SkeletonList(
+      itemCount: 5,
+      itemHeight: 100,
+      itemMargin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
 }

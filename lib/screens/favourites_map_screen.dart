@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import '../providers/theme_provider.dart';
 import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
@@ -11,6 +10,7 @@ import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/validation_toast.dart';
+import '../widgets/skeletons/skeleton_shimmer.dart';
 
 class AddFavouriteMapScreen extends StatefulWidget {
   const AddFavouriteMapScreen({super.key});
@@ -259,7 +259,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                     ),
                     const SizedBox(height: 4),
                     _isLoadingName
-                        ? Shimmer.fromColors(
+                        ? SkeletonShimmer(
                             baseColor: const Color(0xFFE2E7EC),
                             highlightColor: const Color(0xFFF7F9FC),
                             period: const Duration(milliseconds: 1100),

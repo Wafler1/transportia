@@ -1,16 +1,47 @@
-# transportia
+# Transportia
 
-A new Flutter project.
+<p align="center">
+  <img src="assets/branding/logo_rounded.png" width="120" alt="Transportia app icon" />
+</p>
 
-## Getting Started
+<p align="center">
+  <b>Transportia</b> is a modern travel companion designed to make public transportation easier and more accessible.
+</p>
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## What Transportia offers
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Plan routes with confidence**
+  - compare step‑by‑step options
+  - see transfers and timing at a glance
+- **Understand what’s moving**
+  - live map of nearby stops
+  - vehicles visible on the map
+- **Check stop times fast**
+  - upcoming arrivals and departures for any stop
+- **Keep essentials handy**
+  - save home, work, and favourites
+  - start a trip with one tap
+- **Stay focused**
+  - intentionally simple UI for quick navigation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Download
+
+<p align="left">
+  <a href="https://play.google.com/store/apps/details?id=one.wafler.transportia">
+    <img src="https://play.google.com/intl/en_us/badges/images/generic/en_badge_web_generic.png" alt="Get it on Google Play" height="60" />
+  </a>
+</p>
+
+## Suggestions, issues, or bugs
+
+Please open a GitHub issue (click-through):
+
+- https://github.com/Wafler1/transportia/issues/new/choose
+
+When reporting a bug, include:
+- device + OS version
+- steps to reproduce
+- expected vs actual behavior
+- screenshots or screen recordings if possible

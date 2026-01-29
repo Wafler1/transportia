@@ -11,13 +11,14 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
+import '../constants/prefs_keys.dart';
 import '../providers/theme_provider.dart';
 import '../models/route_field_kind.dart';
 import '../models/itinerary.dart';
+import '../models/journey_stop.dart';
 import '../models/saved_place.dart';
 import '../models/stop_time.dart';
 import '../models/time_selection.dart';
@@ -40,7 +41,10 @@ import '../utils/geo_utils.dart';
 import '../utils/haptics.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart';
-import '../utils/time_utils.dart';
+import '../utils/map_marker_utils.dart';
+import '../utils/polyline_utils.dart';
+import '../utils/stop_time_utils.dart';
+import '../utils/journey_utils.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_notice.dart';
 import '../widgets/info_chip.dart';
@@ -49,12 +53,20 @@ import '../widgets/quick_button_picker_sheet.dart';
 import '../widgets/route_bottom_card.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/validation_toast.dart';
+import '../widgets/buttons/pill_button.dart';
+import '../widgets/selectable_icon_card.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/skeletons/skeleton_card.dart';
+import '../widgets/skeletons/skeleton_shimmer.dart';
+import '../widgets/stop_schedule_row.dart';
+import '../widgets/timeline_indicator_box.dart';
+import '../widgets/map/long_press_selection_modal.dart';
+import '../widgets/map/stop_selection_modal.dart';
 
 part 'map_screen/map_screen_models.dart';
 part 'map_screen/map_screen_controls.dart';
 part 'map_screen/map_screen_trip_focus.dart';
 part 'map_screen/map_screen_quick_settings.dart';
-part 'map_screen/map_screen_overlays.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({
@@ -214,17 +226,17 @@ class _MapScreenState extends State<MapScreen>
   static const double _focusedTransferZoomLevel = 16.5;
   static const double _focusedTransferDistanceThresholdMeters = 80.0;
   static const Duration _mapRefreshDebounce = Duration(milliseconds: 250);
-  static const String _kShowStopsPrefKey = 'map_show_stops';
-  static const String _kQuickButtonPrefKey = 'map_quick_button';
-  static const String _kShowVehiclesPrefKey = 'map_show_vehicles';
-  static const String _kHideNonRtPrefKey = 'map_hide_non_rt_vehicles';
-  static const String _kShowTrainPrefKey = 'map_show_train';
-  static const String _kShowMetroPrefKey = 'map_show_metro';
-  static const String _kShowTramPrefKey = 'map_show_tram';
-  static const String _kShowBusPrefKey = 'map_show_bus';
-  static const String _kShowFerryPrefKey = 'map_show_ferry';
-  static const String _kShowLiftPrefKey = 'map_show_lift';
-  static const String _kShowOtherPrefKey = 'map_show_other';
+  static const String _kShowStopsPrefKey = PrefsKeys.mapShowStops;
+  static const String _kQuickButtonPrefKey = PrefsKeys.mapQuickButton;
+  static const String _kShowVehiclesPrefKey = PrefsKeys.mapShowVehicles;
+  static const String _kHideNonRtPrefKey = PrefsKeys.mapHideNonRtVehicles;
+  static const String _kShowTrainPrefKey = PrefsKeys.mapShowTrain;
+  static const String _kShowMetroPrefKey = PrefsKeys.mapShowMetro;
+  static const String _kShowTramPrefKey = PrefsKeys.mapShowTram;
+  static const String _kShowBusPrefKey = PrefsKeys.mapShowBus;
+  static const String _kShowFerryPrefKey = PrefsKeys.mapShowFerry;
+  static const String _kShowLiftPrefKey = PrefsKeys.mapShowLift;
+  static const String _kShowOtherPrefKey = PrefsKeys.mapShowOther;
   String? _lastTripsRequestKey;
   String? _lastStopsRequestKey;
 
@@ -1245,7 +1257,7 @@ class _MapScreenState extends State<MapScreen>
     if (polyline == null || polyline.isEmpty) return null;
     List<LatLng> points;
     try {
-      points = _decodePolyline(polyline, 5);
+      points = decodePolyline(polyline, 5);
     } catch (_) {
       return null;
     }
@@ -1313,40 +1325,6 @@ class _MapScreenState extends State<MapScreen>
       p0.latitude + (p1.latitude - p0.latitude) * f,
       p0.longitude + (p1.longitude - p0.longitude) * f,
     );
-  }
-
-  List<LatLng> _decodePolyline(String encoded, int precision) {
-    final List<LatLng> points = [];
-    int index = 0;
-    int lat = 0;
-    int lng = 0;
-    final double factor = math.pow(10, -precision).toDouble();
-
-    while (index < encoded.length) {
-      int result = 0;
-      int shift = 0;
-      int b;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      result = 0;
-      shift = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.add(LatLng(lat * factor, lng * factor));
-    }
-    return points;
   }
 
   Color _segmentColorForIndex(MapTripSegment segment, int _) {
@@ -1477,13 +1455,6 @@ class _MapScreenState extends State<MapScreen>
       }
     }
     return deduped.values.toList();
-  }
-
-  String _colorToHex(Color color) {
-    final r = (color.r * 255.0).round();
-    final g = (color.g * 255.0).round();
-    final b = (color.b * 255.0).round();
-    return '#${r.toRadixString(16).padLeft(2, '0')}${g.toRadixString(16).padLeft(2, '0')}${b.toRadixString(16).padLeft(2, '0')}';
   }
 
   Color _currentAccentColor() {
@@ -1713,7 +1684,7 @@ class _MapScreenState extends State<MapScreen>
 
               if (showLongPressOverlay && _longPressLatLng != null)
                 Positioned.fill(
-                  child: _LongPressSelectionModal(
+                  child: LongPressSelectionModal(
                     key: ValueKey(_longPressLatLng),
                     latLng: _longPressLatLng!,
                     isClosing: _isLongPressClosing,
@@ -1725,7 +1696,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               if (showStopOverlay && _selectedStop != null)
                 Positioned.fill(
-                  child: _StopSelectionModal(
+                  child: StopSelectionModal(
                     key: ValueKey(_selectedStop!.id),
                     stop: _selectedStop!,
                     stopTimes: _stopTimesPreview,
@@ -2562,7 +2533,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   String _stopMarkerImageIdForColor(Color color) {
-    final colorHex = _colorToHex(color).replaceAll('#', '');
+    final colorHex = colorToHex(color).replaceAll('#', '');
     return 'map-stop-marker-$colorHex';
   }
 
@@ -2575,7 +2546,7 @@ class _MapScreenState extends State<MapScreen>
       return imageId;
     }
     try {
-      final image = await _buildStopMarkerImage(color);
+      final image = await buildStopMarkerImage(color);
       await controller.addImage(imageId, image);
       _stopMarkerImages.add(imageId);
       _stopMarkerImageId = imageId;
@@ -2648,27 +2619,6 @@ class _MapScreenState extends State<MapScreen>
     return byteData!.buffer.asUint8List();
   }
 
-  Future<Uint8List> _buildStopMarkerImage(Color accentColor) async {
-    const double size = 32;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-    final center = Offset(size / 2, size / 2);
-
-    final outerPaint = Paint()..color = AppColors.black.withValues(alpha: 0.2);
-    canvas.drawCircle(center, size / 2, outerPaint);
-
-    final ringPaint = Paint()..color = AppColors.white;
-    canvas.drawCircle(center, size / 2 - 2, ringPaint);
-
-    final innerPaint = Paint()..color = accentColor;
-    canvas.drawCircle(center, size / 2 - 8, innerPaint);
-
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(size.toInt(), size.toInt());
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    return byteData!.buffer.asUint8List();
-  }
-
   Future<void> _applyStopAccentColor() async {
     final color = _stopAccentColor ?? AppColors.accentOf(context);
     final imageId = await _ensureStopMarkerImageForColor(color);
@@ -2691,7 +2641,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   String _vehicleMarkerImageId(_VehicleMarkerVisual visual, Color color) {
-    final colorHex = _colorToHex(color).replaceAll('#', '');
+    final colorHex = colorToHex(color).replaceAll('#', '');
     final rawKey = visual.text ?? 'icon-${visual.icon?.codePoint ?? 0}';
     final key = rawKey.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
     return 'vehicle-$colorHex-$key';
@@ -3252,12 +3202,12 @@ class _MapScreenState extends State<MapScreen>
       final leg = itinerary.legs[i];
       final legColor =
           parseHexColor(leg.routeColor?.trim()) ?? _currentAccentColor();
-      final colorHex = _colorToHex(legColor);
+      final colorHex = colorToHex(legColor);
       final geometry = leg.legGeometry;
       List<LatLng> points = [];
       if (geometry != null && geometry.points.isNotEmpty) {
         try {
-          points = _decodePolyline(geometry.points, geometry.precision);
+          points = decodePolyline(geometry.points, geometry.precision);
         } catch (_) {
           points = [];
         }
@@ -3344,7 +3294,7 @@ class _MapScreenState extends State<MapScreen>
       final geometry = leg.legGeometry;
       if (geometry != null && geometry.points.isNotEmpty) {
         try {
-          points.addAll(_decodePolyline(geometry.points, geometry.precision));
+          points.addAll(decodePolyline(geometry.points, geometry.precision));
           continue;
         } catch (_) {}
       }
@@ -3824,7 +3774,7 @@ class _MapScreenState extends State<MapScreen>
         startTime: DateTime.now(),
       );
       if (!mounted || requestId != _stopTimesRequestId) return;
-      final deduped = _deduplicateStopTimes(response.stopTimes);
+      final deduped = deduplicateStopTimes(response.stopTimes);
       final now = DateTime.now();
       final filtered =
           deduped.where((entry) => _stopTimeKey(entry) != null).where((entry) {
@@ -3848,19 +3798,6 @@ class _MapScreenState extends State<MapScreen>
         _isStopTimesLoading = false;
       });
     }
-  }
-
-  List<StopTime> _deduplicateStopTimes(List<StopTime> stopTimes) {
-    final seen = <String>{};
-    final deduped = <StopTime>[];
-    for (final stopTime in stopTimes) {
-      final departure = stopTime.place.departure?.toIso8601String() ?? '';
-      final key = '${stopTime.tripId}|$departure|${stopTime.headsign}';
-      if (seen.add(key)) {
-        deduped.add(stopTime);
-      }
-    }
-    return deduped;
   }
 
   DateTime? _stopTimeKey(StopTime stopTime) {

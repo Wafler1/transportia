@@ -30,7 +30,7 @@ IconData getLegIcon(String mode) {
     case 'FERRY':
       return LucideIcons.ship;
     case 'AIRPLANE':
-      return LucideIcons.planeTakeoff;
+      return LucideIcons.plane;
     case 'SUBURBAN':
       return LucideIcons.tramFront;
     case 'BUS':
