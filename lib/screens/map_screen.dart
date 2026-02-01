@@ -208,7 +208,9 @@ class _MapScreenState extends State<MapScreen>
   List<StopTime> _stopTimesPreview = [];
   bool _showVehicles = true;
   bool _hideNonRealtimeVehicles = false;
-  _QuickButtonAction _quickButtonAction = _QuickButtonAction.toggleStops;
+  bool _autoCenterEnabled = true;
+  _QuickButtonAction _quickButtonAction =
+      _QuickButtonAction.toggleRealtimeOnly;
   final Map<_VehicleModeGroup, bool> _vehicleModeVisibility = {
     _VehicleModeGroup.train: true,
     _VehicleModeGroup.metro: true,
@@ -230,6 +232,7 @@ class _MapScreenState extends State<MapScreen>
   static const String _kQuickButtonPrefKey = PrefsKeys.mapQuickButton;
   static const String _kShowVehiclesPrefKey = PrefsKeys.mapShowVehicles;
   static const String _kHideNonRtPrefKey = PrefsKeys.mapHideNonRtVehicles;
+  static const String _kAutoCenterPrefKey = PrefsKeys.mapAutoCenter;
   static const String _kShowTrainPrefKey = PrefsKeys.mapShowTrain;
   static const String _kShowMetroPrefKey = PrefsKeys.mapShowMetro;
   static const String _kShowTramPrefKey = PrefsKeys.mapShowTram;
@@ -243,17 +246,9 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
-    unawaited(_loadShowStopsPreference());
-    unawaited(_loadQuickSettingsPreferences());
-    unawaited(_loadSavedSearchPlaces());
+    unawaited(_initStartup());
     FavoritesService.favoritesListenable.addListener(_onFavoritesChanged);
     _favorites = FavoritesService.favoritesListenable.value;
-    if (!widget.deferInit) {
-      _ensureLocationReady();
-      _didInitLocation = true;
-    } else {
-      _maybeAttachActivateListener();
-    }
     _snapCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
@@ -284,11 +279,24 @@ class _MapScreenState extends State<MapScreen>
         if (_isSheetCollapsed) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (_selectionLatLngs().isNotEmpty) {
-              unawaited(_fitSelectionBounds());
+              if (_autoCenterEnabled) {
+                unawaited(_fitSelectionBounds());
+              }
+              _skipAutoCenterOnSnap = false;
+              return;
+            }
+            if (_skipAutoCenterOnSnap) {
+              _skipAutoCenterOnSnap = false;
+              return;
+            }
+            if (!_autoCenterEnabled) {
+              return;
             } else {
               _centerToUserKeepZoom();
             }
           });
+        } else if (_skipAutoCenterOnSnap) {
+          _skipAutoCenterOnSnap = false;
         }
         _hapticSnap();
         _snapTarget = null;
@@ -301,6 +309,19 @@ class _MapScreenState extends State<MapScreen>
     _toCtrl.addListener(_handleToTextChanged);
     unawaited(_loadRecentTrips());
     unawaited(FavoritesService.getFavorites());
+  }
+
+  Future<void> _initStartup() async {
+    await _loadShowStopsPreference();
+    await _loadQuickSettingsPreferences();
+    await _loadSavedSearchPlaces();
+    if (!mounted) return;
+    if (!widget.deferInit) {
+      _ensureLocationReady();
+      _didInitLocation = true;
+    } else {
+      _maybeAttachActivateListener();
+    }
   }
 
   @override
@@ -401,6 +422,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _applyPersistedLastLocation() async {
+    if (!_autoCenterEnabled) return;
     final last = await LocationService.loadLastLatLng();
     if (last == null) return;
     final cam = CameraPosition(
@@ -418,6 +440,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _applyDeviceLastKnown() async {
+    if (!_autoCenterEnabled) return;
     final last = await LocationService.lastKnownPosition();
     if (last == null) return;
     final cam = CameraPosition(
@@ -444,7 +467,7 @@ class _MapScreenState extends State<MapScreen>
           final firstFix = _lastUserLatLng == null;
           _lastUserLatLng = LatLng(p.latitude, p.longitude);
           unawaited(LocationService.saveLastLatLng(_lastUserLatLng!));
-          if (firstFix && !_didAutoCenter) {
+          if (firstFix && !_didAutoCenter && _autoCenterEnabled) {
             _didAutoCenter = true;
             unawaited(_centerToUserKeepZoom());
           }
@@ -591,6 +614,10 @@ class _MapScreenState extends State<MapScreen>
     _setHideNonRealtimeVehicles(!_hideNonRealtimeVehicles);
   }
 
+  void _toggleAutoCenter() {
+    _setAutoCenterEnabled(!_autoCenterEnabled);
+  }
+
   void _changeMapStyle() {
     unawaited(_cycleMapStyle());
   }
@@ -642,6 +669,7 @@ class _MapScreenState extends State<MapScreen>
     final quickButtonKey = await prefs.getString(_kQuickButtonPrefKey);
     final showVehicles = await prefs.getBool(_kShowVehiclesPrefKey);
     final hideNonRt = await prefs.getBool(_kHideNonRtPrefKey);
+    final autoCenter = await prefs.getBool(_kAutoCenterPrefKey);
     final train = await prefs.getBool(_kShowTrainPrefKey);
     final metro = await prefs.getBool(_kShowMetroPrefKey);
     final tram = await prefs.getBool(_kShowTramPrefKey);
@@ -657,6 +685,9 @@ class _MapScreenState extends State<MapScreen>
       }
       if (hideNonRt != null) {
         _hideNonRealtimeVehicles = hideNonRt;
+      }
+      if (autoCenter != null) {
+        _autoCenterEnabled = autoCenter;
       }
       if (train != null) {
         _vehicleModeVisibility[_VehicleModeGroup.train] = train;
@@ -699,6 +730,11 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _persistHideNonRtPreference(bool value) async {
     final prefs = SharedPreferencesAsync();
     await prefs.setBool(_kHideNonRtPrefKey, value);
+  }
+
+  Future<void> _persistAutoCenterPreference(bool value) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool(_kAutoCenterPrefKey, value);
   }
 
   Future<void> _persistVehicleModePreference(
@@ -750,6 +786,12 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  void _setAutoCenterEnabled(bool value) {
+    if (_autoCenterEnabled == value) return;
+    setState(() => _autoCenterEnabled = value);
+    unawaited(_persistAutoCenterPreference(value));
+  }
+
   void _setVehicleModeVisibility(_VehicleModeGroup mode, bool value) {
     if (_vehicleModeVisibility[mode] == value) return;
     setState(() => _vehicleModeVisibility[mode] = value);
@@ -766,6 +808,7 @@ class _MapScreenState extends State<MapScreen>
       _QuickButtonAction.toggleStops => 'toggle_stops',
       _QuickButtonAction.toggleVehicles => 'toggle_vehicles',
       _QuickButtonAction.toggleRealtimeOnly => 'toggle_rt',
+      _QuickButtonAction.toggleAutoCenter => 'toggle_auto_center',
       _QuickButtonAction.changeMapStyle => 'change_map',
     };
   }
@@ -774,8 +817,9 @@ class _MapScreenState extends State<MapScreen>
     return switch (value) {
       'toggle_vehicles' => _QuickButtonAction.toggleVehicles,
       'toggle_rt' => _QuickButtonAction.toggleRealtimeOnly,
+      'toggle_auto_center' => _QuickButtonAction.toggleAutoCenter,
       'change_map' => _QuickButtonAction.changeMapStyle,
-      _ => _QuickButtonAction.toggleStops,
+      _ => _QuickButtonAction.toggleRealtimeOnly,
     };
   }
 
@@ -800,6 +844,13 @@ class _MapScreenState extends State<MapScreen>
         label: 'Toggle Only RT',
         icon: LucideIcons.radio,
         subtitle: 'Show only real-time data',
+        enabled: true,
+      ),
+      _QuickButtonOption(
+        action: _QuickButtonAction.toggleAutoCenter,
+        label: 'Auto-center',
+        icon: LucideIcons.compass,
+        subtitle: 'Enable or disable auto-centering',
         enabled: true,
       ),
       _QuickButtonOption(
@@ -843,6 +894,16 @@ class _MapScreenState extends State<MapScreen>
           icon: LucideIcons.radio,
           color: color,
           onTap: _toggleRealtimeOnly,
+        );
+      case _QuickButtonAction.toggleAutoCenter:
+        final color = _autoCenterEnabled
+            ? AppColors.accentOf(context)
+            : AppColors.black;
+        return _QuickButtonConfig(
+          label: _autoCenterEnabled ? 'Auto-center' : 'No centering',
+          icon: LucideIcons.compass,
+          color: color,
+          onTap: _toggleAutoCenter,
         );
       case _QuickButtonAction.changeMapStyle:
         return _QuickButtonConfig(
@@ -2096,6 +2157,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _centerToUserKeepZoom() async {
+    if (!_autoCenterEnabled) return;
     if (_controller == null || _lastUserLatLng == null) return;
     final cam = _lastCam;
     _lastCam = CameraPosition(
@@ -2111,6 +2173,7 @@ class _MapScreenState extends State<MapScreen>
   double? _lastComputedExpandedTop;
   double? _lastBottomBarHeight;
   bool _isBottomBarResizeAnimating = false;
+  bool _skipAutoCenterOnSnap = false;
   void _animateTo(double target, double collapsedTop) {
     final begin = _sheetTop ?? target;
     _snapAnim = Tween<double>(begin: begin, end: target).animate(
@@ -2123,7 +2186,10 @@ class _MapScreenState extends State<MapScreen>
     _snapTarget = target;
   }
 
-  void _animateCollapsedHeightChange(double newBottomBarHeight) {
+  void _animateCollapsedHeightChange(
+    double newBottomBarHeight, {
+    bool suppressAutoCenter = false,
+  }) {
     final lastTop = _lastComputedCollapsedTop;
     final lastHeight = _lastBottomBarHeight;
     if (lastTop == null || lastHeight == null) return;
@@ -2133,6 +2199,9 @@ class _MapScreenState extends State<MapScreen>
     if (!isNearCollapsed) return;
     final delta = newBottomBarHeight - lastHeight;
     if (delta.abs() < 0.5) return;
+    if (suppressAutoCenter) {
+      _skipAutoCenterOnSnap = true;
+    }
     final target = lastTop - delta;
     _isBottomBarResizeAnimating = true;
     _animateTo(target, target);
@@ -2382,6 +2451,7 @@ class _MapScreenState extends State<MapScreen>
   void _maybeFitSelectionsOnCollapsed() {
     if (!_isSheetCollapsed) return;
     if (_isTripFocus) return;
+    if (!_autoCenterEnabled) return;
     unawaited(_fitSelectionBounds());
   }
 
@@ -3570,7 +3640,10 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _exitTripFocus() {
-    _animateCollapsedHeightChange(_bottomBarHeight);
+    _animateCollapsedHeightChange(
+      _bottomBarHeight,
+      suppressAutoCenter: true,
+    );
     setState(() {
       _isTripFocus = false;
       _isTripFocusLoading = false;

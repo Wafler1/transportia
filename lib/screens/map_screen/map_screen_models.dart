@@ -57,6 +57,7 @@ enum _QuickButtonAction {
   toggleStops,
   toggleVehicles,
   toggleRealtimeOnly,
+  toggleAutoCenter,
   changeMapStyle,
 }
 

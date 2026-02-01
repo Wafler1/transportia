@@ -286,21 +286,38 @@ class ItineraryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final delaySummary = _delaySummaryLabel();
+    final departInLabel = _departInLabel();
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                formatDuration(itinerary.duration),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.black,
+              Expanded(
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      formatDuration(itinerary.duration),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.black,
+                      ),
+                    ),
+                    Text(
+                      'Depart in $departInLabel',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
               if (itinerary.isDirect)
                 Text(
                   'Direct',
@@ -459,6 +476,13 @@ class ItineraryCard extends StatelessWidget {
 
     if (affected == 0) return null;
     return '$affected';
+  }
+
+  String _departInLabel() {
+    final now = DateTime.now();
+    final secondsUntil = itinerary.startTime.difference(now).inSeconds;
+    final clampedSeconds = secondsUntil < 0 ? 0 : secondsUntil;
+    return formatDuration(clampedSeconds);
   }
 }
 

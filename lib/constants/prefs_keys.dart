@@ -12,6 +12,7 @@ class PrefsKeys {
   static const String mapQuickButton = 'map_quick_button';
   static const String mapShowVehicles = 'map_show_vehicles';
   static const String mapHideNonRtVehicles = 'map_hide_non_rt_vehicles';
+  static const String mapAutoCenter = 'map_auto_center';
   static const String mapShowTrain = 'map_show_train';
   static const String mapShowMetro = 'map_show_metro';
   static const String mapShowTram = 'map_show_tram';
