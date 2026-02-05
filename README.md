@@ -45,3 +45,12 @@ When reporting a bug, include:
 - steps to reproduce
 - expected vs actual behavior
 - screenshots or screen recordings if possible
+
+## Thanks to
+
+<a href="https://transitous.org/">Transitous</a> - Free and open public transport routing.
+
+<a href="https://maplibre.org/">MapLibre GL</a> - Interactive vector tile maps in the browser.
+
+<a href="https://lucide.dev/">Lucide</a> - Beautiful & consistent icon toolkit made by the community.
+
