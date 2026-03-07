@@ -7,6 +7,7 @@ import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
 import 'environment.dart';
 import 'constants/prefs_keys.dart';
+import 'providers/backend_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -21,8 +22,11 @@ class Transportia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => BackendProvider()),
+      ],
       child: OKToast(
         child: Consumer<ThemeProvider>(
           builder: (context, themeProvider, _) {
