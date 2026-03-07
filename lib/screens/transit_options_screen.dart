@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../constants/prefs_keys.dart';
+import '../environment.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
@@ -192,8 +193,10 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
           _buildWalkingCard(context),
           const SizedBox(height: 28),
           _buildTransferCard(context),
-          const SizedBox(height: 28),
-          _buildAdvancedCard(context),
+          if (Environment.showBackendSettings) ...[
+            const SizedBox(height: 28),
+            _buildAdvancedCard(context),
+          ],
           const SizedBox(height: 16),
         ],
       ),

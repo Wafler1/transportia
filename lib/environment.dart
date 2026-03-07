@@ -13,6 +13,8 @@ class Environment {
   static const String downloadUrl = 'https://wafler.one/transportia/download';
   static const String sponsorUrl = 'http://wafler.one?ref=transportia';
 
+  static const bool showBackendSettings = true;
+
   static String get transitousHost =>
       BackendProvider.instance?.host ?? BackendProvider.defaultHost;
 
