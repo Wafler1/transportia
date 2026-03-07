@@ -172,7 +172,7 @@ class TransitousMapService {
 
     final uri = Uri.https(
       Environment.transitousHost,
-      '/api/v5/map/trips',
+      '/api/${Environment.mapTripsApiVersion}/map/trips',
       params,
     );
     try {
@@ -230,7 +230,7 @@ class TransitousMapService {
 
     final uri = Uri.https(
       Environment.transitousHost,
-      '/api/v1/map/stops',
+      '/api/${Environment.mapStopsApiVersion}/map/stops',
       params,
     );
     try {

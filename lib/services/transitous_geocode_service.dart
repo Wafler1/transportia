@@ -111,7 +111,7 @@ class TransitousGeocodeService {
 
     final uri = Uri.https(
       Environment.transitousHost,
-      '/api/v1/geocode',
+      '/api/${Environment.geocodeApiVersion}/geocode',
       params,
     );
     try {
@@ -169,7 +169,7 @@ class TransitousGeocodeService {
     };
     final uri = Uri.https(
       Environment.transitousHost,
-      '/api/v1/reverse-geocode',
+      '/api/${Environment.geocodeApiVersion}/reverse-geocode',
       params,
     );
     try {
