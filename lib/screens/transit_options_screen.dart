@@ -91,7 +91,8 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
   void _syncBackendControllers() {
     final backend = context.read<BackendProvider>();
     if (!_hostFocusNode.hasFocus) _hostController.text = backend.host;
-    if (!_versionFocusNode.hasFocus) _versionController.text = backend.apiVersion;
+    if (!_versionFocusNode.hasFocus)
+      _versionController.text = backend.apiVersion;
   }
 
   @override
@@ -262,10 +263,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                         controller: _hostController,
                         focusNode: _hostFocusNode,
                         placeholder: BackendProvider.defaultHost,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: AppColors.black,
-                        ),
+                        style: TextStyle(fontSize: 15, color: AppColors.black),
                         placeholderStyle: TextStyle(
                           fontSize: 15,
                           color: AppColors.black.withValues(alpha: 0.3),
@@ -274,8 +272,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                         autocorrect: false,
                         keyboardType: TextInputType.url,
                         textInputAction: TextInputAction.done,
-                        onSubmitted: (value) =>
-                            backendProvider.setHost(value),
+                        onSubmitted: (value) => backendProvider.setHost(value),
                       ),
                     ),
                     if (backendProvider.isCustomHost)
@@ -325,10 +322,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                         controller: _versionController,
                         focusNode: _versionFocusNode,
                         placeholder: backendProvider.apiVersion,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: AppColors.black,
-                        ),
+                        style: TextStyle(fontSize: 15, color: AppColors.black),
                         placeholderStyle: TextStyle(
                           fontSize: 15,
                           color: AppColors.black.withValues(alpha: 0.3),
@@ -357,7 +351,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Affects routing, stop times and map endpoints. Geocode stays on v1 unless overridden below. Auto: v5 for transitous hosts, v1 otherwise.',
+                'Affects routing, stop times and map trips. Map stops and geocode stay on v1 unless overridden below. Auto: v5 for transitous hosts, v1 otherwise.',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -432,7 +426,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                         _EndpointVersionField(
                           label: 'Map stops',
                           endpointKey: 'mapStops',
-                          defaultVersion: backendProvider.apiVersion,
+                          defaultVersion: backendProvider.mapStopsVersion,
                         ),
                         _EndpointVersionField(
                           label: 'Geocode',
@@ -729,9 +723,10 @@ class _EndpointVersionFieldState extends State<_EndpointVersionField> {
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus) {
-        context
-            .read<BackendProvider>()
-            .setEndpointVersion(widget.endpointKey, _controller.text);
+        context.read<BackendProvider>().setEndpointVersion(
+          widget.endpointKey,
+          _controller.text,
+        );
       }
     });
     backend.addListener(_sync);
@@ -739,9 +734,9 @@ class _EndpointVersionFieldState extends State<_EndpointVersionField> {
 
   void _sync() {
     if (!_focusNode.hasFocus) {
-      final override = context
-          .read<BackendProvider>()
-          .endpointVersionOverride(widget.endpointKey);
+      final override = context.read<BackendProvider>().endpointVersionOverride(
+        widget.endpointKey,
+      );
       final newText = override ?? '';
       if (_controller.text != newText) _controller.text = newText;
     }
@@ -796,8 +791,7 @@ class _EndpointVersionFieldState extends State<_EndpointVersionField> {
               ),
               if (isOverridden)
                 GestureDetector(
-                  onTap: () =>
-                      backend.resetEndpointVersion(widget.endpointKey),
+                  onTap: () => backend.resetEndpointVersion(widget.endpointKey),
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: Icon(

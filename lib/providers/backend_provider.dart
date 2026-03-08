@@ -5,10 +5,11 @@ import '../constants/prefs_keys.dart';
 class BackendProvider extends ChangeNotifier {
   static const String defaultHost = 'api.transitous.org';
   static const String _defaultGeocode = 'v1';
+  static const String _defaultMapStops = 'v1';
 
   // Keys for per-endpoint version overrides.
-  // plan/trip/stoptimes/mapTrips/mapStops fall back to the main apiVersion.
-  // geocode falls back to 'v1' regardless of the main version.
+  // plan/trip/stoptimes/mapTrips fall back to the main apiVersion.
+  // mapStops and geocode fall back to v1 regardless of the main version.
   static const List<String> endpointKeys = [
     'plan',
     'trip',
@@ -37,7 +38,9 @@ class BackendProvider extends ChangeNotifier {
   String get tripVersion => _endpointVersions['trip'] ?? apiVersion;
   String get stopTimesVersion => _endpointVersions['stoptimes'] ?? apiVersion;
   String get mapTripsVersion => _endpointVersions['mapTrips'] ?? apiVersion;
-  String get mapStopsVersion => _endpointVersions['mapStops'] ?? apiVersion;
+  // Map stops always defaults to v1, independent of the main version.
+  String get mapStopsVersion =>
+      _endpointVersions['mapStops'] ?? _defaultMapStops;
   // Geocode always defaults to v1, independent of the main version.
   String get geocodeVersion => _endpointVersions['geocode'] ?? _defaultGeocode;
 
@@ -90,8 +93,9 @@ class BackendProvider extends ChangeNotifier {
   Future<void> setApiVersion(String version) async {
     final trimmed = version.trim();
     final computedDefault = _computeDefaultApiVersion(_host);
-    final effective =
-        trimmed.isEmpty || trimmed == computedDefault ? null : trimmed;
+    final effective = trimmed.isEmpty || trimmed == computedDefault
+        ? null
+        : trimmed;
     if (effective == _apiVersionOverride) return;
     _apiVersionOverride = effective;
     notifyListeners();
@@ -99,7 +103,10 @@ class BackendProvider extends ChangeNotifier {
     if (_apiVersionOverride == null) {
       await prefs.remove(PrefsKeys.transitousApiVersion);
     } else {
-      await prefs.setString(PrefsKeys.transitousApiVersion, _apiVersionOverride!);
+      await prefs.setString(
+        PrefsKeys.transitousApiVersion,
+        _apiVersionOverride!,
+      );
     }
   }
 
