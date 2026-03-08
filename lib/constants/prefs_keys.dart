@@ -28,4 +28,11 @@ class PrefsKeys {
   static const String recentTrips = 'recent_trips';
   static const String savedPlacesSearch = 'saved_places_search_v1';
   static const String savedPlacesTimetable = 'saved_places_timetable_v1';
+
+  static const String transitousHost = 'transitous_host';
+  static const String transitousApiVersion = 'transitous_api_version';
+
+  static const String transitWalkingSpeed = 'transit_walking_speed';
+  static const String transitTransferBuffer = 'transit_transfer_buffer';
+  static const String transitSelectedModes = 'transit_selected_modes';
 }
