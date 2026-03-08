@@ -273,6 +273,18 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
     final currentStopIndex = vehicleStopIndex;
 
+    // Alert colors — adapt to dark mode
+    final isDark = ThemeProvider.instance?.isDark ?? false;
+    final alertBgColor = isDark
+        ? const Color(0xFF2D2200)
+        : const Color(0xFFFFF3CD);
+    final alertBorderColor = isDark
+        ? const Color(0xFFB8860B)
+        : const Color(0xFFFFC107);
+    final alertIconColor = isDark
+        ? const Color(0xFFFFC107)
+        : const Color(0xFFF57C00);
+
     // Collect all alerts
     final allAlerts = <String, Alert>{};
     for (final stop in stops) {
@@ -402,17 +414,17 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3CD),
+                          color: alertBgColor,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFFC107)),
+                          border: Border.all(color: alertBorderColor),
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
+                            Icon(
                               LucideIcons.triangleAlert,
                               size: 16,
-                              color: Color(0xFFF57C00),
+                              color: alertIconColor,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
