@@ -34,6 +34,8 @@
   </a>
 </p>
 
+[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroidButtonGreyBorder_nofont.png" height="50" alt="Get it at IzzyOnDroid">](https://apt.izzysoft.de/packages/one.wafler.transportia)
+
 ## Suggestions, issues, or bugs
 
 Please open a GitHub issue (click-through):
