@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:transportia/providers/backend_provider.dart';
 import 'package:transportia/providers/theme_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../constants/prefs_keys.dart';
+import '../environment.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
@@ -55,6 +59,87 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
   final Set<String> _selectedModes = {..._transitModeOptions};
   double _walkingSpeed = 4.8;
   int _transferBuffer = 0;
+  bool _advancedExpanded = false;
+  bool _endpointVersionsExpanded = false;
+  late final TextEditingController _hostController;
+  late final FocusNode _hostFocusNode;
+  late final TextEditingController _versionController;
+  late final FocusNode _versionFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    final backend = context.read<BackendProvider>();
+    _hostController = TextEditingController(text: backend.host);
+    _versionController = TextEditingController(text: backend.apiVersion);
+    _hostFocusNode = FocusNode();
+    _versionFocusNode = FocusNode();
+    _hostFocusNode.addListener(() {
+      if (!_hostFocusNode.hasFocus) {
+        context.read<BackendProvider>().setHost(_hostController.text);
+      }
+    });
+    _versionFocusNode.addListener(() {
+      if (!_versionFocusNode.hasFocus) {
+        context.read<BackendProvider>().setApiVersion(_versionController.text);
+      }
+    });
+    backend.addListener(_syncBackendControllers);
+    _loadSettings();
+  }
+
+  void _syncBackendControllers() {
+    final backend = context.read<BackendProvider>();
+    if (!_hostFocusNode.hasFocus) _hostController.text = backend.host;
+    if (!_versionFocusNode.hasFocus)
+      _versionController.text = backend.apiVersion;
+  }
+
+  @override
+  void dispose() {
+    context.read<BackendProvider>().removeListener(_syncBackendControllers);
+    _hostController.dispose();
+    _hostFocusNode.dispose();
+    _versionController.dispose();
+    _versionFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = SharedPreferencesAsync();
+    final speed = await prefs.getDouble(PrefsKeys.transitWalkingSpeed);
+    final buffer = await prefs.getInt(PrefsKeys.transitTransferBuffer);
+    final modes = await prefs.getStringList(PrefsKeys.transitSelectedModes);
+    if (!mounted) return;
+    setState(() {
+      if (speed != null) _walkingSpeed = speed;
+      if (buffer != null) _transferBuffer = buffer;
+      if (modes != null) {
+        _selectedModes
+          ..clear()
+          ..addAll(modes);
+      }
+    });
+  }
+
+  Future<void> _saveWalkingSpeed() async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setDouble(PrefsKeys.transitWalkingSpeed, _walkingSpeed);
+  }
+
+  Future<void> _saveTransferBuffer() async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setInt(PrefsKeys.transitTransferBuffer, _transferBuffer);
+  }
+
+  Future<void> _saveSelectedModes() async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setStringList(
+      PrefsKeys.transitSelectedModes,
+      _selectedModes.toList(),
+    );
+  }
+
   static const double _walkingMin = 2.0;
   static const double _walkingMax = 7.0;
   static const double _walkingStep = 0.1;
@@ -109,9 +194,255 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
           _buildWalkingCard(context),
           const SizedBox(height: 28),
           _buildTransferCard(context),
+          if (Environment.showBackendSettings) ...[
+            const SizedBox(height: 28),
+            _buildAdvancedCard(context),
+          ],
           const SizedBox(height: 16),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdvancedCard(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    final backendProvider = context.watch<BackendProvider>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _advancedExpanded = !_advancedExpanded),
+          child: Row(
+            children: [
+              const SectionTitle(text: 'Advanced'),
+              const Spacer(),
+              AnimatedRotation(
+                turns: _advancedExpanded ? 0.5 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  LucideIcons.chevronDown,
+                  size: 18,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
+          ),
+        ),
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 200),
+          crossFadeState: _advancedExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          firstChild: const SizedBox.shrink(),
+          secondChild: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 12),
+              Text(
+                'Backend API host',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              CustomCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                margin: const EdgeInsets.all(0),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.server, size: 16, color: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CupertinoTextField.borderless(
+                        controller: _hostController,
+                        focusNode: _hostFocusNode,
+                        placeholder: BackendProvider.defaultHost,
+                        style: TextStyle(fontSize: 15, color: AppColors.black),
+                        placeholderStyle: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.black.withValues(alpha: 0.3),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        autocorrect: false,
+                        keyboardType: TextInputType.url,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (value) => backendProvider.setHost(value),
+                      ),
+                    ),
+                    if (backendProvider.isCustomHost)
+                      GestureDetector(
+                        onTap: () => backendProvider.resetHost(),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Icon(
+                            LucideIcons.rotateCcw,
+                            size: 16,
+                            color: AppColors.black.withValues(alpha: 0.35),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Hostname only, without https:// or trailing slash.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'API version',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 8),
+              CustomCard(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                margin: const EdgeInsets.all(0),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.layers, size: 16, color: accent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: CupertinoTextField.borderless(
+                        controller: _versionController,
+                        focusNode: _versionFocusNode,
+                        placeholder: backendProvider.apiVersion,
+                        style: TextStyle(fontSize: 15, color: AppColors.black),
+                        placeholderStyle: TextStyle(
+                          fontSize: 15,
+                          color: AppColors.black.withValues(alpha: 0.3),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        autocorrect: false,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (value) =>
+                            backendProvider.setApiVersion(value),
+                      ),
+                    ),
+                    if (backendProvider.isCustomApiVersion)
+                      GestureDetector(
+                        onTap: () => backendProvider.resetApiVersion(),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Icon(
+                            LucideIcons.rotateCcw,
+                            size: 16,
+                            color: AppColors.black.withValues(alpha: 0.35),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Affects routing, stop times and map trips. Map stops and geocode stay on v1 unless overridden below. Auto: v5 for transitous hosts, v1 otherwise.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Nested per-endpoint collapsible
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(
+                  () => _endpointVersionsExpanded = !_endpointVersionsExpanded,
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Per-endpoint versions',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.black.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const Spacer(),
+                    AnimatedRotation(
+                      turns: _endpointVersionsExpanded ? 0.5 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        LucideIcons.chevronDown,
+                        size: 16,
+                        color: AppColors.black.withValues(alpha: 0.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 200),
+                crossFadeState: _endpointVersionsExpanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                firstChild: const SizedBox.shrink(),
+                secondChild: Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: CustomCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      children: [
+                        _EndpointVersionField(
+                          label: 'Plan',
+                          endpointKey: 'plan',
+                          defaultVersion: backendProvider.apiVersion,
+                        ),
+                        _EndpointVersionField(
+                          label: 'Trip',
+                          endpointKey: 'trip',
+                          defaultVersion: backendProvider.apiVersion,
+                        ),
+                        _EndpointVersionField(
+                          label: 'Stop times',
+                          endpointKey: 'stoptimes',
+                          defaultVersion: backendProvider.apiVersion,
+                        ),
+                        _EndpointVersionField(
+                          label: 'Map trips',
+                          endpointKey: 'mapTrips',
+                          defaultVersion: backendProvider.apiVersion,
+                        ),
+                        _EndpointVersionField(
+                          label: 'Map stops',
+                          endpointKey: 'mapStops',
+                          defaultVersion: backendProvider.mapStopsVersion,
+                        ),
+                        _EndpointVersionField(
+                          label: 'Geocode',
+                          endpointKey: 'geocode',
+                          defaultVersion: 'v1',
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -198,7 +529,10 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                       child: _QuickValueCard(
                         value: '${presets[i].toStringAsFixed(1)} km/h',
                         selected: (_walkingSpeed - presets[i]).abs() < 0.05,
-                        onTap: () => setState(() => _walkingSpeed = presets[i]),
+                        onTap: () {
+                          setState(() => _walkingSpeed = presets[i]);
+                          _saveWalkingSpeed();
+                        },
                       ),
                     ),
                   ],
@@ -216,6 +550,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                   setState(() {
                     _walkingSpeed = double.parse(val.toStringAsFixed(1));
                   });
+                  _saveWalkingSpeed();
                 },
               ),
             ],
@@ -269,8 +604,10 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                       child: _QuickValueCard(
                         value: '${presets[i]} min',
                         selected: _transferBuffer == presets[i],
-                        onTap: () =>
-                            setState(() => _transferBuffer = presets[i]),
+                        onTap: () {
+                          setState(() => _transferBuffer = presets[i]);
+                          _saveTransferBuffer();
+                        },
                       ),
                     ),
                   ],
@@ -286,6 +623,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                 displayBuilder: (val) => val.round().toString(),
                 onChanged: (val) {
                   setState(() => _transferBuffer = val.round());
+                  _saveTransferBuffer();
                 },
               ),
             ],
@@ -318,6 +656,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
     } else {
       _selectedModes.addAll(group.modes);
     }
+    _saveSelectedModes();
   }
 }
 
@@ -350,6 +689,130 @@ IconData _categoryIcon(String label) {
       return LucideIcons.sparkles;
     default:
       return LucideIcons.layers;
+  }
+}
+
+class _EndpointVersionField extends StatefulWidget {
+  final String label;
+  final String endpointKey;
+  final String defaultVersion;
+  final bool isLast;
+
+  const _EndpointVersionField({
+    required this.label,
+    required this.endpointKey,
+    required this.defaultVersion,
+    this.isLast = false,
+  });
+
+  @override
+  State<_EndpointVersionField> createState() => _EndpointVersionFieldState();
+}
+
+class _EndpointVersionFieldState extends State<_EndpointVersionField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    final backend = context.read<BackendProvider>();
+    _controller = TextEditingController(
+      text: backend.endpointVersionOverride(widget.endpointKey) ?? '',
+    );
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus) {
+        context.read<BackendProvider>().setEndpointVersion(
+          widget.endpointKey,
+          _controller.text,
+        );
+      }
+    });
+    backend.addListener(_sync);
+  }
+
+  void _sync() {
+    if (!_focusNode.hasFocus) {
+      final override = context.read<BackendProvider>().endpointVersionOverride(
+        widget.endpointKey,
+      );
+      final newText = override ?? '';
+      if (_controller.text != newText) _controller.text = newText;
+    }
+  }
+
+  @override
+  void dispose() {
+    context.read<BackendProvider>().removeListener(_sync);
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    final backend = context.watch<BackendProvider>();
+    final isOverridden = backend.isEndpointOverridden(widget.endpointKey);
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 88,
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.black.withValues(alpha: 0.65),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: CupertinoTextField.borderless(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  placeholder: widget.defaultVersion,
+                  style: TextStyle(fontSize: 14, color: AppColors.black),
+                  placeholderStyle: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.black.withValues(alpha: 0.3),
+                  ),
+                  padding: EdgeInsets.zero,
+                  autocorrect: false,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (v) =>
+                      backend.setEndpointVersion(widget.endpointKey, v),
+                ),
+              ),
+              if (isOverridden)
+                GestureDetector(
+                  onTap: () => backend.resetEndpointVersion(widget.endpointKey),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      LucideIcons.rotateCcw,
+                      size: 14,
+                      color: accent.withValues(alpha: 0.6),
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 22),
+            ],
+          ),
+        ),
+        if (!widget.isLast)
+          Container(
+            height: 0.5,
+            color: AppColors.black.withValues(alpha: 0.08),
+          ),
+      ],
+    );
   }
 }
 

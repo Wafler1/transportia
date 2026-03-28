@@ -39,7 +39,7 @@ class StopTimesService {
 
     final uri = Uri.https(
       Environment.transitousHost,
-      '/api/v5/stoptimes',
+      '/api/${Environment.stopTimesApiVersion}/stoptimes',
       params,
     );
 

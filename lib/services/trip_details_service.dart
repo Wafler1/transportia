@@ -5,7 +5,7 @@ import '../models/itinerary.dart';
 
 class TripDetailsService {
   static Future<Itinerary> fetchTripDetails({required String tripId}) async {
-    final uri = Uri.https(Environment.transitousHost, '/api/v5/trip', {
+    final uri = Uri.https(Environment.transitousHost, '/api/${Environment.tripApiVersion}/trip', {
       'tripId': tripId,
     });
 

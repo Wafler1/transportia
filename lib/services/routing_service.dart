@@ -54,7 +54,7 @@ class RoutingService {
       }
     }
 
-    final uri = Uri.https(Environment.transitousHost, '/api/v5/plan', params);
+    final uri = Uri.https(Environment.transitousHost, '/api/${Environment.planApiVersion}/plan', params);
 
     try {
       final response = await http.get(
