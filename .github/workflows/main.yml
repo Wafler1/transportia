@@ -2,13 +2,7 @@ name: "Build"
 
 on:
   pull_request:
-    branches:
-      - dev
-      - test
   push:
-    branches:
-      - dev
-      - test
 
 jobs:  
   build:      
