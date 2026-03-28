@@ -10,7 +10,6 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _appThemeKey = PrefsKeys.appTheme;
   static const String _vibrationsEnabledKey = PrefsKeys.vibrationsEnabled;
 
-  // Default values
   static const Color defaultAccentColor = Color.fromARGB(255, 0, 113, 133);
   static const String defaultMapStyle = 'default';
   static const AppThemeMode defaultAppThemeMode = AppThemeMode.light;
@@ -24,7 +23,6 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static ThemeProvider? _instance;
 
   // TODO: Host remotely
-  // Map styles
   static const Map<String, String> mapStyleUrls = {
     'default': 'assets/styles/default.json',
     'light': 'assets/styles/light.json',
@@ -73,13 +71,11 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _loadSettings() async {
     final prefs = SharedPreferencesAsync();
 
-    // Load accent color
     final colorValue = await prefs.getInt(_accentColorKey);
     if (colorValue != null) {
       _accentColor = Color(colorValue);
     }
 
-    // Load map style
     _mapStyle = await prefs.getString(_mapStyleKey) ?? defaultMapStyle;
 
     final savedTheme = await prefs.getString(_appThemeKey);

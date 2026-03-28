@@ -37,7 +37,6 @@ class Environment {
   static String get mapStopsApiVersion =>
       BackendProvider.instance?.mapStopsVersion ?? 'v1';
 
-  // Geocode always defaults to v1, independent of the main version.
   static String get geocodeApiVersion =>
       BackendProvider.instance?.geocodeVersion ?? 'v1';
 

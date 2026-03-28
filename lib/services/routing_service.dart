@@ -14,7 +14,6 @@ class RoutingService {
     required double toLon,
     TimeSelection? timeSelection,
   }) async {
-    // Backwards‑compatible helper that returns only the itineraries list.
     final response = await findRoutesPaginated(
       fromLat: fromLat,
       fromLon: fromLon,
@@ -25,8 +24,6 @@ class RoutingService {
     return response.itineraries;
   }
 
-  /// Returns itineraries with pagination support. The optional `pageCursor`
-  /// parameter is passed straight through to the backend when supplied.
   static Future<ItineraryResponse> findRoutesPaginated({
     required double fromLat,
     required double fromLon,
@@ -46,7 +43,6 @@ class RoutingService {
       params['pageCursor'] = pageCursor;
     }
 
-    // Add time parameter only if user selected a specific time (not "Now")
     if (timeSelection != null && !timeSelection.isNow) {
       params['time'] = timeSelection.dateTime.toUtc().toIso8601String();
       if (timeSelection.isArriveBy) {
@@ -54,7 +50,11 @@ class RoutingService {
       }
     }
 
-    final uri = Uri.https(Environment.transitousHost, '/api/${Environment.planApiVersion}/plan', params);
+    final uri = Uri.https(
+      Environment.transitousHost,
+      '/api/${Environment.planApiVersion}/plan',
+      params,
+    );
 
     try {
       final response = await http.get(

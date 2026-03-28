@@ -19,16 +19,15 @@ class AppearanceScreen extends StatefulWidget {
 }
 
 class _AppearanceScreenState extends State<AppearanceScreen> {
-  // Predefined accent colors
   final List<Color> _accentColors = [
-    const Color.fromARGB(255, 0, 113, 133), // Teal
-    const Color(0xFF007AFF), // Blue
-    const Color(0xFF34C759), // Green
-    const Color(0xFFFF9500), // Orange
-    const Color(0xFFFF3B30), // Red
-    const Color(0xFFAF52DE), // Purple
-    const Color(0xFFFF2D55), // Pink
-    const Color(0xFF5856D6), // Indigo
+    const Color.fromARGB(255, 0, 113, 133),
+    const Color(0xFF007AFF),
+    const Color(0xFF34C759),
+    const Color(0xFFFF9500),
+    const Color(0xFFFF3B30),
+    const Color(0xFFAF52DE),
+    const Color(0xFFFF2D55),
+    const Color(0xFF5856D6),
   ];
 
   Future<void> _saveAccentColor(Color color) async {
@@ -422,7 +421,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Preview area
             Container(
               height: 80,
               decoration: BoxDecoration(
@@ -453,7 +451,6 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ),
               ),
             ),
-            // Label area
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
               child: Row(

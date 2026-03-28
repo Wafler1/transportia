@@ -63,7 +63,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
         color: const Color(0x80000000),
         child: Center(
           child: GestureDetector(
-            onTap: () {}, // Prevent closing when tapping the card
+            onTap: () {},
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 32),
               padding: const EdgeInsets.all(24),

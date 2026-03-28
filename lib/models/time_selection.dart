@@ -1,9 +1,7 @@
-/// Represents the time selection state for route planning
 class TimeSelection {
   final DateTime dateTime;
-  final bool isArriveBy; // true = arrive by, false = depart at
-  final bool
-  _isDefaultNow; // Internal flag to track if this is unmodified "Now"
+  final bool isArriveBy;
+  final bool _isDefaultNow;
 
   const TimeSelection({
     required this.dateTime,
@@ -11,7 +9,6 @@ class TimeSelection {
     bool isDefaultNow = false,
   }) : _isDefaultNow = isDefaultNow;
 
-  /// Creates a "Now" time selection (depart now)
   factory TimeSelection.now() {
     return TimeSelection(
       dateTime: DateTime.now(),
@@ -20,20 +17,16 @@ class TimeSelection {
     );
   }
 
-  /// Check if this is a "Now" selection
   bool get isNow => _isDefaultNow;
 
-  /// Format date for API (YYYYMMDD format)
   String toApiDateFormat() {
     return '${dateTime.year}${dateTime.month.toString().padLeft(2, '0')}${dateTime.day.toString().padLeft(2, '0')}';
   }
 
-  /// Format time for API (HH:MM:SS format)
   String toApiTimeFormat() {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
   }
 
-  /// Format for display in UI
   String toDisplayString() {
     if (isNow) return 'Now';
 

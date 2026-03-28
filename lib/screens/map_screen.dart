@@ -80,19 +80,12 @@ class MapScreen extends StatefulWidget {
     this.onTimetableRequested,
   });
 
-  // If true, skip location permission/init until activated.
   final bool deferInit;
-  // Optional external trigger to activate deferred init when revealed.
   final ValueListenable<bool>? activateOnShow;
-  // Callback when the sheet collapse state changes
   final ValueChanged<bool>? onCollapseChanged;
-  // Callback when the sheet collapse progress changes (0.0 = expanded, 1.0 = collapsed)
   final ValueChanged<double>? onCollapseProgressChanged;
-  // Callback when overlays (time selection, route suggestions) are shown/hidden
   final ValueChanged<bool>? onOverlayVisibilityChanged;
-  // Callback when a tab change is requested from a detail screen
   final ValueChanged<int>? onTabChangeRequested;
-  // Callback when a timetable is requested for a stop
   final ValueChanged<TransitousLocationSuggestion>? onTimetableRequested;
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -114,11 +107,10 @@ class _MapScreenState extends State<MapScreen>
   StreamSubscription<Position>? _posSub;
   LatLng? _lastUserLatLng;
   bool _didAutoCenter = false;
-  // Tracks if the draggable sheet is collapsed (map dominant)
   bool _isSheetCollapsed = false;
-  double? _sheetTop; // dynamic top position of the sheet
-  static const double _collapsedMapFraction = 0.25; // visible map when expanded
-  static const double _bottomBarHeight = 116.0; // collapsed bar height
+  double? _sheetTop;
+  static const double _collapsedMapFraction = 0.25;
+  static const double _bottomBarHeight = 116.0;
   static const double _tripFocusBottomBarHeight = 200.0;
   static const List<String> _mapStyleCycle = ['default', 'light', 'dark'];
   final _fromCtrl = TextEditingController();
@@ -161,7 +153,7 @@ class _MapScreenState extends State<MapScreen>
   int _tripsRefreshKey = 0;
   List<TripHistoryItem> _recentTrips = [];
   List<FavoritePlace> _favorites = [];
-  bool _isSearching = false; // Prevent multiple search requests
+  bool _isSearching = false;
   bool _isMapReady = false;
   Timer? _tripRefreshTimer;
   Timer? _tripRefreshDebounce;
@@ -267,7 +259,6 @@ class _MapScreenState extends State<MapScreen>
       }
       if (status == AnimationStatus.completed && _snapTarget != null) {
         final target = _snapTarget!;
-        // Resolve collapsed state only once snap animation finishes
         final collapsed =
             (target - ((_lastComputedCollapsedTop ?? target))).abs() < 1.0;
         if (collapsed != _isSheetCollapsed) {
@@ -372,7 +363,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _maybeAttachActivateListener() {
     final listenable = widget.activateOnShow;
-    _activateListener?.call(); // no-op placeholder if set previously
+    _activateListener?.call();
     if (listenable != null) {
       void listener() {
         if (listenable.value) _activateIfNeeded();
@@ -380,7 +371,6 @@ class _MapScreenState extends State<MapScreen>
 
       listenable.addListener(listener);
       _activateListener = () => listenable.removeListener(listener);
-      // If already true, activate immediately.
       if (listenable.value) _activateIfNeeded();
     }
   }
@@ -1528,7 +1518,6 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _notifyOverlayVisibility() {
-    // Route suggestions should hide the navbar; time selection should not.
     final overlaysVisible = _activeSuggestionField != null;
     widget.onOverlayVisibilityChanged?.call(overlaysVisible);
   }
@@ -1640,7 +1629,6 @@ class _MapScreenState extends State<MapScreen>
           final double bottomBarHeight = _isTripFocus
               ? _tripFocusBottomBarHeight
               : _bottomBarHeight;
-          // Sheet anchors
           final double collapsedTop = math.max(0.0, totalH - bottomBarHeight);
           final double expandedCandidate = totalH * _collapsedMapFraction;
           final double expandedTop = (expandedCandidate.clamp(
@@ -1651,7 +1639,6 @@ class _MapScreenState extends State<MapScreen>
           _lastComputedExpandedTop = expandedTop;
           _lastBottomBarHeight = bottomBarHeight;
 
-          // Initialize and keep within bounds (e.g., on rotation)
           _sheetTop ??= expandedTop;
           if (_isBottomBarResizeAnimating) {
             if (_sheetTop! < expandedTop) {
@@ -1666,15 +1653,13 @@ class _MapScreenState extends State<MapScreen>
             widget.onCollapseChanged?.call(collapsed);
           }
 
-          final animDuration =
-              Duration.zero; // we animate snaps via controller (smoother)
+          final animDuration = Duration.zero;
 
           final denom = (collapsedTop - expandedTop);
           final progress = denom <= 0.0
               ? 1.0
               : ((_sheetTop! - expandedTop) / denom).clamp(0.0, 1.0);
 
-          // Notify progress for smooth navbar animation
           widget.onCollapseProgressChanged?.call(progress);
 
           final overlayWidth = math.max(0.0, constraints.maxWidth - 24);
@@ -1695,7 +1680,6 @@ class _MapScreenState extends State<MapScreen>
           final double pillYOffset = (1 - pillVisibility) * 32;
           return Stack(
             children: [
-              // Map behind (isolated repaint)
               Positioned.fill(
                 child: RepaintBoundary(
                   child: MapLibreMap(
@@ -1774,8 +1758,6 @@ class _MapScreenState extends State<MapScreen>
                   ),
                 ),
 
-              // Draggable white card anchored to bottom
-              // The bottom card; position changes on drag. Snaps animate via controller above.
               AnimatedPositioned(
                 duration: animDuration,
                 curve: Curves.linear,
@@ -1811,7 +1793,7 @@ class _MapScreenState extends State<MapScreen>
                               },
                               onDragEnd: (velocityDy) {
                                 final mid = (collapsedTop + expandedTop) / 2;
-                                const vThresh = 700.0; // px/s
+                                const vThresh = 700.0;
                                 double target;
                                 if (velocityDy.abs() > vThresh) {
                                   target = velocityDy > 0
@@ -1855,7 +1837,7 @@ class _MapScreenState extends State<MapScreen>
                               },
                               onDragEnd: (velocityDy) {
                                 final mid = (collapsedTop + expandedTop) / 2;
-                                const vThresh = 700.0; // px/s
+                                const vThresh = 700.0;
                                 double target;
                                 if (velocityDy.abs() > vThresh) {
                                   target = velocityDy > 0
@@ -1910,7 +1892,7 @@ class _MapScreenState extends State<MapScreen>
                               },
                               onDragEnd: (velocityDy) {
                                 final mid = (collapsedTop + expandedTop) / 2;
-                                const vThresh = 700.0; // px/s
+                                const vThresh = 700.0;
                                 double target;
                                 if (velocityDy.abs() > vThresh) {
                                   target = velocityDy > 0
@@ -2009,7 +1991,6 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _search(TimeSelection timeSelection) async {
-    // Prevent multiple simultaneous search requests
     if (_isSearching) return;
 
     _unfocusInputs();
@@ -2103,7 +2084,6 @@ class _MapScreenState extends State<MapScreen>
           unawaited(_loadRecentTrips());
         });
 
-    // Save trip to history without delaying navigation
     try {
       double resolvedFromLat;
       double resolvedFromLon;
@@ -2123,9 +2103,7 @@ class _MapScreenState extends State<MapScreen>
         userLon: resolvedFromLon,
       );
       await RecentTripsService.saveTrip(trip);
-    } catch (_) {
-      // Silently fail if history save fails
-    }
+    } catch (_) {}
   }
 
   Future<TransitousLocationSuggestion?> _resolveSelectionFromQuery(
@@ -2215,8 +2193,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _startDragRumble() {
     _dragVibeTimer?.cancel();
-    if (!_hasCustomVibration || !Haptics.isEnabled)
-      return; // keep it subtle: only if custom supported
+    if (!_hasCustomVibration || !Haptics.isEnabled) return;
     _dragVibeTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
       Haptics.dragRumblePulse();
     });
@@ -2287,7 +2264,6 @@ class _MapScreenState extends State<MapScreen>
       _activeSuggestionField = kind;
       _isFetchingSuggestions = true;
     });
-    // Notify overlay visibility change
     _notifyOverlayVisibility();
     final placeBias = _placeBiasLatLng();
     TransitousGeocodeService.fetchSuggestions(text: query, placeBias: placeBias)
@@ -2357,7 +2333,6 @@ class _MapScreenState extends State<MapScreen>
       _isFetchingSuggestions = false;
       _activeSuggestionField = null;
     });
-    // Notify overlay visibility change
     _notifyOverlayVisibility();
   }
 
@@ -3935,12 +3910,9 @@ class _MapScreenState extends State<MapScreen>
     final hasTo = _toFocus.hasFocus;
 
     if (!hasFrom && !hasTo) {
-      // Field lost focus - delay clearing suggestions to prevent flicker
-      // if focus is regained quickly (e.g., when tapping same field)
       _unfocusDebounceTimer?.cancel();
       _unfocusDebounceTimer = Timer(const Duration(milliseconds: 100), () {
         if (!mounted) return;
-        // Double-check focus state after delay
         if (!_fromFocus.hasFocus && !_toFocus.hasFocus) {
           _clearSuggestions();
         }
@@ -3948,7 +3920,6 @@ class _MapScreenState extends State<MapScreen>
       return;
     }
 
-    // Field has focus - cancel any pending unfocus action
     _unfocusDebounceTimer?.cancel();
     _unfocusDebounceTimer = null;
 
@@ -4027,7 +3998,6 @@ class _MapScreenState extends State<MapScreen>
   void _onRecentTripTap(TripHistoryItem trip) {
     Haptics.lightTick();
 
-    // Handle From field - leave empty if it was "My Location"
     if (trip.fromName != 'My Location') {
       final fromSuggestion = TransitousLocationSuggestion(
         id: 'history-from-${trip.fromLat}-${trip.fromLon}',
@@ -4039,12 +4009,10 @@ class _MapScreenState extends State<MapScreen>
       _setControllerText(RouteFieldKind.from, trip.fromName);
       _setSelection(RouteFieldKind.from, fromSuggestion, notify: true);
     } else {
-      // Clear the from field for "My Location"
       _setControllerText(RouteFieldKind.from, '');
       _setSelection(RouteFieldKind.from, null, notify: true);
     }
 
-    // Set the To field
     final toSuggestion = TransitousLocationSuggestion(
       id: 'history-to-${trip.toLat}-${trip.toLon}',
       name: trip.toName,
@@ -4055,7 +4023,6 @@ class _MapScreenState extends State<MapScreen>
     _setControllerText(RouteFieldKind.to, trip.toName);
     _setSelection(RouteFieldKind.to, toSuggestion, notify: true);
 
-    // Trigger search with current time (no time parameters)
     _search(TimeSelection.now());
   }
 
@@ -4070,11 +4037,9 @@ class _MapScreenState extends State<MapScreen>
 
     Haptics.lightTick();
 
-    // Clear from field for "My Location"
     _setControllerText(RouteFieldKind.from, '');
     _setSelection(RouteFieldKind.from, null, notify: true);
 
-    // Set the To field to the favorite location
     final toSuggestion = TransitousLocationSuggestion(
       id: 'favorite-${favorite.lat}-${favorite.lon}',
       name: favorite.name,
@@ -4085,7 +4050,6 @@ class _MapScreenState extends State<MapScreen>
     _setControllerText(RouteFieldKind.to, favorite.name);
     _setSelection(RouteFieldKind.to, toSuggestion, notify: true);
 
-    // Trigger search with current time
     _search(TimeSelection.now());
   }
 }

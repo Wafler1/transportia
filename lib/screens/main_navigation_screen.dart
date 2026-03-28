@@ -36,12 +36,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   bool _handleBackGesture() {
-    // If not on map screen, navigate to map screen
     if (_currentIndex != 0) {
       setState(() => _currentIndex = 0);
-      return false; // Prevent default back behavior
+      return false;
     }
-    return true; // Allow default back behavior (exit app)
+    return true;
   }
 
   @override
@@ -55,16 +54,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: _currentIndex == 0, // Only allow popping when on map screen
+      canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          // Back gesture was invoked but pop was prevented
           _handleBackGesture();
         }
       },
       child: Stack(
         children: [
-          // Screen content
           IndexedStack(
             index: _currentIndex,
             children: [
@@ -92,7 +89,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ],
           ),
 
-          // Floating navigation bar
           Positioned(
             left: 0,
             right: 0,
@@ -104,24 +100,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   return ValueListenableBuilder<bool>(
                     valueListenable: _overlaysVisibleNotifier,
                     builder: (context, overlaysVisible, child) {
-                      // Calculate navbar visibility based on drag progress
-                      // Start hiding at 0.6 (trigger point), fully hidden at 0.9
                       const double hideStart = 0.6;
                       const double hideEnd = 0.9;
 
                       double visibility = 1.0;
                       if (_currentIndex == 0) {
-                        // Hide navbar when overlays are visible
                         if (overlaysVisible) {
                           visibility = 0.0;
                         } else {
-                          // Apply drag-based animation when on map screen
                           if (progress <= hideStart) {
-                            visibility = 1.0; // Fully visible
+                            visibility = 1.0;
                           } else if (progress >= hideEnd) {
-                            visibility = 0.0; // Fully hidden
+                            visibility = 0.0;
                           } else {
-                            // Smooth transition between trigger points
                             final t =
                                 (progress - hideStart) / (hideEnd - hideStart);
                             visibility = 1.0 - Curves.easeInOut.transform(t);

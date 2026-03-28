@@ -143,7 +143,6 @@ class Itinerary {
     this.fare,
   });
 
-  // Calculate total walking distance in meters
   double get walkingDistance {
     double totalDistance = 0.0;
     for (final leg in legs) {
@@ -154,14 +153,12 @@ class Itinerary {
     return totalDistance;
   }
 
-  // Calculate calories burned from walking
-  // Average: ~50 calories per km of walking
+  // maybe give the user control over this?
   int get calories {
     final walkingKm = walkingDistance / 1000;
     return (walkingKm * 50).round();
   }
 
-  // Count total alerts across all legs
   int get alertsCount {
     int count = 0;
     for (final leg in legs) {
@@ -177,7 +174,6 @@ class Itinerary {
     Map<String, dynamic> json, {
     bool isDirect = false,
   }) {
-    // Extract fare from fareTransfers if available
     FareInfo? fare;
     if (json['fareTransfers'] != null &&
         (json['fareTransfers'] as List).isNotEmpty) {
@@ -211,12 +207,11 @@ class Leg {
   final DateTime? scheduledStartTime;
   final DateTime? scheduledEndTime;
   final int duration;
-  final double? distance; // Distance in meters
+  final double? distance;
   final String? routeShortName;
   final String? routeLongName;
   final String? displayName;
   final String? headsign;
-  // Hex color strings like "#FF0000" for UI styling.
   final String? routeColor;
   final String? routeTextColor;
   final int? routeType;
@@ -288,7 +283,6 @@ class Leg {
           : {};
       final Map<String, dynamic> toMap = to is Map<String, dynamic> ? to : {};
 
-      // Parse intermediate stops safely
       List<IntermediateStop> intermediateStops = [];
       try {
         if (json['intermediateStops'] is List) {
@@ -305,7 +299,6 @@ class Leg {
         }
       } catch (_) {}
 
-      // Parse alerts safely
       List<Alert> alerts = [];
       try {
         if (json['alerts'] is List) {
@@ -322,7 +315,6 @@ class Leg {
         }
       } catch (_) {}
 
-      // Parse leg geometry safely
       EncodedPolyline? legGeometry;
       try {
         if (json['legGeometry'] is Map &&

@@ -72,7 +72,6 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Depart/Arrive toggle
         if (widget.showDepartArriveToggle)
           Row(
             children: [
@@ -98,8 +97,6 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
             ],
           ),
         if (widget.showDepartArriveToggle) const SizedBox(height: 10),
-
-        // Date Selection
         _DateSelector(
           selectedDate: _selectedDate,
           onDateChanged: (date) {
@@ -107,8 +104,6 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Time Selection
         _TimeSelector(
           selectedHour: _selectedHour,
           selectedMinute: _selectedMinute,
@@ -120,8 +115,6 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
           },
         ),
         const SizedBox(height: 10),
-
-        // Action buttons
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -213,7 +206,7 @@ class _DateSelector extends StatefulWidget {
 class _DateSelectorState extends State<_DateSelector> {
   double _dragOffset = 0;
   Timer? _autoScrollTimer;
-  int _autoScrollDirection = 0; // 1 for next day, -1 for previous day
+  int _autoScrollDirection = 0;
 
   @override
   void dispose() {
@@ -434,7 +427,7 @@ class _NumberPicker extends StatefulWidget {
 class _NumberPickerState extends State<_NumberPicker> {
   double _dragOffset = 0;
   Timer? _autoScrollTimer;
-  int _autoScrollDirection = 0; // 1 for up, -1 for down
+  int _autoScrollDirection = 0;
 
   @override
   void dispose() {
@@ -481,7 +474,6 @@ class _NumberPickerState extends State<_NumberPicker> {
   void _handleDragUpdate(DragUpdateDetails details) {
     _dragOffset += details.delta.dy;
 
-    // Determine direction: upward drag -> decrement dy negative -> increment
     int direction;
     if (_dragOffset <= -10) {
       direction = 1;
@@ -495,7 +487,6 @@ class _NumberPickerState extends State<_NumberPicker> {
       _startAutoScroll(direction);
     }
 
-    // Trigger change every 26 pixels for snappier response
     if (_dragOffset.abs() >= 26) {
       if (_dragOffset < 0) {
         _increment();

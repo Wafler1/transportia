@@ -7,9 +7,6 @@ class BackendProvider extends ChangeNotifier {
   static const String _defaultGeocode = 'v1';
   static const String _defaultMapStops = 'v1';
 
-  // Keys for per-endpoint version overrides.
-  // plan/trip/stoptimes/mapTrips fall back to the main apiVersion.
-  // mapStops and geocode fall back to v1 regardless of the main version.
   static const List<String> endpointKeys = [
     'plan',
     'trip',
@@ -33,15 +30,14 @@ class BackendProvider extends ChangeNotifier {
       _apiVersionOverride ?? _computeDefaultApiVersion(_host);
   bool get isCustomApiVersion => _apiVersionOverride != null;
 
-  // Per-endpoint effective versions.
   String get planVersion => _endpointVersions['plan'] ?? apiVersion;
   String get tripVersion => _endpointVersions['trip'] ?? apiVersion;
   String get stopTimesVersion => _endpointVersions['stoptimes'] ?? apiVersion;
   String get mapTripsVersion => _endpointVersions['mapTrips'] ?? apiVersion;
-  // Map stops always defaults to v1, independent of the main version.
+
   String get mapStopsVersion =>
       _endpointVersions['mapStops'] ?? _defaultMapStops;
-  // Geocode always defaults to v1, independent of the main version.
+
   String get geocodeVersion => _endpointVersions['geocode'] ?? _defaultGeocode;
 
   bool get hasEndpointOverrides => _endpointVersions.isNotEmpty;

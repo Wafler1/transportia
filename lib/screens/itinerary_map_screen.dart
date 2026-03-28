@@ -307,14 +307,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     _controller = controller;
     setState(() => _isMapReady = true);
 
-    // Wait a bit for the map to fully initialize
     await Future.delayed(const Duration(milliseconds: 500));
 
-    // Draw all the journey legs
     await _drawJourneyLegs();
     await _drawRouteStops();
-
-    // Fit the camera to show all legs
     await _fitCameraToBounds();
     if (_currentPage > 0) {
       await _focusLeg(_currentPage - 1);
@@ -327,7 +323,6 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       return;
     }
 
-    // Clear existing lines
     for (final line in _lines) {
       try {
         await controller.removeLine(line);
@@ -375,9 +370,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           ),
         );
         _lines.add(line);
-      } catch (e) {
-        // Handle error silently
-      }
+      } catch (e) {}
     }
     _legGeometries = geometries;
   }
@@ -386,7 +379,13 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final deduped = <String, _RouteStop>{};
     int order = 0;
 
-    void addStop(double lat, double lon, Color color, bool isWalk) {
+    void addStop(
+      double lat,
+      double lon,
+      Color color,
+      bool isWalk, {
+      bool isTransfer = false,
+    }) {
       final key = '${lat.toStringAsFixed(5)},${lon.toStringAsFixed(5)}';
       final existing = deduped[key];
       if (existing == null) {
@@ -395,6 +394,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           color: color,
           order: order++,
           isWalk: isWalk,
+          isTransfer: isTransfer,
         );
         return;
       }
@@ -404,6 +404,17 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           color: color,
           order: existing.order,
           isWalk: false,
+          isTransfer: existing.isTransfer || isTransfer,
+        );
+        return;
+      }
+      if (!existing.isTransfer && isTransfer) {
+        deduped[key] = _RouteStop(
+          point: existing.point,
+          color: existing.color,
+          order: existing.order,
+          isWalk: existing.isWalk,
+          isTransfer: true,
         );
       }
     }
@@ -412,11 +423,29 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       final leg = entry.leg;
       final isWalk = leg.mode == 'WALK';
       final color = _getLegColorFromLeg(leg, entry.originalIndex);
-      addStop(leg.fromLat, leg.fromLon, color, isWalk);
+      addStop(
+        leg.fromLat,
+        leg.fromLon,
+        color,
+        isWalk,
+        isTransfer: entry.isTransfer,
+      );
       for (final stop in leg.intermediateStops) {
-        addStop(stop.lat, stop.lon, color, isWalk);
+        addStop(
+          stop.lat,
+          stop.lon,
+          color,
+          isWalk,
+          isTransfer: entry.isTransfer,
+        );
       }
-      addStop(leg.toLat, leg.toLon, color, isWalk);
+      addStop(
+        leg.toLat,
+        leg.toLon,
+        color,
+        isWalk,
+        isTransfer: entry.isTransfer,
+      );
     }
 
     final stops = deduped.values.toList()
@@ -444,7 +473,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     final features = <Map<String, dynamic>>[];
     for (int i = 0; i < stops.length; i++) {
       final stop = stops[i];
-      final imageId = await _ensureStopMarkerImageForColor(stop.color);
+      final imageId = await _ensureStopMarkerImageForColor(
+        stop.color,
+        isTransfer: stop.isTransfer,
+      );
       if (imageId == null) continue;
       features.add({
         'type': 'Feature',
@@ -464,20 +496,26 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     } catch (_) {}
   }
 
-  String _stopMarkerImageIdForColor(Color color) {
+  String _stopMarkerImageIdForColor(Color color, {bool isTransfer = false}) {
     final hex = colorToHex(color).replaceAll('#', '');
-    return 'itinerary-stop-marker-$hex';
+    final prefix = isTransfer
+        ? 'itinerary-transfer-stop-marker'
+        : 'itinerary-stop-marker';
+    return '$prefix-$hex';
   }
 
-  Future<String?> _ensureStopMarkerImageForColor(Color color) async {
+  Future<String?> _ensureStopMarkerImageForColor(
+    Color color, {
+    bool isTransfer = false,
+  }) async {
     final controller = _controller;
     if (controller == null) return null;
-    final imageId = _stopMarkerImageIdForColor(color);
+    final imageId = _stopMarkerImageIdForColor(color, isTransfer: isTransfer);
     if (_stopMarkerImages.contains(imageId)) {
       return imageId;
     }
     try {
-      final image = await buildStopMarkerImage(color);
+      final image = await buildStopMarkerImage(color, isTransfer: isTransfer);
       await controller.addImage(imageId, image);
       _stopMarkerImages.add(imageId);
       return imageId;
@@ -726,12 +764,14 @@ class _RouteStop {
     required this.color,
     required this.order,
     required this.isWalk,
+    required this.isTransfer,
   });
 
   final LatLng point;
   final Color color;
   final int order;
   final bool isWalk;
+  final bool isTransfer;
 }
 
 class _LegCarouselCard extends StatelessWidget {

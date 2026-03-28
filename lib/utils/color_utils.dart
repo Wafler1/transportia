@@ -2,8 +2,6 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/app_colors.dart';
 
-/// Converts a hex string (with or without leading '#') into a [Color].
-/// Returns null when the value cannot be parsed.
 Color? parseHexColor(String? hex) {
   if (hex == null || hex.isEmpty) return null;
 
@@ -21,13 +19,10 @@ Color? parseHexColor(String? hex) {
   return Color(value);
 }
 
-/// Convenience wrapper that falls back to [fallback] when the color is invalid.
 Color parseHexColorOr(String? hex, Color fallback) {
   return parseHexColor(hex) ?? fallback;
 }
 
-/// Convenience wrapper that falls back to the current accent colour when the
-/// value is invalid.
 Color parseHexColorOrAccent(BuildContext context, String? hex) {
   return parseHexColor(hex) ?? AppColors.accentOf(context);
 }

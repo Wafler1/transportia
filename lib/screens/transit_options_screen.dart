@@ -358,7 +358,6 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Nested per-endpoint collapsible
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(
@@ -464,8 +463,7 @@ class _TransitOptionsScreenState extends State<TransitOptionsScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             const spacing = 12.0;
-            final double width =
-                (constraints.maxWidth - spacing) / 2; // two columns
+            final double width = (constraints.maxWidth - spacing) / 2;
             final totalWidth = constraints.maxWidth;
             return Wrap(
               spacing: spacing,

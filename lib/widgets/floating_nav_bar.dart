@@ -15,16 +15,15 @@ class FloatingNavBar extends StatelessWidget {
 
   final int currentIndex;
   final ValueChanged<int> onIndexChanged;
-  final double visibility; // 0.0 (hidden) to 1.0 (visible)
+  final double visibility;
 
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
     final opacity = visibility.clamp(0.0, 1.0);
-    final translateY = (1 - opacity) * 32; // Slide down 32px when hiding
-    final blur = (1 - opacity) * 8.0; // Blur when fading out
-    final scale =
-        0.92 + (opacity * 0.08); // Shrink from 1.0 to 0.92 when hiding
+    final translateY = (1 - opacity) * 32;
+    final blur = (1 - opacity) * 8.0;
+    final scale = 0.92 + (opacity * 0.08);
 
     return IgnorePointer(
       ignoring: opacity < 0.1,

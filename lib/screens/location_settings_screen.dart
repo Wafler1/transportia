@@ -54,7 +54,6 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   Future<void> _openAppSettings() async {
     await openAppSettings();
-    // Refresh status when user returns
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         _checkLocationStatus();
@@ -263,7 +262,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
       case PermissionStatus.limited:
         return AppColors.accentOf(context);
       default:
-        return const Color(0xFFFF3B30); // Red
+        return const Color(0xFFFF3B30);
     }
   }
 }

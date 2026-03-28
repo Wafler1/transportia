@@ -4,10 +4,6 @@ import '../theme/app_colors.dart';
 import '../widgets/pressable_highlight.dart';
 import 'skeletons/skeleton_shimmer.dart';
 
-/// A reusable button widget for loading more items.
-///
-/// Displays a loading shimmer when [isLoading] is true, otherwise shows the
-/// "Load more" label with a chevron icon. Tapping while loading does nothing.
 class LoadMoreButton extends StatelessWidget {
   const LoadMoreButton({
     required this.onTap,
@@ -34,7 +30,6 @@ class LoadMoreButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (isLoading) ...[
-              // Loading shimmer placeholder
               IgnorePointer(
                 child: Align(
                   alignment: Alignment.centerRight,

@@ -92,7 +92,6 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
       _isLoadingName = true;
     });
 
-    // Fetch location name
     _fetchLocationName(coordinates);
   }
 
@@ -201,7 +200,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
     try {
       await FavoritesService.saveFavorite(favorite);
       if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

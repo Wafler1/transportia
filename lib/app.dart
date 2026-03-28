@@ -178,13 +178,12 @@ class _RootGateState extends State<_RootGate> {
       return;
     }
     debugPrint('Received ${Environment.appName} trip link: ${uri.toString()}');
-    // Trip link payload will be handled in a future iteration.
+    // TODO: this
   }
 
   @override
   Widget build(BuildContext context) {
     if (_seen == null) {
-      // Simple placeholder while loading preference.
       return const SizedBox.expand();
     }
     final mainChild = _seen!

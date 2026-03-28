@@ -4,7 +4,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../theme/app_colors.dart';
 import 'pressable_highlight.dart';
 
-/// Reusable interactive tile for the settings screens.
 class SettingsTile extends StatelessWidget {
   const SettingsTile({
     super.key,

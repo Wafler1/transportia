@@ -23,9 +23,7 @@ class VersionService {
           return version;
         }
       }
-    } catch (_) {
-      // Silently swallow errors; update prompts shouldn't block startup.
-    }
+    } catch (_) {}
     return null;
   }
 }

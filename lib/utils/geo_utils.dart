@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 
-const double _earthRadiusMeters = 6371000; // Average Earth radius in meters.
+const double _earthRadiusMeters = 6371000;
 
-/// Returns the haversine distance in meters between two WGS84 coordinates.
 double coordinateDistanceInMeters(
   double lat1,
   double lon1,
@@ -21,8 +20,6 @@ double coordinateDistanceInMeters(
   return _earthRadiusMeters * c;
 }
 
-/// Convenience helper that checks whether two coordinates are within a short
-/// [thresholdInMeters] distance of each other.
 bool areCoordsClose(
   double lat1,
   double lon1,

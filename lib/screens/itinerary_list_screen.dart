@@ -20,7 +20,6 @@ import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/skeletons/skeleton_list.dart';
-// Pagination response model imported via RoutingService; no direct reference needed.
 
 class ItineraryListScreen extends StatefulWidget {
   final FutureOr<double> fromLat;
@@ -150,7 +149,6 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         _scrollController.jumpTo(0);
       }
     } catch (_) {
-      // Ignore network errors for now; button remains visible for retry.
     } finally {
       setState(() => _isLoadingPrevious = false);
     }
@@ -171,11 +169,8 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
     return PopScope(
-      // Handle both back button and back gesture
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) {
-          // Unfocus any active text fields before returning to the map
-          // This prevents fields from auto-focusing when returning via back gesture
           FocusScope.of(context).unfocus();
         }
       },
@@ -186,7 +181,6 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
             children: [
               CustomAppBar(
                 title: 'Search Results',
-                // Unfocus any active text fields before returning to the map.
                 onBackButtonPressed: () {
                   FocusScope.of(context).unfocus();
                   Navigator.of(context).pop();
@@ -343,7 +337,6 @@ class ItineraryCard extends StatelessWidget {
             runSpacing: 4.0,
             children: itinerary.legs.map((leg) => LegWidget(leg: leg)).toList(),
           ),
-          // Thin horizontal divider with vertical spacing, inset from sides (no Material Divider)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: 12.0,
@@ -358,14 +351,11 @@ class ItineraryCard extends StatelessWidget {
               ),
             ),
           ),
-          // Bottom row with stats on left and "More" action on right
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left side: transfers, calories, alerts
               Row(
                 children: [
-                  // Transfers
                   Icon(
                     LucideIcons.repeat,
                     size: 16,
@@ -380,7 +370,6 @@ class ItineraryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Calories (only show if there's walking)
                   if (itinerary.walkingDistance > 0) ...[
                     Icon(
                       LucideIcons.flame,
@@ -413,7 +402,6 @@ class ItineraryCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                   ],
-                  // Alerts (only show if there are alerts)
                   if (itinerary.alertsCount > 0) ...[
                     Icon(
                       LucideIcons.triangleAlert,
@@ -431,7 +419,6 @@ class ItineraryCard extends StatelessWidget {
                   ],
                 ],
               ),
-              // Right side: "More" action
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -510,8 +497,7 @@ class LegWidget extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height:
-              18, // Match the height of the text container (14 font + 2*2 padding)
+          height: 18,
           child: Center(
             child: Icon(
               icon,

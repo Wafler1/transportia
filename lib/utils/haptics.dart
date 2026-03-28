@@ -34,13 +34,10 @@ class Haptics {
       } else {
         await Vibration.vibrate(duration: duration);
       }
-    } catch (_) {
-      // Silently ignore unsupported platforms or errors.
-    }
+    } catch (_) {}
   }
 
   static Future<void> subtlePress() async {
-    // Small ascending pattern to feel responsive but not intrusive.
     await _tryVibrate(duration: 20, amplitude: 40);
     await Future.delayed(const Duration(milliseconds: 40));
     await _tryVibrate(duration: 20, amplitude: 80);

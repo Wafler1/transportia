@@ -52,7 +52,6 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       context,
     ).push(CustomPageRoute(child: const AddFavouriteMapScreen()));
 
-    // Reload favorites if something was added
     if (result == true && mounted) {
       await FavoritesService.getFavorites();
     }
@@ -65,7 +64,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
       builder: (context) => EditFavoriteOverlay(
         favorite: favorite,
         onSaved: () {
-          setState(() {}); // Trigger rebuild to show updated data
+          setState(() {});
         },
       ),
     );

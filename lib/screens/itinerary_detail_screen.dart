@@ -157,11 +157,9 @@ class JourneyOverviewWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main journey info row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Departure
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +183,6 @@ class JourneyOverviewWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              // Duration
               Expanded(
                 child: Column(
                   children: [
@@ -202,7 +199,6 @@ class JourneyOverviewWidget extends StatelessWidget {
                   ],
                 ),
               ),
-              // Arrival
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -229,7 +225,6 @@ class JourneyOverviewWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Additional stats row with map icon on the right
           Row(
             children: [
               Wrap(
@@ -241,21 +236,18 @@ class JourneyOverviewWidget extends StatelessWidget {
                     '${itinerary.transfers}',
                     itinerary.transfers == 1 ? 'transfer' : 'transfers',
                   ),
-                  // Only show calories if there is walking in the itinerary
                   if (itinerary.walkingDistance > 0)
                     _buildStatChip(
                       LucideIcons.flame,
                       '${itinerary.calories}',
                       'cal',
                     ),
-                  // Show cost if fare information is available
                   if (itinerary.fare != null && itinerary.fare!.amount > 0)
                     _buildStatChip(
                       LucideIcons.banknote,
                       '${itinerary.fare!.amount.toStringAsFixed(2)}',
                       itinerary.fare!.currency,
                     ),
-                  // Show alerts if there are any
                   if (itinerary.alertsCount > 0)
                     _buildStatChip(
                       LucideIcons.triangleAlert,
@@ -265,7 +257,6 @@ class JourneyOverviewWidget extends StatelessWidget {
                 ],
               ),
               const Spacer(),
-              // Map icon button
               GestureDetector(
                 onTap: () {
                   Navigator.of(context).push(
@@ -338,12 +329,10 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main leg info (always visible)
             Row(
               children: [
                 _buildLegIcon(),
                 const SizedBox(width: 8),
-                // Title with optional route colour styling
                 Expanded(child: _buildTitleWidget()),
                 const SizedBox(width: 8),
                 Row(
@@ -390,7 +379,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
               ),
             ),
 
-            // Origin and destination (only show when collapsed)
             if (!_isExpanded) ...[
               const SizedBox(height: 8),
               Row(
@@ -434,7 +422,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
               ),
             ],
 
-            // Expanded content (only for non-walk legs)
             if (_isExpanded && !isWalkLeg) ...[
               const SizedBox(height: 12),
               const Padding(
@@ -458,14 +445,12 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     final modeName = getTransitModeName(widget.leg.mode);
 
     if (widget.leg.mode == 'WALK') {
-      // For walk legs, add distance in parentheses
       final distance = widget.leg.distance;
       if (distance != null && distance > 0) {
         return '$modeName (${(distance / 1000).toStringAsFixed(2)} km)';
       }
       return modeName;
     } else {
-      // For transit legs, add headsign if available
       if (widget.leg.headsign != null && widget.leg.headsign!.isNotEmpty) {
         return '$modeName • ${widget.leg.headsign}';
       }
@@ -474,10 +459,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   Widget _buildTransitTimelineContent() {
-    // Build a list of all stops including origin and destination
     final stops = <_TimelineStop>[];
 
-    // Add origin
     stops.add(
       _TimelineStop(
         name: widget.leg.fromName,
@@ -490,7 +473,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       ),
     );
 
-    // Add intermediate stops
     for (final stop in widget.leg.intermediateStops) {
       stops.add(
         _TimelineStop(
@@ -505,7 +487,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
 
-    // Add destination
     stops.add(
       _TimelineStop(
         name: widget.leg.toName,
@@ -525,14 +506,12 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Alerts
         if (widget.leg.alerts.isNotEmpty) ...[
           const SizedBox(height: 6),
           ...widget.leg.alerts.map((alert) => _buildAlertWidget(alert)),
           const SizedBox(height: 6),
         ],
 
-        // Timeline
         FixedTimeline.tileBuilder(
           theme: TimelineThemeData(
             nodePosition: 0,
@@ -565,7 +544,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
         const SizedBox(height: 12),
 
-        // Metadata section
         _buildMetadataSection(),
       ],
     );
@@ -576,7 +554,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     final departureDelay = _departureDelay;
     final arrivalDelay = _arrivalDelay;
 
-    // Cancelled
     if (widget.leg.cancelled) {
       metadata.add(
         InfoChip(
@@ -587,7 +564,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
 
-    // Track info integrated here
     if (widget.leg.fromTrack != null) {
       metadata.add(
         InfoChip(
@@ -597,12 +573,10 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
 
-    // Real-time indicator
     if (widget.leg.realTime) {
       metadata.add(const InfoChip(icon: LucideIcons.radio, label: 'Real-time'));
     }
 
-    // Distance
     if (widget.leg.distance != null && widget.leg.distance! > 0) {
       metadata.add(
         InfoChip(
@@ -612,7 +586,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
 
-    // Agency and Route
     if (widget.leg.agencyName != null) {
       metadata.add(
         InfoChip(icon: LucideIcons.building, label: widget.leg.agencyName!),
@@ -791,7 +764,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     return Icon(getLegIcon(widget.leg.mode), size: 24, color: AppColors.black);
   }
 
-  // Build the title widget, applying background and text colours if provided.
   Widget _buildTitleWidget() {
     if (widget.leg.displayName != null) {
       final routeColor = parseHexColor(widget.leg.routeColor);
@@ -825,7 +797,6 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
         ),
       );
     }
-    // Fallback to transit mode name when no short name.
     return Text(
       getTransitModeName(widget.leg.mode),
       style: TextStyle(

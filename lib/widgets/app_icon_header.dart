@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 
-/// Consistent hero/header used across multiple preference/info screens.
 class AppIconHeader extends StatelessWidget {
   const AppIconHeader({
     super.key,

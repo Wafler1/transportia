@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 import '../theme/app_colors.dart';
 
-/// Card-like grouping for related settings rows.
 class SettingsSection extends StatelessWidget {
   const SettingsSection({
     super.key,

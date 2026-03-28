@@ -3,10 +3,6 @@ import 'package:flutter/widgets.dart';
 import '../theme/app_colors.dart';
 import 'custom_app_bar.dart';
 
-/// Shared page scaffold that wraps common secondary screens with a
-/// consistent SafeArea, background and header. It keeps the navigation
-/// stack handling in one place and cuts down the ad-hoc Column/SafeArea
-/// wrappers scattered across the codebase.
 class AppPageScaffold extends StatelessWidget {
   const AppPageScaffold({
     super.key,

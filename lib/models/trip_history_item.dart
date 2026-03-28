@@ -76,7 +76,6 @@ class TripHistoryItem {
     );
   }
 
-  // Create a unique key for deduplication
   String get dedupeKey =>
       '${fromLat.toStringAsFixed(3)},${fromLon.toStringAsFixed(3)}->${toLat.toStringAsFixed(3)},${toLon.toStringAsFixed(3)}';
 }

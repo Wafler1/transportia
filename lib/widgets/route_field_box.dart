@@ -6,8 +6,6 @@ import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
 import 'skeletons/skeleton_shimmer.dart';
 
-// Toast helpers moved to lib/widgets/validation_toast.dart
-
 class RouteFieldBox extends StatefulWidget {
   const RouteFieldBox({
     super.key,
@@ -78,12 +76,10 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: AppColors.black.withValues(alpha: 0.1),
-          ), // ~10% black
+          border: Border.all(color: AppColors.black.withValues(alpha: 0.1)),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x14000000), // subtle shadow
+              color: Color(0x14000000),
               blurRadius: 10,
               offset: Offset(0, 4),
             ),
@@ -92,7 +88,6 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
-            // From
             Expanded(
               child: _InlineField(
                 controller: widget.fromController,
@@ -105,20 +100,17 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 showLoading: widget.fromLoading,
               ),
             ),
-            // Divider
             SizedBox(
               width: 44,
               height: 36,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // The thin divider line behind the button
                   Container(
                     width: 1,
                     height: 28,
                     color: AppColors.black.withValues(alpha: 0.1),
                   ),
-                  // The swap button centered on the divider
                   GestureDetector(
                     onTap: () {
                       final fromText = widget.fromController.text;
@@ -132,7 +124,6 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                       }
                       final swapped = widget.onSwapRequested();
                       if (!swapped) return;
-                      // Light haptic on successful swap
                       Haptics.mediumTick();
                     },
                     onTapDown: (_) => setState(() => _swapPressed = true),
@@ -173,7 +164,6 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 ],
               ),
             ),
-            // To
             Expanded(
               child: _InlineField(
                 controller: widget.toController,
@@ -235,7 +225,6 @@ class _InlineField extends StatelessWidget {
             CupertinoTextField(
               controller: controller,
               focusNode: focusNode,
-              // Show placeholder immediately when focused; hide when overlay wants to show.
               placeholder:
                   (isFromField &&
                       showMyLocationDefault &&
@@ -250,13 +239,12 @@ class _InlineField extends StatelessWidget {
               style: TextStyle(color: AppColors.black, fontSize: 16),
               cursorColor: AppColors.accentOf(context),
               textAlign: textAlign,
-              decoration: null, // Let outer container draw the box
+              decoration: null,
               padding: const EdgeInsets.symmetric(vertical: 8),
               maxLines: 1,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.text,
             ),
-            // Overlay always present but animated opacity/blur/offset for smooth transitions
             IgnorePointer(
               ignoring: overlayT < 0.01,
               child: Opacity(
@@ -333,5 +321,3 @@ class _InlineField extends StatelessWidget {
     );
   }
 }
-
-// Inline toast view removed; shared toast lives in validation_toast.dart

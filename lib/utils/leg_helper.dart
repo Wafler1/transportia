@@ -64,8 +64,6 @@ IconData getLegIcon(String mode) {
   }
 }
 
-/// Returns a human‑readable name for a transit [mode].
-/// This mirrors the icon mapping and provides clearer text for UI.
 String getTransitModeName(String mode) {
   switch (mode) {
     case 'WALK':
@@ -125,6 +123,6 @@ String getTransitModeName(String mode) {
     case 'OTHER':
       return 'Other';
     default:
-      return mode; // fallback to raw mode string
+      return mode;
   }
 }

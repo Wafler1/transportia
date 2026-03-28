@@ -70,7 +70,6 @@ class _AccountScreenState extends State<AccountScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                 child: Row(
@@ -113,7 +112,6 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
               ),
 
-              // Sponsored by Wafler.one banner with orange shadow
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -194,7 +192,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
               const SizedBox(height: 12),
 
-              // Statistics section
               SettingsSection(
                 title: 'Analytics',
                 children: [
@@ -213,7 +210,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
               const SizedBox(height: 12),
 
-              // Settings sections
               SettingsSection(
                 title: 'Preferences',
                 children: [
@@ -290,7 +286,6 @@ class _AccountScreenState extends State<AccountScreen> {
 
               const SizedBox(height: 32),
 
-              // App version footer
               Center(
                 child: Column(
                   children: [
@@ -326,7 +321,6 @@ class _AccountScreenState extends State<AccountScreen> {
                         color: AppColors.black.withValues(alpha: 0.4),
                       ),
                     ),
-                    // Add extra padding to account for floating nav bar
                     const SizedBox(height: 112),
                   ],
                 ),

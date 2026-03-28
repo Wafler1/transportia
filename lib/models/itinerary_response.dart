@@ -1,10 +1,5 @@
 import 'itinerary.dart';
 
-/// Response wrapper for the routing API that supports pagination.
-///
-/// The API returns a list of direct itineraries and regular itineraries.
-/// It may also include a `nextPageCursor` field for fetching additional
-/// results. This class mirrors the structure used by `StopTimesResponse`.
 class ItineraryResponse {
   final List<Itinerary> itineraries;
   final String? nextPageCursor;

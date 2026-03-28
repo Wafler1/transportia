@@ -2,7 +2,7 @@ import 'package:flutter/animation.dart';
 
 class SmallBackOutCurve extends Curve {
   const SmallBackOutCurve(this.s);
-  final double s; // overshoot; 0.4–0.8 is subtle
+  final double s;
   @override
   double transform(double t) {
     t = t - 1.0;

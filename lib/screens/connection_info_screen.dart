@@ -43,12 +43,9 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
   void initState() {
     super.initState();
     _fetchTripDetails();
-    // Start periodic refresh every 5 seconds to update vehicle position
     _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted && _itinerary != null) {
-        setState(() {
-          // This will trigger a rebuild and recalculate the vehicle position
-        });
+        setState(() {});
       }
     });
   }
@@ -74,9 +71,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
     }
   }
 
-  // Helper to check if two times are in the same minute
   bool _isSameMinute(DateTime a, DateTime b) {
-    // Convert both to local time to ensure proper comparison
     final aLocal = a.toLocal();
     final bLocal = b.toLocal();
     return aLocal.year == bLocal.year &&
@@ -86,29 +81,23 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
         aLocal.minute == bLocal.minute;
   }
 
-  // Estimate where the vehicle is based on current time and schedule
-  // Returns: (stopIndex, isAtStation)
-  // stopIndex: which stop the vehicle is at/passed
-  // isAtStation: true if vehicle is currently at a station, false if between stations
   (int, bool) _estimateVehiclePosition(List<JourneyStop> stops) {
     final now = DateTime.now();
 
-    // Check if trip hasn't started yet
     final firstStop = stops.first;
     final firstDeparture = firstStop.departure ?? firstStop.arrival;
     if (firstDeparture != null &&
         !_isSameMinute(now, firstDeparture) &&
         now.isBefore(firstDeparture)) {
-      return (-1, false); // Trip hasn't started, don't show vehicle
+      return (-1, false);
     }
 
-    // Check if trip has ended
     final lastStop = stops.last;
     final lastArrival = lastStop.arrival ?? lastStop.departure;
     if (lastArrival != null &&
         !_isSameMinute(now, lastArrival) &&
         now.isAfter(lastArrival)) {
-      return (stops.length, false); // Trip has ended, don't show vehicle
+      return (stops.length, false);
     }
 
     for (int i = 0; i < stops.length; i++) {
@@ -116,34 +105,24 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
       final arrival = stop.arrival;
       final departure = stop.departure;
 
-      // Check if vehicle is at this station
-      // Vehicle is at station if:
-      // 1. Current time is in the same minute as departure time (vehicle hasn't left yet)
-      // 2. OR current time is between arrival and departure
       if (departure != null && _isSameMinute(now, departure)) {
-        return (
-          i,
-          true,
-        ); // At this station (current time matches departure minute)
+        return (i, true);
       }
 
       if (arrival != null && departure != null) {
         if (now.isAfter(arrival) && now.isBefore(departure)) {
-          return (i, true); // At this station (between arrival and departure)
+          return (i, true);
         }
       }
 
-      // Check if vehicle hasn't reached this stop yet
       final nextTime = departure ?? arrival;
       if (nextTime != null &&
           now.isBefore(nextTime) &&
           !_isSameMinute(now, nextTime)) {
-        // Vehicle is between previous and this stop
         return (i - 1, false);
       }
     }
 
-    // If all stops are in the past, vehicle has completed the journey
     return (stops.length, false);
   }
 
@@ -153,13 +132,11 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: Column(
           children: const [
-            // Header skeleton
             SkeletonCard(
               height: 120,
               borderRadius: BorderRadius.all(Radius.circular(14)),
               margin: EdgeInsets.all(12),
             ),
-            // Timeline skeleton
             SkeletonCard(
               height: 400,
               borderRadius: BorderRadius.all(Radius.circular(14)),
@@ -224,7 +201,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
       );
     }
 
-    // For now, we'll use the first leg (main transit leg)
     final leg = _itinerary!.legs.first;
     final routeColor =
         parseHexColor(leg.routeColor) ?? AppColors.accentOf(context);
@@ -240,13 +216,10 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
     final showVehicle =
         vehicleStopIndex >= 0 && vehicleStopIndex < stops.length;
 
-    // Create timeline items with vehicle position
     final timelineItems = <_TimelineItem>[];
     for (int i = 0; i < stops.length; i++) {
-      // Always add the station as a regular item
       timelineItems.add(_TimelineItem(stop: stops[i], isVehicle: false));
 
-      // Insert vehicle position marker between stops if vehicle is in transit
       if (showVehicle &&
           !isVehicleAtStation &&
           i == vehicleStopIndex &&
@@ -255,16 +228,13 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
       }
     }
 
-    // Determine upcoming stop (next stop the vehicle will reach)
     int upcomingStopIndex = -1;
     if (showVehicle) {
       if (isVehicleAtStation) {
-        // If at a station, upcoming is the next station
         upcomingStopIndex = vehicleStopIndex < stops.length - 1
             ? vehicleStopIndex + 1
             : -1;
       } else {
-        // If between stations, upcoming is the next station after current segment
         upcomingStopIndex = vehicleStopIndex < stops.length - 1
             ? vehicleStopIndex + 1
             : -1;
@@ -273,7 +243,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
     final currentStopIndex = vehicleStopIndex;
 
-    // Alert colors — adapt to dark mode
     final isDark = ThemeProvider.instance?.isDark ?? false;
     final alertBgColor = isDark
         ? const Color(0xFF2D2200)
@@ -285,7 +254,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
         ? const Color(0xFFFFC107)
         : const Color(0xFFF57C00);
 
-    // Collect all alerts
     final allAlerts = <String, Alert>{};
     for (final stop in stops) {
       for (final alert in stop.alerts) {
@@ -295,7 +263,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
         }
       }
     }
-    // Add leg-level alerts
     for (final alert in leg.alerts) {
       if (alert.headerText != null || alert.descriptionText != null) {
         final key = '${alert.headerText}|${alert.descriptionText}';
@@ -308,7 +275,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header card with route and destination
           CustomCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -354,7 +320,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                         ],
                       ),
                     ),
-                    // Map icon button
                     GestureDetector(
                       onTap: () {
                         Navigator.of(context).push(
@@ -381,7 +346,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
             ),
           ),
 
-          // Alerts section
           if (allAlerts.isNotEmpty) ...[
             const SizedBox(height: 12),
             CustomCard(
@@ -465,7 +429,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
             ),
           ],
 
-          // Information section
           const SizedBox(height: 12),
           CustomCard(
             child: Column(
@@ -522,7 +485,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
             ),
           ),
 
-          // Timeline section
           const SizedBox(height: 12),
           CustomCard(
             child: Column(
@@ -539,8 +501,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                 const SizedBox(height: 16),
                 FixedTimeline.tileBuilder(
                   theme: TimelineThemeData(
-                    nodePosition:
-                        0.08, // Offset from left edge to center vehicle icon
+                    nodePosition: 0.08,
                     color: routeColor,
                     indicatorTheme: const IndicatorThemeData(size: 28),
                     connectorTheme: const ConnectorThemeData(thickness: 2.5),
@@ -551,7 +512,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                     contentsBuilder: (context, index) {
                       final item = timelineItems[index];
 
-                      // Vehicle position indicator between stations - no content
                       if (item.isVehicle && item.stop == null) {
                         return const SizedBox.shrink();
                       }
@@ -661,7 +621,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                     indicatorBuilder: (context, index) {
                       final item = timelineItems[index];
 
-                      // Vehicle position indicator between stations
                       if (item.isVehicle && item.stop == null) {
                         return TimelineIndicatorBox(
                           lineColor: routeColor,
@@ -681,12 +640,10 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                         );
                       }
 
-                      // Regular station indicator
                       final stop = item.stop!;
                       final stopIndex = stops.indexOf(stop);
                       final isPassed = stopIndex <= currentStopIndex;
 
-                      // Determine the base indicator size and color
                       final bool isTerminal =
                           stopIndex == 0 || stopIndex == stops.length - 1;
                       final double dotSize = isTerminal ? 16 : 12;
@@ -694,7 +651,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                           ? routeColor.withValues(alpha: 0.6)
                           : routeColor;
 
-                      // Check if vehicle is at this specific station
                       final bool isVehicleHere =
                           showVehicle &&
                           isVehicleAtStation &&
@@ -702,20 +658,16 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       final bool isFirstStop = stopIndex == 0;
                       final bool isLastStop = stopIndex == stops.length - 1;
 
-                      // If vehicle is at this station, overlay the vehicle icon on top of the dot
                       if (isVehicleHere) {
                         return TimelineIndicatorBox(
                           lineColor: dotColor,
-                          // Hide the line entirely behind the 28×28 vehicle disc
                           centerGap: 28.0,
                           cutTop: isFirstStop,
                           cutBottom: isLastStop,
                           child: Stack(
                             alignment: Alignment.center,
                             children: [
-                              // Base station dot still drawn for consistency
                               DotIndicator(color: dotColor, size: dotSize),
-                              // Vehicle icon overlaid on top
                               Container(
                                 width: 28,
                                 height: 28,
@@ -734,10 +686,8 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                         );
                       }
 
-                      // Regular station dot without vehicle (fixed layout box, with bridge line)
                       return TimelineIndicatorBox(
                         lineColor: dotColor,
-                        // leave a small padding so the stroke doesn't peek out
                         centerGap: (dotSize),
                         cutTop: isFirstStop,
                         cutBottom: isLastStop,
@@ -747,12 +697,10 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       );
                     },
                     connectorBuilder: (context, index, connectorType) {
-                      // Determine if this connector segment is passed
                       bool isPassed = false;
                       if (index < timelineItems.length) {
                         final item = timelineItems[index];
                         if (item.isVehicle) {
-                          // Segment before vehicle is passed
                           isPassed = true;
                         } else {
                           final stopIndex = stops.indexOf(item.stop!);
@@ -783,7 +731,6 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
   }
 }
 
-// Helper class for timeline items
 class _TimelineItem {
   final JourneyStop? stop;
   final bool isVehicle;

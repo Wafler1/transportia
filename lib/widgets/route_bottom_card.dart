@@ -47,11 +47,11 @@ class BottomCard extends StatefulWidget {
   });
 
   final bool isCollapsed;
-  final double collapseProgress; // 0.0 (expanded) -> 1.0 (collapsed)
+  final double collapseProgress;
   final VoidCallback onHandleTap;
   final VoidCallback onDragStart;
-  final ValueChanged<double> onDragUpdate; // dy delta
-  final ValueChanged<double> onDragEnd; // velocity dy
+  final ValueChanged<double> onDragUpdate;
+  final ValueChanged<double> onDragEnd;
   final TextEditingController fromCtrl;
   final TextEditingController toCtrl;
   final FocusNode fromFocusNode;
@@ -90,7 +90,7 @@ class _BottomCardState extends State<BottomCard> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000), // ~10% black
+            color: Color(0x1A000000),
             blurRadius: 14,
             offset: Offset(0, -6),
           ),
@@ -99,8 +99,6 @@ class _BottomCardState extends State<BottomCard> {
       child: GestureDetector(
         behavior: HitTestBehavior.translucent,
         onTap: () {
-          // Don't unfocus if either text field is already focused
-          // This prevents the flickering when tapping on an already-focused field
           if (widget.fromFocusNode.hasFocus || widget.toFocusNode.hasFocus) {
             return;
           }
@@ -108,8 +106,6 @@ class _BottomCardState extends State<BottomCard> {
         },
         child: Listener(
           onPointerDown: (_) {
-            // Don't unfocus if either text field is already focused
-            // This prevents the flickering when tapping on an already-focused field
             if (widget.fromFocusNode.hasFocus || widget.toFocusNode.hasFocus) {
               return;
             }
@@ -121,7 +117,6 @@ class _BottomCardState extends State<BottomCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Drag handle area
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: widget.onHandleTap,
@@ -147,10 +142,8 @@ class _BottomCardState extends State<BottomCard> {
                     ),
                   ),
 
-                  // Title above the pickers; fade and collapse height progressively with drag
                   Builder(
                     builder: (context) {
-                      // Start fading the header from mid -> collapsed
                       final fadeStart = 0.5;
                       final t =
                           ((widget.collapseProgress - fadeStart) /
@@ -163,7 +156,7 @@ class _BottomCardState extends State<BottomCard> {
                         child: ClipRect(
                           child: Align(
                             alignment: Alignment.topCenter,
-                            heightFactor: opacity, // shrink height as it fades
+                            heightFactor: opacity,
                             child: Opacity(
                               opacity: opacity,
                               child: Padding(
@@ -187,20 +180,13 @@ class _BottomCardState extends State<BottomCard> {
                     },
                   ),
 
-                  // Route input fields
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     child: Listener(
-                      // Block parent Listener's onPointerDown from triggering unfocus
-                      onPointerDown: (_) {
-                        // Consume the event - don't call onUnfocus here
-                      },
+                      onPointerDown: (_) {},
                       behavior: HitTestBehavior.opaque,
                       child: GestureDetector(
-                        // Block parent GestureDetector's onTap from triggering unfocus
-                        onTap: () {
-                          // Consume the event - don't call onUnfocus here
-                        },
+                        onTap: () {},
                         behavior: HitTestBehavior.opaque,
                         child: RouteFieldBox(
                           fromController: widget.fromCtrl,
@@ -218,18 +204,16 @@ class _BottomCardState extends State<BottomCard> {
                     ),
                   ),
 
-                  // Time and Search actions (expanded only)
                   if (!widget.isCollapsed)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                       child: Builder(
                         builder: (context) {
-                          const double start =
-                              0.5; // begin sliding near mid-drag
+                          const double start = 0.5;
                           final double raw =
                               (widget.collapseProgress - start) / (1 - start);
                           final double t = raw.clamp(0.0, 1.0);
-                          final double dy = 16.0 * t; // slight slide 0..16 px
+                          final double dy = 16.0 * t;
                           return GestureDetector(
                             behavior: HitTestBehavior.translucent,
                             onTap: widget.onUnfocus,
@@ -238,11 +222,7 @@ class _BottomCardState extends State<BottomCard> {
                               child: Row(
                                 children: [
                                   GestureDetector(
-                                    // Block parent GestureDetector from triggering unfocus
-                                    // This prevents flickering when tapping the time button
-                                    onTap: () {
-                                      // Consume the event - button handles its own tap
-                                    },
+                                    onTap: () {},
                                     behavior: HitTestBehavior.opaque,
                                     child: CompositedTransformTarget(
                                       link: widget.timeSelectionLayerLink,
@@ -276,12 +256,8 @@ class _BottomCardState extends State<BottomCard> {
                                     ),
                                   ),
                                   const Spacer(),
-                                  // Search button (primary)
                                   GestureDetector(
-                                    // Block parent GestureDetector from interfering
-                                    onTap: () {
-                                      // Consume the event - button handles its own tap
-                                    },
+                                    onTap: () {},
                                     behavior: HitTestBehavior.opaque,
                                     child: PrimaryButton(
                                       onTap: () =>
@@ -309,7 +285,6 @@ class _BottomCardState extends State<BottomCard> {
                       ),
                     ),
 
-                  // Scrollable content for favourites and recents
                   if (!widget.isCollapsed)
                     Expanded(
                       child: SingleChildScrollView(
@@ -349,8 +324,6 @@ class _BottomCardState extends State<BottomCard> {
                                   ),
                                 ),
                               ),
-
-                              // Recent trips section
                               if (widget.recentTrips.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 16),
@@ -386,8 +359,6 @@ class _BottomCardState extends State<BottomCard> {
                                     ),
                                   ),
                                 ),
-
-                              // Add padding to account for floating nav bar
                               const SizedBox(height: 96),
                             ],
                           ),
@@ -418,14 +389,10 @@ class _RecentTripTileState extends State<_RecentTripTile> {
   bool _isLoading = false;
 
   void _handleTap() async {
-    if (_isLoading) return; // Prevent multiple clicks
+    if (_isLoading) return;
 
     setState(() => _isLoading = true);
-
-    // Call the onTap callback
     widget.onTap();
-
-    // Reset loading state after a delay (navigation will have happened by then)
     await Future.delayed(const Duration(milliseconds: 1500));
     if (mounted) {
       setState(() => _isLoading = false);

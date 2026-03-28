@@ -41,7 +41,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   }
 
   Future<void> _onContinue() async {
-    // Persist that welcome has been seen, then fade overlay away.
     final prefs = SharedPreferencesAsync();
     await prefs.setBool(WelcomeScreen._kWelcomeSeenKey, true);
     if (!mounted) return;
@@ -73,12 +72,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Pre-mount the map behind; defer its location init until revealed.
         RepaintBoundary(
           child: MapScreen(deferInit: true, activateOnShow: _activateMap),
         ),
 
-        // Welcome overlay that fades out, then gets removed.
         if (!_overlayGone)
           AnimatedOpacity(
             opacity: _fading ? 0.0 : 1.0,
@@ -86,7 +83,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             curve: Curves.easeOutCubic,
             onEnd: () {
               if (_fading && mounted) {
-                // Activate the map's deferred init once the overlay is gone.
                 _activateMap.value = true;
                 setState(() => _overlayGone = true);
                 widget.onFinished?.call();
@@ -231,5 +227,3 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
-
-// PressableHighlight moved to lib/widgets/pressable_highlight.dart

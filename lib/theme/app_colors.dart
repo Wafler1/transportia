@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/theme_provider.dart';
 
 class AppColors {
-  // Dynamic accent color - use this when you have BuildContext
   static Color accentOf(BuildContext context) {
     try {
       return context.watch<ThemeProvider>().accentColor;
@@ -15,18 +14,15 @@ class AppColors {
       try {
         return context.read<ThemeProvider>().accentColor;
       } catch (_) {
-        // Fallback if provider is not available
         return accent;
       }
     }
   }
 
-  // Static accent color for places where context is not available
   static Color get accent => ThemeProvider.defaultAccentColor;
   static const Color solidBlack = Color(0xFF000000);
   static const Color solidWhite = Color(0xFFFFFFFF);
 
-  // Theme-driven base colors (light/dark).
   static Color get black =>
       _resolveThemeColor((provider) => provider.textColor, solidBlack);
   static Color get white =>

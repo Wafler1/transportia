@@ -111,9 +111,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
             _lastUserLatLng = LatLng(pos.latitude, pos.longitude);
           });
         }
-      } catch (_) {
-        // Silently fail if location is not available
-      }
+      } catch (_) {}
     }
   }
 
@@ -159,7 +157,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
   void _onFocusChanged() {
     setState(() {});
-    // Show overlay on focus if field is empty or has less than 3 characters
     if (_searchFocus.hasFocus) {
       _onSearchTextChanged();
     }
@@ -238,12 +235,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     final query = _searchController.text.trim();
     setState(() {});
 
-    // Show overlay on focus even with empty query
     if (_searchFocus.hasFocus) {
       if (query.length >= 3) {
         _requestSuggestions(query);
       } else {
-        // Still show overlay, just with "Keep typing" message
         setState(() {
           _suggestions = [];
           _isFetchingSuggestions = false;
@@ -453,7 +448,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       if (!mounted) return;
 
       setState(() {
-        // Deduplicate the combined list to avoid duplicates across pages
         _stopTimes = deduplicateStopTimes([
           ...?_stopTimes,
           ...response.stopTimes,
@@ -568,7 +562,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Header
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                       child: Column(
@@ -621,13 +614,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Search field (styled like RouteFieldBox)
                           CompositedTransformTarget(
                             link: _searchFieldLink,
                             child: GestureDetector(
-                              onTap: () {
-                                // Prevent unfocus when tapping the field
-                              },
+                              onTap: () {},
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: AppColors.white,
@@ -712,7 +702,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
                           const SizedBox(height: 12),
 
-                          // Time and Search buttons
                           Row(
                             children: [
                               CompositedTransformTarget(
@@ -760,7 +749,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                       ),
                     ),
 
-                    // Content area
                     Expanded(
                       child: _isLoadingStopTimes
                           ? _buildLoadingSkeleton()
@@ -780,7 +768,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                     left: 20,
                                     right: 20,
                                     top: 0,
-                                    bottom: 96, // Padding for navbar
+                                    bottom: 96,
                                   ),
                                   itemCount: totalItems,
                                   itemBuilder: (context, index) {
@@ -872,7 +860,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       ),
                                       padding: EdgeInsets.zero,
                                     ),
-                                    // Add padding at bottom for navbar
                                     const SizedBox(height: 96),
                                   ],
                                 ),
@@ -882,7 +869,6 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                   ],
                 ),
 
-                // Suggestions overlay
                 Positioned(
                   left: 20,
                   right: 20,
@@ -969,20 +955,17 @@ class _StopTimeCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Mode icon (not in color badge)
             Icon(
               modeIcon,
               size: 24,
               color: AppColors.black.withValues(alpha: 0.4),
             ),
             const SizedBox(width: 12),
-            // Route badge and destination in a column
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Route badge (without icon)
                   Container(
                     constraints: const BoxConstraints(minWidth: 30),
                     padding: const EdgeInsets.symmetric(
@@ -1006,7 +989,6 @@ class _StopTimeCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Destination
                   Text(
                     stopTime.headsign,
                     style: TextStyle(
@@ -1021,7 +1003,6 @@ class _StopTimeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Times stacked vertically on the right
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1096,5 +1077,3 @@ class _TimeWithDelayText extends StatelessWidget {
     );
   }
 }
-
-// LoadMoreButton widget has been moved to lib/widgets/load_more_button.dart

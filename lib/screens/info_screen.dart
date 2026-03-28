@@ -234,9 +234,7 @@ class _InfoScreenState extends State<InfoScreen> {
         try {
           final uri = Uri.parse(url);
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } catch (e) {
-          // Handle error silently
-        }
+        } catch (e) {}
       },
       child: CustomCard(
         margin: const EdgeInsets.only(bottom: 8),

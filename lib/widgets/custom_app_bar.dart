@@ -16,8 +16,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use a Stack so the title can be truly centered on the screen while the back
-    // button stays left‑aligned.
     return Padding(
       padding: const EdgeInsets.all(12.0),
       child: SizedBox(
