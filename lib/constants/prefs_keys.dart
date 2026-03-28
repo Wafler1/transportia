@@ -7,6 +7,7 @@ class PrefsKeys {
   static const String accentColor = 'accent_color';
   static const String mapStyle = 'map_style';
   static const String appTheme = 'app_theme';
+  static const String vibrationsEnabled = 'vibrations_enabled';
 
   static const String mapShowStops = 'map_show_stops';
   static const String mapQuickButton = 'map_quick_button';

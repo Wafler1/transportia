@@ -12,7 +12,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timelines_plus/timelines_plus.dart';
-import 'package:vibration/vibration.dart';
 import '../animations/curves.dart';
 import '../constants/prefs_keys.dart';
 import '../providers/theme_provider.dart';
@@ -48,6 +47,7 @@ import '../utils/journey_utils.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_notice.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/app_toggle_switch.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/quick_button_picker_sheet.dart';
 import '../widgets/route_bottom_card.dart';
@@ -209,8 +209,7 @@ class _MapScreenState extends State<MapScreen>
   bool _showVehicles = true;
   bool _hideNonRealtimeVehicles = false;
   bool _autoCenterEnabled = true;
-  _QuickButtonAction _quickButtonAction =
-      _QuickButtonAction.toggleRealtimeOnly;
+  _QuickButtonAction _quickButtonAction = _QuickButtonAction.toggleRealtimeOnly;
   final Map<_VehicleModeGroup, bool> _vehicleModeVisibility = {
     _VehicleModeGroup.train: true,
     _VehicleModeGroup.metro: true,
@@ -2208,25 +2207,18 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _initHapticCaps() async {
-    try {
-      _hasVibrator = await Vibration.hasVibrator();
-      _hasCustomVibration = await Vibration.hasCustomVibrationsSupport();
-    } catch (_) {
-      _hasVibrator = false;
-      _hasCustomVibration = false;
-    }
+    _hasVibrator = await Haptics.hasVibrator();
+    _hasCustomVibration = await Haptics.hasCustomVibrationsSupport();
     if (!mounted) return;
     setState(() {});
   }
 
   void _startDragRumble() {
     _dragVibeTimer?.cancel();
-    if (!_hasCustomVibration)
+    if (!_hasCustomVibration || !Haptics.isEnabled)
       return; // keep it subtle: only if custom supported
     _dragVibeTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
-      try {
-        Vibration.vibrate(duration: 8, amplitude: 25);
-      } catch (_) {}
+      Haptics.dragRumblePulse();
     });
   }
 
@@ -3640,10 +3632,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _exitTripFocus() {
-    _animateCollapsedHeightChange(
-      _bottomBarHeight,
-      suppressAutoCenter: true,
-    );
+    _animateCollapsedHeightChange(_bottomBarHeight, suppressAutoCenter: true);
     setState(() {
       _isTripFocus = false;
       _isTripFocusLoading = false;
@@ -3928,13 +3917,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _hapticSnap() {
     if (!_hasVibrator) return;
-    try {
-      if (_hasCustomVibration) {
-        Vibration.vibrate(duration: 10, amplitude: 90);
-      } else {
-        Vibration.vibrate(duration: 10);
-      }
-    } catch (_) {}
+    Haptics.snap(useCustomAmplitude: _hasCustomVibration);
   }
 
   void _onAnyFieldFocus() {

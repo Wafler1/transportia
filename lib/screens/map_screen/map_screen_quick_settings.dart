@@ -412,55 +412,8 @@ class _QuickToggleRow extends StatelessWidget {
                 ),
               ),
             ),
-            _MiniSwitch(value: value),
+            AppToggleSwitch(value: value),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniSwitch extends StatelessWidget {
-  const _MiniSwitch({required this.value});
-
-  final bool value;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = AppColors.accentOf(context);
-    final trackColor = value ? accent : AppColors.black.withValues(alpha: 0.14);
-    final borderColor = value
-        ? accent.withValues(alpha: 0.7)
-        : AppColors.black.withValues(alpha: 0.14);
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOutCubic,
-      width: 30,
-      height: 16,
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: trackColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderColor),
-      ),
-      child: AnimatedAlign(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: AppColors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withValues(alpha: 0.16),
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
         ),
       ),
     );

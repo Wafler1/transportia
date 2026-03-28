@@ -7,7 +7,9 @@ import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/app_toggle_switch.dart';
 import '../widgets/section_title.dart';
+import '../widgets/settings_tile.dart';
 
 class AppearanceScreen extends StatefulWidget {
   const AppearanceScreen({super.key});
@@ -49,11 +51,17 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
     await themeProvider.setAppThemeMode(mode);
   }
 
+  Future<void> _saveVibrationsEnabled(bool enabled) async {
+    final themeProvider = context.read<ThemeProvider>();
+    await themeProvider.setVibrationsEnabled(enabled);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final selectedAccentColor = themeProvider.accentColor;
     final selectedAppThemeMode = themeProvider.appThemeMode;
+    final vibrationsEnabled = themeProvider.vibrationsEnabled;
 
     return AppPageScaffold(
       title: 'Appearance',
@@ -259,6 +267,40 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 32),
+              const SectionTitle(text: 'Interaction'),
+              const SizedBox(height: 8),
+              Text(
+                'Choose whether the app should use tactile feedback',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.black.withValues(alpha: 0.04),
+                  ),
+                ),
+                child: SettingsTile(
+                  icon: vibrationsEnabled
+                      ? LucideIcons.vibrate
+                      : LucideIcons.vibrateOff,
+                  title: 'App vibrations',
+                  subtitle: vibrationsEnabled
+                      ? 'Haptic feedback is enabled throughout the app'
+                      : 'Haptic feedback is disabled throughout the app',
+                  trailingIcon: null,
+                  trailing: AppToggleSwitch(
+                    value: vibrationsEnabled,
+                    onChanged: _saveVibrationsEnabled,
+                  ),
+                ),
               ),
               const SizedBox(height: 32),
             ],

@@ -1,0 +1,1 @@
+Transportia is a modern travel companion designed to make public transportation easier and more accessible. Transportia aims to provide all of this free of charge and utilising only open-source software without sacrificing user privacy.

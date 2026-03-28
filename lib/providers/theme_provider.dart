@@ -8,11 +8,13 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _accentColorKey = PrefsKeys.accentColor;
   static const String _mapStyleKey = PrefsKeys.mapStyle;
   static const String _appThemeKey = PrefsKeys.appTheme;
+  static const String _vibrationsEnabledKey = PrefsKeys.vibrationsEnabled;
 
   // Default values
   static const Color defaultAccentColor = Color.fromARGB(255, 0, 113, 133);
   static const String defaultMapStyle = 'default';
   static const AppThemeMode defaultAppThemeMode = AppThemeMode.light;
+  static const bool defaultVibrationsEnabled = true;
 
   static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color darkBackground = Color(0xFF161616);
@@ -32,6 +34,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   Color _accentColor = defaultAccentColor;
   String _mapStyle = defaultMapStyle;
   AppThemeMode _appThemeMode = defaultAppThemeMode;
+  bool _vibrationsEnabled = defaultVibrationsEnabled;
   bool _isInitialized = false;
 
   static ThemeProvider? get instance => _instance;
@@ -41,6 +44,7 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   String get mapStyleUrl =>
       mapStyleUrls[_mapStyle] ?? mapStyleUrls[defaultMapStyle]!;
   AppThemeMode get appThemeMode => _appThemeMode;
+  bool get vibrationsEnabled => _vibrationsEnabled;
   bool get isInitialized => _isInitialized;
 
   AppThemeMode get _effectiveAppThemeMode {
@@ -86,6 +90,9 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
       );
     }
 
+    _vibrationsEnabled =
+        await prefs.getBool(_vibrationsEnabledKey) ?? defaultVibrationsEnabled;
+
     _isInitialized = true;
     notifyListeners();
   }
@@ -129,6 +136,16 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     final prefs = SharedPreferencesAsync();
     await prefs.setString(_appThemeKey, mode.name);
+  }
+
+  Future<void> setVibrationsEnabled(bool enabled) async {
+    if (_vibrationsEnabled == enabled) return;
+
+    _vibrationsEnabled = enabled;
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool(_vibrationsEnabledKey, enabled);
   }
 
   @override
