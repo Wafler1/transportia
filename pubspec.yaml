@@ -39,6 +39,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
 
+dependency_overrides:
+  geolocator_android:
+    git:
+      url: https://github.com/Zverik/flutter-geolocator.git
+      ref: floss
+      path: geolocator_android
+
 flutter:
 
   uses-material-design: false
