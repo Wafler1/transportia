@@ -2,7 +2,7 @@ name: "transportia"
 description: "A public transportation app for Europe and beyond."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.3+2
+version: 1.0.3+3
 
 environment:
   sdk: ^3.9.2
@@ -44,7 +44,7 @@ flutter:
   uses-material-design: false
 
   assets:
-    - assets/images/welcome-image.png
+    - assets/images/welcome-image.webp
     - assets/branding/logo_rounded_min.png
     - assets/styles/default.json
     - assets/styles/dark.json

@@ -122,7 +122,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     children: [
                                       Flexible(
                                         child: Image.asset(
-                                          "assets/images/welcome-image.png",
+                                          "assets/images/welcome-image.webp",
                                           fit: BoxFit.contain,
                                         ),
                                       ),
