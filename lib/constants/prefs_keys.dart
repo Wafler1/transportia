@@ -2,7 +2,6 @@ class PrefsKeys {
   const PrefsKeys._();
 
   static const String welcomeSeen = 'welcome_seen_v1';
-  static const String ignoredUpdateVersion = 'ignored_update_version';
 
   static const String accentColor = 'accent_color';
   static const String mapStyle = 'map_style';

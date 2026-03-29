@@ -844,7 +844,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       ),
                                       title: 'Search for a stop',
                                       subtitle:
-                                          'Enter a stop name above to view\\ndepartures and arrivals',
+                                          'Enter a stop name above to view\ndepartures and arrivals',
                                       titleStyle: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w700,

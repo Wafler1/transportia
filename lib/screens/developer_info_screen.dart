@@ -24,7 +24,6 @@ class DeveloperInfoScreen extends StatefulWidget {
 class _DeveloperInfoScreenState extends State<DeveloperInfoScreen> {
   static const Set<String> _prefsAllowList = {
     PrefsKeys.welcomeSeen,
-    PrefsKeys.ignoredUpdateVersion,
     PrefsKeys.accentColor,
     PrefsKeys.mapStyle,
     PrefsKeys.appTheme,

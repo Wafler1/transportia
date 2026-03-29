@@ -2,20 +2,16 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'environment.dart';
 import 'constants/prefs_keys.dart';
 import 'providers/backend_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
-import 'services/version_service.dart';
-import 'utils/app_version.dart';
-import 'utils/version_utils.dart';
 import 'widgets/offline_banner_shell.dart';
-import 'widgets/update_prompt_overlay.dart';
 
 class Transportia extends StatelessWidget {
   const Transportia({super.key});
@@ -83,10 +79,7 @@ class _RootGate extends StatefulWidget {
 
 class _RootGateState extends State<_RootGate> {
   static const _kWelcomeSeenKey = PrefsKeys.welcomeSeen;
-  static const _kIgnoredUpdateKey = PrefsKeys.ignoredUpdateVersion;
   bool? _seen;
-  String? _availableUpdateVersion;
-  SharedPreferencesAsync? _prefs;
   StreamSubscription<Uri>? _appLinkSubscription;
 
   @override
@@ -123,54 +116,15 @@ class _RootGateState extends State<_RootGate> {
   Future<void> _init() async {
     final prefs = SharedPreferencesAsync();
     final seen = await prefs.getBool(_kWelcomeSeenKey) ?? false;
-    final ignored = await prefs.getString(_kIgnoredUpdateKey);
-    _prefs = prefs;
     if (!mounted) return;
     setState(() {
       _seen = seen;
     });
-    _checkForUpdates(ignored);
-  }
-
-  Future<void> _checkForUpdates(String? ignoredVersion) async {
-    final remoteVersion = await VersionService.fetchLatestVersion();
-    if (!mounted || remoteVersion == null) return;
-    if (!_shouldShowUpdate(remoteVersion, ignoredVersion)) return;
-    setState(() => _availableUpdateVersion = remoteVersion);
-  }
-
-  bool _shouldShowUpdate(String remoteVersion, String? ignoredVersion) {
-    if (!isVersionGreater(remoteVersion, AppVersion.current)) {
-      return false;
-    }
-    if (ignoredVersion != null && ignoredVersion == remoteVersion) {
-      return false;
-    }
-    return true;
   }
 
   void _handleWelcomeFinished() {
     if (!mounted) return;
     setState(() => _seen = true);
-  }
-
-  void _dismissUpdateOverlay() {
-    if (!mounted) return;
-    setState(() => _availableUpdateVersion = null);
-  }
-
-  Future<void> _skipCurrentVersion() async {
-    final version = _availableUpdateVersion;
-    if (version == null) {
-      _dismissUpdateOverlay();
-      return;
-    }
-    final prefs = _prefs ?? SharedPreferencesAsync();
-    await prefs.setString(_kIgnoredUpdateKey, version);
-    if (!mounted) return;
-    setState(() {
-      _availableUpdateVersion = null;
-    });
   }
 
   void _handleIncomingDeepLink(Uri uri) {
@@ -190,20 +144,7 @@ class _RootGateState extends State<_RootGate> {
         ? const MainNavigationScreen()
         : WelcomeScreen(onFinished: _handleWelcomeFinished);
 
-    return Stack(
-      children: [
-        mainChild,
-        if (_availableUpdateVersion != null)
-          UpdatePromptOverlay(
-            remoteVersion: _availableUpdateVersion!,
-            localVersion: AppVersion.current,
-            onDismiss: _dismissUpdateOverlay,
-            onSkipVersion: () {
-              _skipCurrentVersion();
-            },
-          ),
-      ],
-    );
+    return mainChild;
   }
 
   @override

@@ -5,55 +5,16 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../environment.dart';
 import '../providers/theme_provider.dart';
-import '../services/version_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_version.dart';
-import '../utils/version_utils.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/custom_card.dart';
-import '../widgets/pressable_highlight.dart';
 import '../widgets/section_title.dart';
 import '../widgets/icon_badge.dart';
 
-class InfoScreen extends StatefulWidget {
+class InfoScreen extends StatelessWidget {
   const InfoScreen({super.key});
-
-  @override
-  State<InfoScreen> createState() => _InfoScreenState();
-}
-
-class _InfoScreenState extends State<InfoScreen> {
-  static final Uri _downloadUri = Uri.parse(Environment.downloadUrl);
-
-  String? _remoteVersion;
-  bool _fetchAttempted = false;
-
-  bool get _showUpdateBanner {
-    if (!_fetchAttempted || _remoteVersion == null) {
-      return false;
-    }
-    return isVersionGreater(_remoteVersion!, AppVersion.current);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadVersion();
-  }
-
-  Future<void> _loadVersion() async {
-    final latest = await VersionService.fetchLatestVersion();
-    if (!mounted) return;
-    setState(() {
-      _remoteVersion = latest;
-      _fetchAttempted = true;
-    });
-  }
-
-  Future<void> _openDownload() async {
-    await launchUrl(_downloadUri, mode: LaunchMode.externalApplication);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,10 +33,6 @@ class _InfoScreenState extends State<InfoScreen> {
             subtitle: 'Version ${AppVersion.current}',
             iconSize: 40,
           ),
-          if (_showUpdateBanner) ...[
-            const SizedBox(height: 16),
-            _buildUpdateBanner(context),
-          ],
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -140,71 +97,6 @@ class _InfoScreenState extends State<InfoScreen> {
               ),
               const SizedBox(height: 32),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUpdateBanner(BuildContext context) {
-    final latest = _remoteVersion ?? '';
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.accentOf(context).withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.accentOf(context).withValues(alpha: 0.15),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Update available',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: AppColors.accentOf(context),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Version $latest is ready to download. '
-            'Tap below to grab the update.',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: AppColors.black.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: PressableHighlight(
-              onPressed: _openDownload,
-              enableHaptics: false,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Download update',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accentOf(context),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    LucideIcons.externalLink,
-                    size: 16,
-                    color: AppColors.accentOf(context),
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
