@@ -2,7 +2,7 @@ name: "transportia"
 description: "A public transportation app for Europe and beyond."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.3+3
+version: 1.0.3+4
 
 environment:
   sdk: ^3.9.2
@@ -21,7 +21,7 @@ dependencies:
   lucide_icons_flutter: ^3.1.5
   shared_preferences: ^2.5.4
   permission_handler: ^12.0.1
-  vibration: ^3.1.4
+  vibration: ^3.1.8
   oktoast: ^3.3.1
   flutter_native_splash: ^2.4.7
   http: ^1.2.2
