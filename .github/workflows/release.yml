@@ -1,0 +1,75 @@
+name: Release Android APKs
+
+on:
+  push:
+    branches:
+      - release
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: oracle
+          java-version: '17'
+
+      - name: Set Up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.1'
+          channel: stable
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Create key.properties
+        run: |
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=keystore.jks" >> android/key.properties
+
+      - name: Get version
+        run: |
+          APP_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          APP_VERSION_NAME="${APP_VERSION%%+*}"
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+          echo "APP_VERSION_NAME=$APP_VERSION_NAME" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v$APP_VERSION" >> $GITHUB_ENV
+          echo "RELEASE_TITLE=Transportia $APP_VERSION_NAME" >> $GITHUB_ENV
+
+      - name: Build ARM APK
+        run: flutter build apk --release --split-per-abi --target-platform android-arm --split-debug-info=build/symbols
+
+      - name: Build ARM64 APK
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64 --split-debug-info=build/symbols
+
+      - name: Rename APK files
+        run: |
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk transportia-armeabi-v7a-$APP_VERSION.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk transportia-arm64-v8a-$APP_VERSION.apk
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            "transportia-armeabi-v7a-$APP_VERSION.apk" \
+            "transportia-arm64-v8a-$APP_VERSION.apk" \
+            --title "$RELEASE_TITLE" \
+            --notes "Automatic release from branch '${{ github.ref_name }}' for commit ${{ github.sha }}" \
+            --target "${{ github.sha }}"
