@@ -10,6 +10,22 @@
 
 ---
 
+
+
+<p align="center">
+<a href="https://peerpush.net/p/transportia"
+  target="_blank"
+  rel="noopener"
+  style="width: 230px;"
+>
+  <img
+    src="https://peerpush.net/p/transportia/badge.png"
+    alt="Transportia badge"
+    style="width: 230px;"
+  />
+</a>
+</p>
+
 ## What Transportia offers
 
 - **Plan routes with confidence**
