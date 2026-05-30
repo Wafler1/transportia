@@ -1973,6 +1973,7 @@ class _MapScreenState extends State<MapScreen>
                                     toController: _toCtrl,
                                     suggestions: _suggestions,
                                     savedPlaces: _savedSearchPlaces,
+                                    favorites: _favorites,
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
@@ -3960,6 +3961,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _recordSavedPlace(
     TransitousLocationSuggestion suggestion,
   ) async {
+    if (suggestion.id.startsWith('fav-')) return;
     final name = suggestion.name.trim();
     if (name.isEmpty) return;
     final selected = SavedPlace(
