@@ -2362,7 +2362,11 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_recordSavedPlace(suggestion));
     _setControllerText(field, suggestion.name);
     _setSelection(field, suggestion, notify: true);
-    _unfocusInputs();
+    if (field == RouteFieldKind.from && _toCtrl.text.trim().isEmpty) {
+      _toFocus.requestFocus();
+    } else {
+      _unfocusInputs();
+    }
   }
 
   void _setControllerText(RouteFieldKind kind, String value) {
