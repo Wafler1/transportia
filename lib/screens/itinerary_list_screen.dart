@@ -426,7 +426,14 @@ class ItineraryCard extends StatelessWidget {
                         color: AppColors.black.withValues(alpha: 0.8),
                       ),
                     ),
+                    const SizedBox(width: 12),
                   ],
+                  if (itinerary.hasTicketInfo)
+                    Icon(
+                      LucideIcons.ticket,
+                      size: 16,
+                      color: AppColors.black.withValues(alpha: 0.6),
+                    ),
                 ],
               ),
               Row(
