@@ -2112,6 +2112,14 @@ class _MapScreenState extends State<MapScreen>
     final current = _selectionFor(kind);
     if (current != null) return current;
     final query = _controllerFor(kind).text.trim();
+    final coord = TransitousGeocodeService.tryParseLatLon(query);
+    if (coord != null) {
+      final suggestion = TransitousLocationSuggestion.fromLatLon(coord);
+      if (!mounted) return suggestion;
+      _setControllerText(kind, suggestion.name);
+      _setSelection(kind, suggestion, notify: true);
+      return suggestion;
+    }
     if (query.length < 3) return null;
 
     try {
@@ -2250,6 +2258,17 @@ class _MapScreenState extends State<MapScreen>
 
   void _requestSuggestions(RouteFieldKind kind, String text) {
     final query = text.trim();
+    final coord = TransitousGeocodeService.tryParseLatLon(query);
+    if (coord != null) {
+      ++_suggestionRequestId;
+      setState(() {
+        _activeSuggestionField = kind;
+        _suggestions = [TransitousLocationSuggestion.fromLatLon(coord)];
+        _isFetchingSuggestions = false;
+      });
+      _notifyOverlayVisibility();
+      return;
+    }
     if (query.length < 3) {
       if (_activeSuggestionField == kind) {
         setState(() {
