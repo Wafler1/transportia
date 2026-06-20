@@ -50,7 +50,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
                       zoom: 13.0,
                     ),
                     myLocationEnabled: true,
-                    rotateGesturesEnabled: false,
+                    rotateGesturesEnabled: true,
                     tiltGesturesEnabled: false,
                     compassEnabled: false,
                     onMapClick: _onMapTap,
