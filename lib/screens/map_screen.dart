@@ -1692,7 +1692,7 @@ class _MapScreenState extends State<MapScreen>
                         : MyLocationRenderMode.normal,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     trackCameraPosition: true,
-                    rotateGesturesEnabled: false,
+                    rotateGesturesEnabled: true,
                     tiltGesturesEnabled: false,
                     initialCameraPosition: _startCam,
                     compassEnabled: false,
