@@ -53,6 +53,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   LatLng? _lastUserLatLng;
   TransitousLocationSuggestion? _selectedStop;
   List<StopTime>? _stopTimes;
+  int _centerIndex = 0;
   bool _isLoadingStopTimes = false;
   String? _nextPageCursor;
   bool _isLoadingMore = false;
@@ -61,6 +62,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   late final ScrollController _resultsScrollController;
   bool _appliedInitialPreviousOffset = false;
   static const double _seePreviousScrollOffset = 40.0;
+  static const Key _centerKey = ValueKey('stop-times-center');
 
   bool get _hasPreviousPage => _previousPageCursor?.isNotEmpty ?? false;
   bool get _hasNextPage => _nextPageCursor?.isNotEmpty ?? false;
@@ -379,6 +381,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
       setState(() {
         _stopTimes = deduplicateStopTimes(response.stopTimes);
+        _centerIndex = 0;
         _nextPageCursor = _normalizeCursor(response.nextPageCursor);
         _previousPageCursor = _normalizeCursor(response.previousPageCursor);
         _isLoadingStopTimes = false;
@@ -489,18 +492,19 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
       if (!mounted) return;
 
+      final oldLength = _stopTimes?.length ?? 0;
+      final combined = deduplicateStopTimes([
+        ...response.stopTimes,
+        ...?_stopTimes,
+      ]);
+      final addedCount = combined.length - oldLength;
+
       setState(() {
-        _stopTimes = deduplicateStopTimes([
-          ...response.stopTimes,
-          ...?_stopTimes,
-        ]);
+        _stopTimes = combined;
+        _centerIndex += addedCount;
         _previousPageCursor = _normalizeCursor(response.previousPageCursor);
         _isLoadingPrevious = false;
       });
-
-      if (_resultsScrollController.hasClients) {
-        _resultsScrollController.jumpTo(0);
-      }
     } catch (e) {
       if (!mounted) return;
 
@@ -519,7 +523,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_resultsScrollController.hasClients) return;
-      _resultsScrollController.jumpTo(_seePreviousScrollOffset);
+      final minExtent = _resultsScrollController.position.minScrollExtent;
+      _resultsScrollController.jumpTo(minExtent + _seePreviousScrollOffset);
       _appliedInitialPreviousOffset = true;
     });
   }
@@ -757,62 +762,99 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               builder: (context) {
                                 final hasPreviousSlot = _hasPreviousPage;
                                 final hasNextSlot = _hasNextPage;
-                                final totalItems =
-                                    _stopTimes!.length +
-                                    (hasPreviousSlot ? 1 : 0) +
-                                    (hasNextSlot ? 1 : 0);
+                                final beforeItems = _stopTimes!.sublist(
+                                  0,
+                                  _centerIndex,
+                                );
+                                final afterItems = _stopTimes!.sublist(
+                                  _centerIndex,
+                                );
+                                final beforeCount =
+                                    beforeItems.length +
+                                    (hasPreviousSlot ? 1 : 0);
+                                final afterCount =
+                                    afterItems.length + (hasNextSlot ? 1 : 0);
 
-                                return ListView.builder(
-                                  controller: _resultsScrollController,
-                                  padding: const EdgeInsets.only(
-                                    left: 20,
-                                    right: 20,
-                                    top: 0,
-                                    bottom: 96,
-                                  ),
-                                  itemCount: totalItems,
-                                  itemBuilder: (context, index) {
-                                    if (hasPreviousSlot && index == 0) {
-                                      return LoadMoreButton(
-                                        onTap: _loadPrevious,
-                                        isLoading: _isLoadingPrevious,
-                                        label: 'See previous',
-                                        icon: LucideIcons.chevronUp,
-                                      );
-                                    }
-
-                                    final adjustedIndex =
-                                        index - (hasPreviousSlot ? 1 : 0);
-
-                                    if (adjustedIndex < _stopTimes!.length) {
-                                      final stopTime =
-                                          _stopTimes![adjustedIndex];
-                                      return GestureDetector(
-                                        onTap: () {
-                                          Navigator.of(context).push(
-                                            CustomPageRoute(
-                                              child: ConnectionInfoScreen(
-                                                tripId: stopTime.tripId,
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                        child: _StopTimeCard(
-                                          stopTime: stopTime,
+                                Widget buildStopTimeTile(StopTime stopTime) {
+                                  return GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        CustomPageRoute(
+                                          child: ConnectionInfoScreen(
+                                            tripId: stopTime.tripId,
+                                          ),
                                         ),
                                       );
-                                    }
+                                    },
+                                    child: _StopTimeCard(stopTime: stopTime),
+                                  );
+                                }
 
-                                    if (hasNextSlot &&
-                                        adjustedIndex == _stopTimes!.length) {
-                                      return LoadMoreButton(
-                                        onTap: _loadMore,
-                                        isLoading: _isLoadingMore,
-                                      );
-                                    }
-
-                                    return const SizedBox.shrink();
-                                  },
+                                return CustomScrollView(
+                                  controller: _resultsScrollController,
+                                  center: _centerKey,
+                                  slivers: [
+                                    SliverPadding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                      // Within a reverse-growth sliver,
+                                      // delegate index 0 is adjacent to the
+                                      // center anchor, so items are listed
+                                      // nearest-first with the "See previous"
+                                      // button last (farthest away, requiring
+                                      // a scroll up to reach it).
+                                      sliver: SliverList(
+                                        delegate: SliverChildBuilderDelegate((
+                                          context,
+                                          index,
+                                        ) {
+                                          if (index < beforeItems.length) {
+                                            final stopTime =
+                                                beforeItems[beforeItems.length -
+                                                    1 -
+                                                    index];
+                                            return buildStopTimeTile(stopTime);
+                                          }
+                                          return LoadMoreButton(
+                                            onTap: _loadPrevious,
+                                            isLoading: _isLoadingPrevious,
+                                            label: 'See previous',
+                                            icon: LucideIcons.chevronUp,
+                                          );
+                                        }, childCount: beforeCount),
+                                      ),
+                                    ),
+                                    SliverPadding(
+                                      key: _centerKey,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                      ),
+                                      sliver: SliverList(
+                                        delegate: SliverChildBuilderDelegate((
+                                          context,
+                                          index,
+                                        ) {
+                                          if (index < afterItems.length) {
+                                            return buildStopTimeTile(
+                                              afterItems[index],
+                                            );
+                                          }
+                                          if (hasNextSlot &&
+                                              index == afterItems.length) {
+                                            return LoadMoreButton(
+                                              onTap: _loadMore,
+                                              isLoading: _isLoadingMore,
+                                            );
+                                          }
+                                          return const SizedBox.shrink();
+                                        }, childCount: afterCount),
+                                      ),
+                                    ),
+                                    const SliverToBoxAdapter(
+                                      child: SizedBox(height: 96),
+                                    ),
+                                  ],
                                 );
                               },
                             )

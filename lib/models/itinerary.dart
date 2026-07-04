@@ -59,11 +59,19 @@ class FareOption {
   }
 }
 
+class RouteBadge {
+  final String name;
+  final String? routeColor;
+  final String? routeTextColor;
+
+  RouteBadge({required this.name, this.routeColor, this.routeTextColor});
+}
+
 class FareLegInfo {
-  final List<String> routeShortNames;
+  final List<RouteBadge> routeBadges;
   final List<FareOption> options;
 
-  FareLegInfo({required this.routeShortNames, required this.options});
+  FareLegInfo({required this.routeBadges, required this.options});
 
   String get _optionsKey => options
       .map(
@@ -258,7 +266,7 @@ class Itinerary {
       }
 
       try {
-        final routeNamesByFareLeg = <String, List<String>>{};
+        final routeBadgesByFareLeg = <String, List<RouteBadge>>{};
         for (final leg in legs) {
           if (leg.fareTransferIndex == null ||
               leg.effectiveFareLegIndex == null) {
@@ -267,8 +275,16 @@ class Itinerary {
           final name = leg.routeShortName ?? leg.displayName;
           if (name == null || name.isEmpty) continue;
           final key = '${leg.fareTransferIndex}:${leg.effectiveFareLegIndex}';
-          final names = routeNamesByFareLeg.putIfAbsent(key, () => []);
-          if (!names.contains(name)) names.add(name);
+          final badges = routeBadgesByFareLeg.putIfAbsent(key, () => []);
+          if (!badges.any((b) => b.name == name)) {
+            badges.add(
+              RouteBadge(
+                name: name,
+                routeColor: leg.routeColor,
+                routeTextColor: leg.routeTextColor,
+              ),
+            );
+          }
         }
 
         final rawTicketInfo = <FareLegInfo>[];
@@ -287,7 +303,7 @@ class Itinerary {
             if (options.isEmpty) continue;
             rawTicketInfo.add(
               FareLegInfo(
-                routeShortNames: routeNamesByFareLeg['$t:$i'] ?? const [],
+                routeBadges: routeBadgesByFareLeg['$t:$i'] ?? const [],
                 options: options,
               ),
             );
@@ -304,12 +320,14 @@ class Itinerary {
             mergedByKey[key] = entry;
             order.add(key);
           } else {
-            final combinedNames = [...existing.routeShortNames];
-            for (final name in entry.routeShortNames) {
-              if (!combinedNames.contains(name)) combinedNames.add(name);
+            final combinedBadges = [...existing.routeBadges];
+            for (final badge in entry.routeBadges) {
+              if (!combinedBadges.any((b) => b.name == badge.name)) {
+                combinedBadges.add(badge);
+              }
             }
             mergedByKey[key] = FareLegInfo(
-              routeShortNames: combinedNames,
+              routeBadges: combinedBadges,
               options: existing.options,
             );
           }

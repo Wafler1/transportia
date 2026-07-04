@@ -135,16 +135,30 @@ class _SuggestionsOverlayCard extends StatelessWidget {
     Widget body;
     final bool hasFullQuery = query.length >= 3;
     final bool hasFavMatches = favMatches.isNotEmpty;
+    // A favorite is only excluded here while the query is empty and it has
+    // no matching recent entry yet (i.e. it's never been searched). As soon
+    // as a query is typed, favorites are matched by name exactly like
+    // recents — they just never get pruned away entirely the way an unused
+    // recent search eventually would.
+    final bool queryIsEmpty = query.trim().isEmpty;
+    final recentFavMatches = favMatches.where((fav) {
+      final alreadyInRecents = savedMatches.any(
+        (place) => _sameCoordinates(place.lat, place.lon, fav.lat, fav.lon),
+      );
+      if (alreadyInRecents) return false;
+      return !queryIsEmpty;
+    }).toList();
     final bool showSaved =
-        !hasFullQuery && (hasFavMatches || savedMatches.isNotEmpty);
+        !hasFullQuery &&
+        (savedMatches.isNotEmpty || recentFavMatches.isNotEmpty);
     final bool hasResults =
         hasFullQuery && (suggestions.isNotEmpty || hasFavMatches);
     final bool showLoading = hasFullQuery && isLoading && !hasFavMatches;
 
     if (showSaved) {
       final combined = [
-        ...favMatches.map(_favToSuggestion),
         ...savedMatches.map(_toSuggestion),
+        ...recentFavMatches.map(_favToSuggestion),
       ];
       body = ListView.separated(
         padding: EdgeInsets.zero,
@@ -245,6 +259,11 @@ class _SuggestionsOverlayCard extends StatelessWidget {
       child: card,
     );
   }
+}
+
+bool _sameCoordinates(double lat1, double lon1, double lat2, double lon2) {
+  return lat1.toStringAsFixed(5) == lat2.toStringAsFixed(5) &&
+      lon1.toStringAsFixed(5) == lon2.toStringAsFixed(5);
 }
 
 List<FavoritePlace> _filterFavorites(List<FavoritePlace> favs, String query) {
