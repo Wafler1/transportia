@@ -108,6 +108,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
                 Expanded(
                   child: MapLibreMap(
                     onMapCreated: _onMapCreated,
+                    onStyleLoadedCallback: _onStyleLoaded,
                     styleString: context.watch<ThemeProvider>().mapStyleUrl,
                     initialCameraPosition: _calculateInitialCamera(),
                     myLocationEnabled: true,
@@ -303,11 +304,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     return CameraPosition(target: LatLng(centerLat, centerLon), zoom: 13.0);
   }
 
-  Future<void> _onMapCreated(MapLibreMapController controller) async {
+  void _onMapCreated(MapLibreMapController controller) {
     _controller = controller;
-    setState(() => _isMapReady = true);
+  }
 
-    await Future.delayed(const Duration(milliseconds: 500));
+  Future<void> _onStyleLoaded() async {
+    setState(() => _isMapReady = true);
 
     await _drawJourneyLegs();
     await _drawRouteStops();

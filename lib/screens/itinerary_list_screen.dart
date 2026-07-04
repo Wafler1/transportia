@@ -47,6 +47,7 @@ class ItineraryListScreen extends StatefulWidget {
 
 class _ItineraryListScreenState extends State<ItineraryListScreen> {
   List<Itinerary> _itineraries = [];
+  int _centerIndex = 0;
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _nextPageCursor;
@@ -57,6 +58,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   late final ScrollController _scrollController;
   bool _appliedInitialPreviousOffset = false;
   static const double _seePreviousScrollOffset = 40.0;
+  static const Key _centerKey = ValueKey('itineraries-center');
 
   @override
   void initState() {
@@ -87,6 +89,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         _fromLat = fromLat;
         _fromLon = fromLon;
         _itineraries = response.itineraries;
+        _centerIndex = 0;
         _nextPageCursor = response.nextPageCursor;
         _previousPageCursor = response.previousPageCursor;
         _isLoading = false;
@@ -139,15 +142,14 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
         timeSelection: widget.timeSelection,
         pageCursor: _previousPageCursor,
       );
+
       setState(() {
         _fromLat = fromLat;
         _fromLon = fromLon;
         _itineraries = [...response.itineraries, ..._itineraries];
+        _centerIndex += response.itineraries.length;
         _previousPageCursor = response.previousPageCursor;
       });
-      if (_scrollController.hasClients) {
-        _scrollController.jumpTo(0);
-      }
     } catch (_) {
     } finally {
       setState(() => _isLoadingPrevious = false);
@@ -160,7 +162,8 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (!_scrollController.hasClients) return;
-      _scrollController.jumpTo(_seePreviousScrollOffset);
+      final minExtent = _scrollController.position.minScrollExtent;
+      _scrollController.jumpTo(minExtent + _seePreviousScrollOffset);
       _appliedInitialPreviousOffset = true;
     });
   }
@@ -204,54 +207,85 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                         builder: (context) {
                           final hasPreviousSlot = _previousPageCursor != null;
                           final hasNextSlot = _nextPageCursor != null;
-                          final topSlotCount = hasPreviousSlot ? 1 : 0;
-                          final bottomSlotCount = hasNextSlot ? 1 : 0;
-                          final totalItems =
-                              _itineraries.length +
-                              topSlotCount +
-                              bottomSlotCount;
+                          final beforeItems = _itineraries.sublist(
+                            0,
+                            _centerIndex,
+                          );
+                          final afterItems = _itineraries.sublist(_centerIndex);
+                          final beforeCount =
+                              beforeItems.length + (hasPreviousSlot ? 1 : 0);
+                          final afterCount =
+                              afterItems.length + (hasNextSlot ? 1 : 0);
 
-                          return ListView.builder(
+                          Widget buildItineraryTile(Itinerary itin) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  CustomPageRoute(
+                                    child: ItineraryDetailScreen(
+                                      itinerary: itin,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: ItineraryCard(itinerary: itin),
+                            );
+                          }
+
+                          return CustomScrollView(
                             controller: _scrollController,
-                            padding: const EdgeInsets.only(bottom: 16),
-                            itemCount: totalItems,
-                            itemBuilder: (context, index) {
-                              if (hasPreviousSlot && index == 0) {
-                                return LoadMoreButton(
-                                  onTap: _loadPrevious,
-                                  isLoading: _isLoadingPrevious,
-                                  label: 'See previous',
-                                  icon: LucideIcons.chevronUp,
-                                );
-                              }
-
-                              final adjustedIndex = index - topSlotCount;
-                              if (adjustedIndex < _itineraries.length) {
-                                final itin = _itineraries[adjustedIndex];
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.of(context).push(
-                                      CustomPageRoute(
-                                        child: ItineraryDetailScreen(
-                                          itinerary: itin,
-                                        ),
-                                      ),
+                            center: _centerKey,
+                            slivers: [
+                              SliverList(
+                                // Within a reverse-growth sliver, delegate
+                                // index 0 is adjacent to the center anchor, so
+                                // items must be listed nearest-first with the
+                                // "See previous" button last (i.e. farthest
+                                // away, requiring a scroll up to reach it).
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  if (index < beforeItems.length) {
+                                    final itin =
+                                        beforeItems[beforeItems.length -
+                                            1 -
+                                            index];
+                                    return buildItineraryTile(itin);
+                                  }
+                                  return LoadMoreButton(
+                                    onTap: _loadPrevious,
+                                    isLoading: _isLoadingPrevious,
+                                    label: 'See previous',
+                                    icon: LucideIcons.chevronUp,
+                                  );
+                                }, childCount: beforeCount),
+                              ),
+                              SliverList(
+                                key: _centerKey,
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
+                                  if (index < afterItems.length) {
+                                    return buildItineraryTile(
+                                      afterItems[index],
                                     );
-                                  },
-                                  child: ItineraryCard(itinerary: itin),
-                                );
-                              }
-
-                              if (hasNextSlot &&
-                                  adjustedIndex == _itineraries.length) {
-                                return LoadMoreButton(
-                                  onTap: _loadMore,
-                                  isLoading: _isLoadingMore,
-                                );
-                              }
-
-                              return const SizedBox.shrink();
-                            },
+                                  }
+                                  if (hasNextSlot &&
+                                      index == afterItems.length) {
+                                    return LoadMoreButton(
+                                      onTap: _loadMore,
+                                      isLoading: _isLoadingMore,
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                }, childCount: afterCount),
+                              ),
+                              const SliverToBoxAdapter(
+                                child: SizedBox(height: 16),
+                              ),
+                            ],
                           );
                         },
                       ),
@@ -272,15 +306,47 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
   }
 }
 
-class ItineraryCard extends StatelessWidget {
+class ItineraryCard extends StatefulWidget {
   final Itinerary itinerary;
 
   const ItineraryCard({super.key, required this.itinerary});
 
   @override
+  State<ItineraryCard> createState() => _ItineraryCardState();
+}
+
+class _ItineraryCardState extends State<ItineraryCard>
+    with SingleTickerProviderStateMixin {
+  static const Color _softRed = Color(0xFFE57373);
+
+  late final Timer _departInTimer;
+  late final AnimationController _realTimeIconController;
+
+  @override
+  void initState() {
+    super.initState();
+    _departInTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+    _realTimeIconController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _departInTimer.cancel();
+    _realTimeIconController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final itinerary = widget.itinerary;
     final delaySummary = _delaySummaryLabel();
-    final departInLabel = _departInLabel();
+    final hasDeparted = _hasDeparted();
+    final departureText = _departureText();
     final firstNonWalkingLeg = itinerary.legs
         .where((leg) => leg.mode != 'WALK')
         .firstOrNull;
@@ -290,6 +356,7 @@ class ItineraryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Wrap(
@@ -306,31 +373,46 @@ class ItineraryCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Depart in $departInLabel',
+                      departureText,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.black.withValues(alpha: 0.7),
+                        color: hasDeparted
+                            ? _softRed
+                            : AppColors.black.withValues(alpha: 0.7),
                       ),
                     ),
-                    if (hasFirstLegRealTime)
-                      Icon(
-                        LucideIcons.wifi,
-                        size: 14,
-                        color: AppColors.accentOf(context),
-                      ),
                   ],
                 ),
               ),
-              if (itinerary.isDirect)
-                Text(
-                  'Direct',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accentOf(context),
-                  ),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (itinerary.isDirect) ...[
+                    Text(
+                      'Direct',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentOf(context),
+                      ),
+                    ),
+                    if (hasFirstLegRealTime) const SizedBox(width: 8),
+                  ],
+                  if (hasFirstLegRealTime)
+                    FadeTransition(
+                      opacity: Tween<double>(
+                        begin: 1.0,
+                        end: 0.4,
+                      ).animate(_realTimeIconController),
+                      child: Icon(
+                        LucideIcons.radio,
+                        size: 14,
+                        color: AppColors.accentOf(context),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -467,7 +549,7 @@ class ItineraryCard extends StatelessWidget {
     bool hasPositive(Duration? d) => d != null && d.inMinutes > 0;
     bool hasNegative(Duration? d) => d != null && d.inMinutes < 0;
 
-    for (final leg in itinerary.legs) {
+    for (final leg in widget.itinerary.legs) {
       final depDelay = computeDelay(leg.scheduledStartTime, leg.startTime);
       final arrDelay = computeDelay(leg.scheduledEndTime, leg.endTime);
       if (hasPositive(depDelay) ||
@@ -482,11 +564,17 @@ class ItineraryCard extends StatelessWidget {
     return '$affected';
   }
 
-  String _departInLabel() {
-    final now = DateTime.now();
-    final secondsUntil = itinerary.startTime.difference(now).inSeconds;
-    final clampedSeconds = secondsUntil < 0 ? 0 : secondsUntil;
-    return formatDuration(clampedSeconds);
+  int _secondsUntilDeparture() {
+    return widget.itinerary.startTime.difference(DateTime.now()).inSeconds;
+  }
+
+  bool _hasDeparted() => _secondsUntilDeparture() <= 0;
+
+  String _departureText() {
+    final secondsUntil = _secondsUntilDeparture();
+    if (secondsUntil <= 0) return 'Departed';
+    if (secondsUntil < 60) return 'Depart now';
+    return 'Depart in ${formatDuration(secondsUntil)}';
   }
 }
 

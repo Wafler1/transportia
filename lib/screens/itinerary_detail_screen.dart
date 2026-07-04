@@ -355,9 +355,7 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
                   ),
                 ),
                 Icon(
-                  _isExpanded
-                      ? LucideIcons.chevronUp
-                      : LucideIcons.chevronDown,
+                  _isExpanded ? LucideIcons.chevronUp : LucideIcons.chevronDown,
                   size: 16,
                   color: AppColors.accentOf(context),
                 ),
@@ -388,20 +386,47 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (legInfo.routeShortNames.isNotEmpty)
+          if (legInfo.routeBadges.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text(
-                'Valid for ${legInfo.routeShortNames.join(' & ')}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black.withValues(alpha: 0.5),
-                ),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  Text(
+                    'Valid for',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.black.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  ...legInfo.routeBadges.map(_buildRouteBadge),
+                ],
               ),
             ),
           ...legInfo.options.map(_buildFareOption),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRouteBadge(RouteBadge badge) {
+    final routeColor = parseHexColor(badge.routeColor);
+    final bg = routeColor ?? AppColors.accentOf(context);
+    final txt =
+        parseHexColor(badge.routeTextColor) ??
+        (routeColor == null ? AppColors.solidWhite : AppColors.black);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        badge.name,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: txt),
       ),
     );
   }
