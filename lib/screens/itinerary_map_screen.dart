@@ -112,7 +112,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
                     initialCameraPosition: _calculateInitialCamera(),
                     myLocationEnabled: true,
                     myLocationRenderMode: MyLocationRenderMode.compass,
-                    rotateGesturesEnabled: false,
+                    rotateGesturesEnabled: true,
                     tiltGesturesEnabled: false,
                     compassEnabled: false,
                   ),

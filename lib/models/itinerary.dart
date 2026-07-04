@@ -14,6 +14,69 @@ class FareInfo {
   }
 }
 
+class TicketProduct {
+  final String name;
+  final double amount;
+  final String currency;
+  final String? fareMediaName;
+  final String? fareMediaType;
+
+  TicketProduct({
+    required this.name,
+    required this.amount,
+    required this.currency,
+    this.fareMediaName,
+    this.fareMediaType,
+  });
+
+  factory TicketProduct.fromJson(Map<String, dynamic> json) {
+    final media = json['media'];
+    final Map<String, dynamic> mediaMap = media is Map<String, dynamic>
+        ? media
+        : {};
+    return TicketProduct(
+      name: json['name'] ?? '',
+      amount: json['amount']?.toDouble() ?? 0.0,
+      currency: json['currency'] ?? '',
+      fareMediaName: mediaMap['fareMediaName'],
+      fareMediaType: mediaMap['fareMediaType'],
+    );
+  }
+}
+
+class FareOption {
+  final List<TicketProduct> products;
+
+  FareOption({required this.products});
+
+  factory FareOption.fromJson(List<dynamic> json) {
+    return FareOption(
+      products: json
+          .whereType<Map<String, dynamic>>()
+          .map((p) => TicketProduct.fromJson(p))
+          .toList(),
+    );
+  }
+}
+
+class FareLegInfo {
+  final List<String> routeShortNames;
+  final List<FareOption> options;
+
+  FareLegInfo({required this.routeShortNames, required this.options});
+
+  String get _optionsKey => options
+      .map(
+        (o) => o.products
+            .map(
+              (p) =>
+                  '${p.name}|${p.amount}|${p.currency}|${p.fareMediaName}|${p.fareMediaType}',
+            )
+            .join(','),
+      )
+      .join(';');
+}
+
 class Alert {
   final String? cause;
   final String? causeDetail;
@@ -132,6 +195,7 @@ class Itinerary {
   final List<Leg> legs;
   final bool isDirect;
   final FareInfo? fare;
+  final List<FareLegInfo> ticketInfo;
 
   Itinerary({
     required this.duration,
@@ -141,7 +205,10 @@ class Itinerary {
     required this.legs,
     this.isDirect = false,
     this.fare,
+    this.ticketInfo = const [],
   });
+
+  bool get hasTicketInfo => ticketInfo.isNotEmpty;
 
   double get walkingDistance {
     double totalDistance = 0.0;
@@ -174,7 +241,12 @@ class Itinerary {
     Map<String, dynamic> json, {
     bool isDirect = false,
   }) {
+    final legs = (json['legs'] as List)
+        .map((leg) => Leg.fromJson(leg))
+        .toList();
+
     FareInfo? fare;
+    var ticketInfo = <FareLegInfo>[];
     if (json['fareTransfers'] != null &&
         (json['fareTransfers'] as List).isNotEmpty) {
       final fareTransfer = (json['fareTransfers'] as List).first;
@@ -184,6 +256,73 @@ class Itinerary {
           (fareTransfer['transferProducts'] as List).first,
         );
       }
+
+      try {
+        final routeNamesByFareLeg = <String, List<String>>{};
+        for (final leg in legs) {
+          if (leg.fareTransferIndex == null ||
+              leg.effectiveFareLegIndex == null) {
+            continue;
+          }
+          final name = leg.routeShortName ?? leg.displayName;
+          if (name == null || name.isEmpty) continue;
+          final key = '${leg.fareTransferIndex}:${leg.effectiveFareLegIndex}';
+          final names = routeNamesByFareLeg.putIfAbsent(key, () => []);
+          if (!names.contains(name)) names.add(name);
+        }
+
+        final rawTicketInfo = <FareLegInfo>[];
+        final transfers = json['fareTransfers'] as List;
+        for (var t = 0; t < transfers.length; t++) {
+          final legProducts = transfers[t]['effectiveFareLegProducts'];
+          if (legProducts is! List) continue;
+          for (var i = 0; i < legProducts.length; i++) {
+            final legOptions = legProducts[i];
+            if (legOptions is! List) continue;
+            final options = legOptions
+                .whereType<List<dynamic>>()
+                .map((o) => FareOption.fromJson(o))
+                .where((o) => o.products.isNotEmpty)
+                .toList();
+            if (options.isEmpty) continue;
+            rawTicketInfo.add(
+              FareLegInfo(
+                routeShortNames: routeNamesByFareLeg['$t:$i'] ?? const [],
+                options: options,
+              ),
+            );
+          }
+        }
+
+        // Merge fare legs that share identical ticket options.
+        final mergedByKey = <String, FareLegInfo>{};
+        final order = <String>[];
+        for (final entry in rawTicketInfo) {
+          final key = entry._optionsKey;
+          final existing = mergedByKey[key];
+          if (existing == null) {
+            mergedByKey[key] = entry;
+            order.add(key);
+          } else {
+            final combinedNames = [...existing.routeShortNames];
+            for (final name in entry.routeShortNames) {
+              if (!combinedNames.contains(name)) combinedNames.add(name);
+            }
+            mergedByKey[key] = FareLegInfo(
+              routeShortNames: combinedNames,
+              options: existing.options,
+            );
+          }
+        }
+        ticketInfo = order.map((key) => mergedByKey[key]!).toList();
+      } catch (e, stackTrace) {
+        developer.log(
+          'Error parsing ticket info',
+          name: 'Itinerary',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
 
     return Itinerary(
@@ -191,9 +330,10 @@ class Itinerary {
       startTime: DateTime.parse(json['startTime']),
       endTime: DateTime.parse(json['endTime']),
       transfers: json['transfers'] ?? 0,
-      legs: (json['legs'] as List).map((leg) => Leg.fromJson(leg)).toList(),
+      legs: legs,
       isDirect: isDirect,
       fare: fare,
+      ticketInfo: ticketInfo,
     );
   }
 }
@@ -234,6 +374,8 @@ class Leg {
   final List<Alert> alerts;
   final EncodedPolyline? legGeometry;
   final bool interlineWithPreviousLeg;
+  final int? fareTransferIndex;
+  final int? effectiveFareLegIndex;
 
   Leg({
     required this.mode,
@@ -271,6 +413,8 @@ class Leg {
     this.alerts = const [],
     this.legGeometry,
     this.interlineWithPreviousLeg = false,
+    this.fareTransferIndex,
+    this.effectiveFareLegIndex,
   });
 
   factory Leg.fromJson(Map<String, dynamic> json) {
@@ -370,6 +514,8 @@ class Leg {
         alerts: alerts,
         legGeometry: legGeometry,
         interlineWithPreviousLeg: json['interlineWithPreviousLeg'] ?? false,
+        fareTransferIndex: json['fareTransferIndex'],
+        effectiveFareLegIndex: json['effectiveFareLegIndex'],
       );
     } catch (e, stackTrace) {
       developer.log(

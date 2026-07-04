@@ -281,6 +281,10 @@ class ItineraryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final delaySummary = _delaySummaryLabel();
     final departInLabel = _departInLabel();
+    final firstNonWalkingLeg = itinerary.legs
+        .where((leg) => leg.mode != 'WALK')
+        .firstOrNull;
+    final hasFirstLegRealTime = firstNonWalkingLeg?.realTime ?? false;
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,6 +313,12 @@ class ItineraryCard extends StatelessWidget {
                         color: AppColors.black.withValues(alpha: 0.7),
                       ),
                     ),
+                    if (hasFirstLegRealTime)
+                      Icon(
+                        LucideIcons.wifi,
+                        size: 14,
+                        color: AppColors.accentOf(context),
+                      ),
                   ],
                 ),
               ),
@@ -416,7 +426,14 @@ class ItineraryCard extends StatelessWidget {
                         color: AppColors.black.withValues(alpha: 0.8),
                       ),
                     ),
+                    const SizedBox(width: 12),
                   ],
+                  if (itinerary.hasTicketInfo)
+                    Icon(
+                      LucideIcons.ticket,
+                      size: 16,
+                      color: AppColors.black.withValues(alpha: 0.6),
+                    ),
                 ],
               ),
               Row(

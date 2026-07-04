@@ -2,8 +2,10 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../models/route_field_kind.dart';
 import '../models/saved_place.dart';
+import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/favorite_icons.dart';
 import '../utils/haptics.dart';
 
 class RouteSuggestionsOverlay extends StatelessWidget {
@@ -15,6 +17,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
     required this.toController,
     required this.suggestions,
     required this.savedPlaces,
+    required this.favorites,
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
@@ -27,6 +30,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
   final TextEditingController toController;
   final List<TransitousLocationSuggestion> suggestions;
   final List<SavedPlace> savedPlaces;
+  final List<FavoritePlace> favorites;
   final bool isLoading;
   final void Function(
     RouteFieldKind field,
@@ -52,6 +56,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       query: controller.text.trim(),
       suggestions: suggestions,
       savedPlaces: savedPlaces,
+      favorites: favorites,
       isLoading: isLoading,
       onSuggestionTap: (suggestion) => onSuggestionTap(field, suggestion),
       onDismissRequest: onDismissRequest,
@@ -66,6 +71,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
     required this.controller,
     required this.suggestions,
     required this.savedPlaces,
+    this.favorites = const [],
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
@@ -76,6 +82,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
   final TextEditingController controller;
   final List<TransitousLocationSuggestion> suggestions;
   final List<SavedPlace> savedPlaces;
+  final List<FavoritePlace> favorites;
   final bool isLoading;
   final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
   final VoidCallback onDismissRequest;
@@ -89,6 +96,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
       query: controller.text.trim(),
       suggestions: suggestions,
       savedPlaces: savedPlaces,
+      favorites: favorites,
       isLoading: isLoading,
       onSuggestionTap: onSuggestionTap,
       onDismissRequest: onDismissRequest,
@@ -103,6 +111,7 @@ class _SuggestionsOverlayCard extends StatelessWidget {
     required this.query,
     required this.suggestions,
     required this.savedPlaces,
+    required this.favorites,
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
@@ -113,6 +122,7 @@ class _SuggestionsOverlayCard extends StatelessWidget {
   final String query;
   final List<TransitousLocationSuggestion> suggestions;
   final List<SavedPlace> savedPlaces;
+  final List<FavoritePlace> favorites;
   final bool isLoading;
   final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
   final VoidCallback onDismissRequest;
@@ -120,21 +130,29 @@ class _SuggestionsOverlayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final savedMatches = _filterSavedPlaces(savedPlaces, query);
+    final favMatches = _filterFavorites(favorites, query);
 
     Widget body;
     final bool hasFullQuery = query.length >= 3;
-    final bool showSaved = !hasFullQuery && savedMatches.isNotEmpty;
-    final bool hasResults = hasFullQuery && suggestions.isNotEmpty;
-    final bool showLoading = hasFullQuery && isLoading;
+    final bool hasFavMatches = favMatches.isNotEmpty;
+    final bool showSaved =
+        !hasFullQuery && (hasFavMatches || savedMatches.isNotEmpty);
+    final bool hasResults =
+        hasFullQuery && (suggestions.isNotEmpty || hasFavMatches);
+    final bool showLoading = hasFullQuery && isLoading && !hasFavMatches;
 
     if (showSaved) {
+      final combined = [
+        ...favMatches.map(_favToSuggestion),
+        ...savedMatches.map(_toSuggestion),
+      ];
       body = ListView.separated(
         padding: EdgeInsets.zero,
         shrinkWrap: true,
-        itemCount: savedMatches.length,
+        itemCount: combined.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          final suggestion = _toSuggestion(savedMatches[index]);
+          final suggestion = combined[index];
           return _SuggestionTile(
             suggestion: suggestion,
             onTap: () => onSuggestionTap(suggestion),
@@ -160,13 +178,14 @@ class _SuggestionsOverlayCard extends StatelessWidget {
         ),
       );
     } else {
+      final merged = [...favMatches.map(_favToSuggestion), ...suggestions];
       body = ListView.separated(
         padding: EdgeInsets.zero,
         shrinkWrap: true,
-        itemCount: suggestions.length,
+        itemCount: merged.length,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
-          final suggestion = suggestions[index];
+          final suggestion = merged[index];
           return _SuggestionTile(
             suggestion: suggestion,
             onTap: () => onSuggestionTap(suggestion),
@@ -226,6 +245,27 @@ class _SuggestionsOverlayCard extends StatelessWidget {
       child: card,
     );
   }
+}
+
+List<FavoritePlace> _filterFavorites(List<FavoritePlace> favs, String query) {
+  if (favs.isEmpty) return <FavoritePlace>[];
+  final trimmed = query.trim().toLowerCase();
+  final filtered = trimmed.isEmpty
+      ? favs
+      : favs.where((f) => f.name.toLowerCase().contains(trimmed)).toList();
+  return filtered.take(5).toList(growable: false);
+}
+
+TransitousLocationSuggestion _favToSuggestion(FavoritePlace fav) {
+  return TransitousLocationSuggestion(
+    id: 'fav-${fav.id}',
+    name: fav.name,
+    lat: fav.lat,
+    lon: fav.lon,
+    type: fav.iconName,
+    country: null,
+    defaultArea: null,
+  );
 }
 
 List<SavedPlace> _filterSavedPlaces(List<SavedPlace> places, String query) {
@@ -393,6 +433,6 @@ class _SuggestionTile extends StatelessWidget {
     if (type.contains('stop')) return LucideIcons.bus;
     if (type.contains('place')) return LucideIcons.map;
     if (type.contains('address')) return LucideIcons.locateFixed;
-    return LucideIcons.mapPin;
+    return iconForFavorite(rawType);
   }
 }

@@ -2,15 +2,20 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'environment.dart';
 import 'constants/prefs_keys.dart';
+import 'models/time_selection.dart';
 import 'providers/backend_provider.dart';
 import 'providers/theme_provider.dart';
+import 'screens/itinerary_list_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/welcome_screen.dart';
+import 'services/location_service.dart';
+import 'services/transitous_geocode_service.dart';
 import 'widgets/offline_banner_shell.dart';
 
 class Transportia extends StatelessWidget {
@@ -128,11 +133,62 @@ class _RootGateState extends State<_RootGate> {
   }
 
   void _handleIncomingDeepLink(Uri uri) {
+    if (uri.scheme == 'geo') {
+      _handleGeoLink(uri);
+      return;
+    }
     if (uri.scheme != 'transportia' || uri.host != 'trip') {
       return;
     }
     debugPrint('Received ${Environment.appName} trip link: ${uri.toString()}');
     // TODO: this
+  }
+
+  void _handleGeoLink(Uri uri) {
+    final destination = _parseGeoUri(uri);
+    if (destination == null) {
+      debugPrint('Unable to parse geo link: $uri');
+      return;
+    }
+    debugPrint('Received geo link: $uri');
+
+    final currentPosition = LocationService.currentPosition();
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => ItineraryListScreen(
+          fromLat: currentPosition.then((position) => position.latitude),
+          fromLon: currentPosition.then((position) => position.longitude),
+          toLat: destination.latitude,
+          toLon: destination.longitude,
+          timeSelection: TimeSelection.now(),
+        ),
+      ),
+    );
+  }
+
+  /// Parses `geo:lat,lon` and `geo:0,0?q=lat,lon(label)` URIs, the two
+  /// forms produced by Android/iOS when a `geo:` link is shared or tapped.
+  LatLng? _parseGeoUri(Uri uri) {
+    final direct = TransitousGeocodeService.tryParseLatLon(uri.path);
+    if (direct != null && (direct.latitude != 0 || direct.longitude != 0)) {
+      return direct;
+    }
+
+    final query = uri.queryParameters['q'];
+    if (query != null) {
+      final match = RegExp(
+        r'^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)',
+      ).firstMatch(query);
+      if (match != null) {
+        final lat = double.tryParse(match.group(1)!);
+        final lon = double.tryParse(match.group(2)!);
+        if (lat != null && lon != null) {
+          return LatLng(lat, lon);
+        }
+      }
+    }
+
+    return null;
   }
 
   @override

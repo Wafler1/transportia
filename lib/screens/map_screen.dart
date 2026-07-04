@@ -1692,7 +1692,7 @@ class _MapScreenState extends State<MapScreen>
                         : MyLocationRenderMode.normal,
                     myLocationTrackingMode: MyLocationTrackingMode.none,
                     trackCameraPosition: true,
-                    rotateGesturesEnabled: false,
+                    rotateGesturesEnabled: true,
                     tiltGesturesEnabled: false,
                     initialCameraPosition: _startCam,
                     compassEnabled: false,
@@ -1973,6 +1973,7 @@ class _MapScreenState extends State<MapScreen>
                                     toController: _toCtrl,
                                     suggestions: _suggestions,
                                     savedPlaces: _savedSearchPlaces,
+                                    favorites: _favorites,
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
@@ -2112,6 +2113,14 @@ class _MapScreenState extends State<MapScreen>
     final current = _selectionFor(kind);
     if (current != null) return current;
     final query = _controllerFor(kind).text.trim();
+    final coord = TransitousGeocodeService.tryParseLatLon(query);
+    if (coord != null) {
+      final suggestion = TransitousLocationSuggestion.fromLatLon(coord);
+      if (!mounted) return suggestion;
+      _setControllerText(kind, suggestion.name);
+      _setSelection(kind, suggestion, notify: true);
+      return suggestion;
+    }
     if (query.length < 3) return null;
 
     try {
@@ -2250,6 +2259,17 @@ class _MapScreenState extends State<MapScreen>
 
   void _requestSuggestions(RouteFieldKind kind, String text) {
     final query = text.trim();
+    final coord = TransitousGeocodeService.tryParseLatLon(query);
+    if (coord != null) {
+      ++_suggestionRequestId;
+      setState(() {
+        _activeSuggestionField = kind;
+        _suggestions = [TransitousLocationSuggestion.fromLatLon(coord)];
+        _isFetchingSuggestions = false;
+      });
+      _notifyOverlayVisibility();
+      return;
+    }
     if (query.length < 3) {
       if (_activeSuggestionField == kind) {
         setState(() {
@@ -2343,7 +2363,11 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_recordSavedPlace(suggestion));
     _setControllerText(field, suggestion.name);
     _setSelection(field, suggestion, notify: true);
-    _unfocusInputs();
+    if (field == RouteFieldKind.from && _toCtrl.text.trim().isEmpty) {
+      _toFocus.requestFocus();
+    } else {
+      _unfocusInputs();
+    }
   }
 
   void _setControllerText(RouteFieldKind kind, String value) {
@@ -3960,6 +3984,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _recordSavedPlace(
     TransitousLocationSuggestion suggestion,
   ) async {
+    if (suggestion.id.startsWith('fav-')) return;
     final name = suggestion.name.trim();
     if (name.isEmpty) return;
     final selected = SavedPlace(

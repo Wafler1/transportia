@@ -55,6 +55,17 @@ class TransitousLocationSuggestion {
     return 3;
   }
 
+  factory TransitousLocationSuggestion.fromLatLon(LatLng latLng) {
+    return TransitousLocationSuggestion(
+      id: _fallbackId(latLng.latitude, latLng.longitude),
+      name:
+          '${latLng.latitude.toStringAsFixed(6)}, ${latLng.longitude.toStringAsFixed(6)}',
+      lat: latLng.latitude,
+      lon: latLng.longitude,
+      type: 'COORDINATE',
+    );
+  }
+
   factory TransitousLocationSuggestion.fromJson(Map<String, dynamic> json) {
     final areas = json['areas'];
     String? defaultArea;
@@ -87,6 +98,20 @@ class TransitousLocationSuggestion {
 }
 
 class TransitousGeocodeService {
+  static final RegExp _latLonPattern = RegExp(
+    r'^\s*(-?\d{1,3}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$',
+  );
+
+  static LatLng? tryParseLatLon(String text) {
+    final match = _latLonPattern.firstMatch(text);
+    if (match == null) return null;
+    final lat = double.tryParse(match.group(1)!);
+    final lon = double.tryParse(match.group(2)!);
+    if (lat == null || lon == null) return null;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+    return LatLng(lat, lon);
+  }
+
   static Future<List<TransitousLocationSuggestion>> fetchSuggestions({
     required String text,
     LatLng? placeBias,

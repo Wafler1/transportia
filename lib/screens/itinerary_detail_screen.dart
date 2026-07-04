@@ -50,59 +50,79 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
             ),
             JourneyOverviewWidget(itinerary: widget.itinerary),
             Expanded(
-              child: displayLegs.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No additional steps required for this journey.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.black.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    )
-                  : Builder(
-                      builder: (context) {
-                        final hasFinishCard = widget.itinerary.legs.isNotEmpty;
-                        final finishInsertIndex = displayLegs.length;
-                        final shareIndex =
-                            finishInsertIndex + (hasFinishCard ? 1 : 0);
-                        final totalItems = shareIndex + 1;
+              child: Builder(
+                builder: (context) {
+                  final hasTicketInfo = widget.itinerary.hasTicketInfo;
+                  final ticketInsertIndex = hasTicketInfo ? 1 : 0;
+                  final hasFinishCard = widget.itinerary.legs.isNotEmpty;
+                  final legsInsertIndex = ticketInsertIndex;
+                  final emptyMessageIndex = displayLegs.isEmpty
+                      ? legsInsertIndex
+                      : -1;
+                  final legsEndIndex =
+                      legsInsertIndex +
+                      (displayLegs.isEmpty ? 1 : displayLegs.length);
+                  final finishInsertIndex = legsEndIndex;
+                  final shareIndex =
+                      finishInsertIndex + (hasFinishCard ? 1 : 0);
+                  final totalItems = shareIndex + 1;
 
-                        return ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          itemCount: totalItems,
-                          itemBuilder: (context, index) {
-                            if (index < displayLegs.length) {
-                              final entry = displayLegs[index];
-                              if (entry.isTransfer) {
-                                return TransferLegCard(leg: entry.leg);
-                              }
-                              return LegDetailsWidget(leg: entry.leg);
-                            }
-
-                            if (hasFinishCard && index == finishInsertIndex) {
-                              final finishLeg = widget.itinerary.legs.last;
-                              return FinishLegCard(
-                                leg: finishLeg,
-                                arrivalTime: widget.itinerary.endTime,
-                                totalDuration: widget.itinerary.duration,
-                              );
-                            }
-
-                            if (index == shareIndex) {
-                              return LoadMoreButton(
-                                onTap: _shareItinerary,
-                                isLoading: _isSharing,
-                                label: 'Share this trip',
-                                icon: LucideIcons.share2,
-                              );
-                            }
-
-                            return const SizedBox.shrink();
-                          },
+                  return ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    itemCount: totalItems,
+                    itemBuilder: (context, index) {
+                      if (hasTicketInfo && index == 0) {
+                        return TicketInfoCard(
+                          ticketInfo: widget.itinerary.ticketInfo,
                         );
-                      },
-                    ),
+                      }
+
+                      if (index == emptyMessageIndex) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              'No additional steps required for this journey.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.black.withValues(alpha: 0.4),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      if (index >= legsInsertIndex && index < legsEndIndex) {
+                        final entry = displayLegs[index - legsInsertIndex];
+                        if (entry.isTransfer) {
+                          return TransferLegCard(leg: entry.leg);
+                        }
+                        return LegDetailsWidget(leg: entry.leg);
+                      }
+
+                      if (hasFinishCard && index == finishInsertIndex) {
+                        final finishLeg = widget.itinerary.legs.last;
+                        return FinishLegCard(
+                          leg: finishLeg,
+                          arrivalTime: widget.itinerary.endTime,
+                          totalDuration: widget.itinerary.duration,
+                        );
+                      }
+
+                      if (index == shareIndex) {
+                        return LoadMoreButton(
+                          onTap: _shareItinerary,
+                          isLoading: _isSharing,
+                          label: 'Share this trip',
+                          icon: LucideIcons.share2,
+                        );
+                      }
+
+                      return const SizedBox.shrink();
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -292,6 +312,149 @@ class JourneyOverviewWidget extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class TicketInfoCard extends StatefulWidget {
+  final List<FareLegInfo> ticketInfo;
+
+  const TicketInfoCard({super.key, required this.ticketInfo});
+
+  @override
+  State<TicketInfoCard> createState() => _TicketInfoCardState();
+}
+
+class _TicketInfoCardState extends State<TicketInfoCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _isExpanded = !_isExpanded),
+      child: CustomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  LucideIcons.ticket,
+                  size: 18,
+                  color: AppColors.accentOf(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ticket information',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.black,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _isExpanded
+                      ? LucideIcons.chevronUp
+                      : LucideIcons.chevronDown,
+                  size: 16,
+                  color: AppColors.accentOf(context),
+                ),
+              ],
+            ),
+            if (_isExpanded) ...[
+              const SizedBox(height: 12),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: SizedBox(
+                  height: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(color: Color(0x33000000)),
+                  ),
+                ),
+              ),
+              ...widget.ticketInfo.map(_buildFareLegOptions),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFareLegOptions(FareLegInfo legInfo) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (legInfo.routeShortNames.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                'Valid for ${legInfo.routeShortNames.join(' & ')}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.black.withValues(alpha: 0.5),
+                ),
+              ),
+            ),
+          ...legInfo.options.map(_buildFareOption),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFareOption(FareOption option) {
+    final label = option.products.map((p) => p.name).join(' + ');
+    final price = option.products
+        .map((p) => '${p.amount.toStringAsFixed(2)} ${p.currency}')
+        .join(' + ');
+    final media = option.products
+        .map((p) => p.fareMediaName)
+        .whereType<String>()
+        .where((m) => m.isNotEmpty)
+        .toSet()
+        .join(', ');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.black.withValues(alpha: 0.8),
+                  ),
+                ),
+                if (media.isNotEmpty)
+                  Text(
+                    media,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.black.withValues(alpha: 0.5),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            price,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.black,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
