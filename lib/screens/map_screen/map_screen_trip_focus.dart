@@ -1,5 +1,12 @@
 part of '../map_screen.dart';
 
+typedef _OpenStopDeparturesSheet =
+    void Function({
+      required String? stopId,
+      required String stopName,
+      required DateTime referenceTime,
+    });
+
 class _TripFocusBottomCard extends StatelessWidget {
   const _TripFocusBottomCard({
     required this.onHandleTap,
@@ -11,6 +18,9 @@ class _TripFocusBottomCard extends StatelessWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.bottomSpacer,
+    required this.onStopTap,
+    required this.onRefresh,
+    required this.lastUpdated,
   });
 
   final VoidCallback onHandleTap;
@@ -22,6 +32,9 @@ class _TripFocusBottomCard extends StatelessWidget {
   final bool isLoading;
   final String? errorMessage;
   final double bottomSpacer;
+  final _OpenStopDeparturesSheet onStopTap;
+  final Future<void> Function() onRefresh;
+  final DateTime? lastUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -48,13 +61,28 @@ class _TripFocusBottomCard extends StatelessWidget {
               onDragUpdate: onDragUpdate,
               onDragEnd: onDragEnd,
             ),
-            _BottomSheetBackButton(onPressed: onBack),
+            Stack(
+              alignment: Alignment.centerRight,
+              children: [
+                _BottomSheetBackButton(onPressed: onBack),
+                if (lastUpdated != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: LastUpdatedFooter(
+                      lastUpdated: lastUpdated,
+                      compact: true,
+                    ),
+                  ),
+              ],
+            ),
             Expanded(
               child: _TripFocusContent(
                 itinerary: itinerary,
                 isLoading: isLoading,
                 errorMessage: errorMessage,
                 bottomSpacer: bottomSpacer,
+                onStopTap: onStopTap,
+                onRefresh: onRefresh,
               ),
             ),
           ],
@@ -70,12 +98,16 @@ class _TripFocusContent extends StatelessWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.bottomSpacer,
+    required this.onStopTap,
+    required this.onRefresh,
   });
 
   final Itinerary? itinerary;
   final bool isLoading;
   final String? errorMessage;
   final double bottomSpacer;
+  final _OpenStopDeparturesSheet onStopTap;
+  final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -191,448 +223,495 @@ class _TripFocusContent extends StatelessWidget {
       }
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(modeIcon, size: 32, color: AppColors.black),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (headerText.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: routeColor,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                headerText,
-                                style: TextStyle(
-                                  color: routeTextColor,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                          if (headsign != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              '${getTransitModeName(focusLeg.mode)} • $headsign',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.black,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (allAlerts.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            CustomCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Warnings',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ...allAlerts.values.map((alert) {
-                    final hasTitle =
-                        alert.headerText != null &&
-                        alert.headerText!.isNotEmpty;
-                    final hasBody =
-                        alert.descriptionText != null &&
-                        alert.descriptionText!.isNotEmpty;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF3CD),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFFFC107)),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Icon(
-                              LucideIcons.triangleAlert,
-                              size: 16,
-                              color: Color(0xFFF57C00),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (hasTitle)
-                                    Text(
-                                      alert.headerText!,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.black,
-                                      ),
-                                    ),
-                                  if (hasBody) ...[
-                                    if (hasTitle) const SizedBox(height: 2),
-                                    Text(
-                                      alert.descriptionText!,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: AppColors.black.withValues(
-                                          alpha: 0.8,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          CustomCard(
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
+        CupertinoSliverRefreshControl(onRefresh: onRefresh),
+        SliverPadding(
+          padding: const EdgeInsets.only(bottom: 16),
+          sliver: SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  'Information',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black,
+                CustomCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(modeIcon, size: 32, color: AppColors.black),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (headerText.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: routeColor,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      headerText,
+                                      style: TextStyle(
+                                        color: routeTextColor,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                if (headsign != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${getTransitModeName(focusLeg.mode)} • $headsign',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.black,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (allAlerts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  CustomCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Warnings',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...allAlerts.values.map((alert) {
+                          final hasTitle =
+                              alert.headerText != null &&
+                              alert.headerText!.isNotEmpty;
+                          final hasBody =
+                              alert.descriptionText != null &&
+                              alert.descriptionText!.isNotEmpty;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3CD),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFFFFC107),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(
+                                    LucideIcons.triangleAlert,
+                                    size: 16,
+                                    color: Color(0xFFF57C00),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (hasTitle)
+                                          Text(
+                                            alert.headerText!,
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppColors.black,
+                                            ),
+                                          ),
+                                        if (hasBody) ...[
+                                          if (hasTitle)
+                                            const SizedBox(height: 2),
+                                          Text(
+                                            alert.descriptionText!,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: AppColors.black.withValues(
+                                                alpha: 0.8,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                CustomCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Information',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          if (focusLeg.realTime)
+                            const InfoChip(
+                              icon: LucideIcons.radio,
+                              label: 'Real-time',
+                            ),
+                          if (focusLeg.cancelled == true)
+                            const InfoChip(
+                              icon: LucideIcons.x,
+                              label: 'CANCELLED',
+                              tint: Color(0xFFD32F2F),
+                            ),
+                          InfoChip(
+                            icon: LucideIcons.clock,
+                            label: formatDuration(focusLeg.duration),
+                          ),
+                          if (focusLeg.distance != null)
+                            InfoChip(
+                              icon: LucideIcons.ruler,
+                              label:
+                                  '${(focusLeg.distance! / 1000).toStringAsFixed(1)} km',
+                            ),
+                          if (focusLeg.agencyName != null)
+                            InfoChip(
+                              icon: LucideIcons.building,
+                              label: focusLeg.agencyName!,
+                            ),
+                          if (focusLeg.routeLongName != null &&
+                              focusLeg.routeLongName!.isNotEmpty)
+                            InfoChip(
+                              icon: LucideIcons.route,
+                              label: focusLeg.routeLongName!,
+                            ),
+                          if (itinerary.fare != null)
+                            InfoChip(
+                              icon: LucideIcons.coins,
+                              label:
+                                  '${itinerary.fare!.amount.toStringAsFixed(2)} ${itinerary.fare!.currency}',
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (focusLeg.realTime)
-                      const InfoChip(
-                        icon: LucideIcons.radio,
-                        label: 'Real-time',
+                CustomCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Journey',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
                       ),
-                    if (focusLeg.cancelled == true)
-                      const InfoChip(
-                        icon: LucideIcons.x,
-                        label: 'CANCELLED',
-                        tint: Color(0xFFD32F2F),
-                      ),
-                    InfoChip(
-                      icon: LucideIcons.clock,
-                      label: formatDuration(focusLeg.duration),
-                    ),
-                    if (focusLeg.distance != null)
-                      InfoChip(
-                        icon: LucideIcons.ruler,
-                        label:
-                            '${(focusLeg.distance! / 1000).toStringAsFixed(1)} km',
-                      ),
-                    if (focusLeg.agencyName != null)
-                      InfoChip(
-                        icon: LucideIcons.building,
-                        label: focusLeg.agencyName!,
-                      ),
-                    if (focusLeg.routeLongName != null &&
-                        focusLeg.routeLongName!.isNotEmpty)
-                      InfoChip(
-                        icon: LucideIcons.route,
-                        label: focusLeg.routeLongName!,
-                      ),
-                    if (itinerary.fare != null)
-                      InfoChip(
-                        icon: LucideIcons.coins,
-                        label:
-                            '${itinerary.fare!.amount.toStringAsFixed(2)} ${itinerary.fare!.currency}',
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          CustomCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Journey',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                if (stops.isEmpty)
-                  EmptyState(
-                    title: 'No stops available',
-                    padding: EdgeInsets.zero,
-                    titleStyle: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.black.withValues(alpha: 0.6),
-                    ),
-                  )
-                else
-                  FixedTimeline.tileBuilder(
-                    theme: TimelineThemeData(
-                      nodePosition: 0.08,
-                      color: routeColor,
-                      indicatorTheme: const IndicatorThemeData(size: 28),
-                      connectorTheme: const ConnectorThemeData(thickness: 2.5),
-                    ),
-                    builder: TimelineTileBuilder.connected(
-                      itemCount: timelineItems.length,
-                      connectionDirection: ConnectionDirection.before,
-                      contentsBuilder: (context, index) {
-                        final item = timelineItems[index];
-                        if (item.isVehicle && item.stop == null) {
-                          return const SizedBox.shrink();
-                        }
+                      const SizedBox(height: 16),
+                      if (stops.isEmpty)
+                        EmptyState(
+                          title: 'No stops available',
+                          padding: EdgeInsets.zero,
+                          titleStyle: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.black.withValues(alpha: 0.6),
+                          ),
+                        )
+                      else
+                        FixedTimeline.tileBuilder(
+                          theme: TimelineThemeData(
+                            nodePosition: 0.08,
+                            color: routeColor,
+                            indicatorTheme: const IndicatorThemeData(size: 28),
+                            connectorTheme: const ConnectorThemeData(
+                              thickness: 2.5,
+                            ),
+                          ),
+                          builder: TimelineTileBuilder.connected(
+                            itemCount: timelineItems.length,
+                            connectionDirection: ConnectionDirection.before,
+                            contentsBuilder: (context, index) {
+                              final item = timelineItems[index];
+                              if (item.isVehicle && item.stop == null) {
+                                return const SizedBox.shrink();
+                              }
 
-                        final stop = item.stop!;
-                        final stopIndex = stops.indexOf(stop);
-                        final isPassed = stopIndex <= currentStopIndex;
-                        final isUpcoming = stopIndex == upcomingStopIndex;
+                              final stop = item.stop!;
+                              final stopIndex = stops.indexOf(stop);
+                              final isPassed = stopIndex <= currentStopIndex;
+                              final isUpcoming = stopIndex == upcomingStopIndex;
 
-                        final arrRow = buildStopScheduleRow(
-                          'Arr',
-                          stop.scheduledArrival,
-                          stop.arrival,
-                          isPassed,
-                        );
-                        final depRow = buildStopScheduleRow(
-                          'Dep',
-                          stop.scheduledDeparture,
-                          stop.departure,
-                          isPassed,
-                        );
+                              final arrRow = buildStopScheduleRow(
+                                'Arr',
+                                stop.scheduledArrival,
+                                stop.arrival,
+                                isPassed,
+                              );
+                              final depRow = buildStopScheduleRow(
+                                'Dep',
+                                stop.scheduledDeparture,
+                                stop.departure,
+                                isPassed,
+                              );
 
-                        return Padding(
-                          padding: const EdgeInsets.only(left: 12, bottom: 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      stop.name,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight:
-                                            stopIndex == 0 ||
-                                                stopIndex == stops.length - 1 ||
-                                                isUpcoming
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                        color: isPassed
-                                            ? AppColors.black.withValues(
-                                                alpha: 0.5,
-                                              )
-                                            : AppColors.black,
+                              return GestureDetector(
+                                onTap: stop.stopId == null
+                                    ? null
+                                    : () => onStopTap(
+                                        stopId: stop.stopId,
+                                        stopName: stop.name,
+                                        referenceTime:
+                                            stop.departure ??
+                                            stop.arrival ??
+                                            DateTime.now().toUtc(),
                                       ),
-                                    ),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 12,
+                                    bottom: 16,
                                   ),
-                                  if (isUpcoming) ...[
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: routeColor.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        'Upcoming',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                          color: routeColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              if (arrRow != null || depRow != null) ...[
-                                const SizedBox(height: 2),
-                                if (arrRow != null) arrRow,
-                                if (depRow != null) ...[
-                                  if (arrRow != null) const SizedBox(height: 2),
-                                  depRow,
-                                ],
-                              ],
-                              if (stop.track != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Track ${stop.track}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: isPassed
-                                        ? AppColors.black.withValues(alpha: 0.4)
-                                        : AppColors.black.withValues(
-                                            alpha: 0.5,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              stop.name,
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight:
+                                                    stopIndex == 0 ||
+                                                        stopIndex ==
+                                                            stops.length - 1 ||
+                                                        isUpcoming
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
+                                                color: isPassed
+                                                    ? AppColors.black
+                                                          .withValues(
+                                                            alpha: 0.5,
+                                                          )
+                                                    : AppColors.black,
+                                              ),
+                                            ),
                                           ),
+                                          if (isUpcoming) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: routeColor.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                'Upcoming',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: routeColor,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      if (arrRow != null || depRow != null) ...[
+                                        const SizedBox(height: 2),
+                                        if (arrRow != null) arrRow,
+                                        if (depRow != null) ...[
+                                          if (arrRow != null)
+                                            const SizedBox(height: 2),
+                                          depRow,
+                                        ],
+                                      ],
+                                      if (stop.track != null) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Track ${stop.track}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isPassed
+                                                ? AppColors.black.withValues(
+                                                    alpha: 0.4,
+                                                  )
+                                                : AppColors.black.withValues(
+                                                    alpha: 0.5,
+                                                  ),
+                                          ),
+                                        ),
+                                      ],
+                                      if (stop.cancelled == true) ...[
+                                        const SizedBox(height: 2),
+                                        const Text(
+                                          'CANCELLED',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFFD32F2F),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
-                              ],
-                              if (stop.cancelled == true) ...[
-                                const SizedBox(height: 2),
-                                const Text(
-                                  'CANCELLED',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFFD32F2F),
-                                    fontWeight: FontWeight.w600,
+                              );
+                            },
+                            indicatorBuilder: (context, index) {
+                              final item = timelineItems[index];
+                              if (item.isVehicle && item.stop == null) {
+                                return TimelineIndicatorBox(
+                                  lineColor: routeColor,
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      color: routeColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        modeIcon,
+                                        size: 14,
+                                        color: routeTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              final stop = item.stop!;
+                              final stopIndex = stops.indexOf(stop);
+                              final isPassed = stopIndex <= currentStopIndex;
+                              final bool isTerminal =
+                                  stopIndex == 0 ||
+                                  stopIndex == stops.length - 1;
+                              final double dotSize = isTerminal ? 16 : 12;
+                              final Color dotColor = isPassed
+                                  ? routeColor.withValues(alpha: 0.6)
+                                  : routeColor;
+                              final bool isVehicleHere =
+                                  showVehicle &&
+                                  isVehicleAtStation &&
+                                  stopIndex == vehicleStopIndex;
+                              final bool isFirstStop = stopIndex == 0;
+                              final bool isLastStop =
+                                  stopIndex == stops.length - 1;
+
+                              if (isVehicleHere) {
+                                return TimelineIndicatorBox(
+                                  lineColor: dotColor,
+                                  centerGap: 28.0,
+                                  cutTop: isFirstStop,
+                                  cutBottom: isLastStop,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      DotIndicator(
+                                        color: dotColor,
+                                        size: dotSize,
+                                      ),
+                                      Container(
+                                        width: 28,
+                                        height: 28,
+                                        decoration: BoxDecoration(
+                                          color: routeColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          modeIcon,
+                                          size: 14,
+                                          color: routeTextColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+
+                              return TimelineIndicatorBox(
+                                lineColor: dotColor,
+                                centerGap: dotSize,
+                                cutTop: isFirstStop,
+                                cutBottom: isLastStop,
+                                child: Center(
+                                  child: DotIndicator(
+                                    color: dotColor,
+                                    size: dotSize,
                                   ),
                                 ),
-                              ],
-                            ],
+                              );
+                            },
+                            connectorBuilder: (context, index, connectorType) {
+                              bool isPassed = false;
+                              if (index < timelineItems.length) {
+                                final item = timelineItems[index];
+                                if (item.isVehicle) {
+                                  isPassed = true;
+                                } else {
+                                  final stopIndex = stops.indexOf(item.stop!);
+                                  isPassed = stopIndex <= currentStopIndex;
+                                }
+                              }
+
+                              return SolidLineConnector(
+                                color: isPassed
+                                    ? routeColor.withValues(alpha: 0.6)
+                                    : routeColor,
+                              );
+                            },
                           ),
-                        );
-                      },
-                      indicatorBuilder: (context, index) {
-                        final item = timelineItems[index];
-                        if (item.isVehicle && item.stop == null) {
-                          return TimelineIndicatorBox(
-                            lineColor: routeColor,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: routeColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Icon(
-                                  modeIcon,
-                                  size: 14,
-                                  color: routeTextColor,
-                                ),
-                              ),
-                            ),
-                          );
-                        }
-
-                        final stop = item.stop!;
-                        final stopIndex = stops.indexOf(stop);
-                        final isPassed = stopIndex <= currentStopIndex;
-                        final bool isTerminal =
-                            stopIndex == 0 || stopIndex == stops.length - 1;
-                        final double dotSize = isTerminal ? 16 : 12;
-                        final Color dotColor = isPassed
-                            ? routeColor.withValues(alpha: 0.6)
-                            : routeColor;
-                        final bool isVehicleHere =
-                            showVehicle &&
-                            isVehicleAtStation &&
-                            stopIndex == vehicleStopIndex;
-                        final bool isFirstStop = stopIndex == 0;
-                        final bool isLastStop = stopIndex == stops.length - 1;
-
-                        if (isVehicleHere) {
-                          return TimelineIndicatorBox(
-                            lineColor: dotColor,
-                            centerGap: 28.0,
-                            cutTop: isFirstStop,
-                            cutBottom: isLastStop,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                DotIndicator(color: dotColor, size: dotSize),
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color: routeColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    modeIcon,
-                                    size: 14,
-                                    color: routeTextColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        return TimelineIndicatorBox(
-                          lineColor: dotColor,
-                          centerGap: dotSize,
-                          cutTop: isFirstStop,
-                          cutBottom: isLastStop,
-                          child: Center(
-                            child: DotIndicator(color: dotColor, size: dotSize),
-                          ),
-                        );
-                      },
-                      connectorBuilder: (context, index, connectorType) {
-                        bool isPassed = false;
-                        if (index < timelineItems.length) {
-                          final item = timelineItems[index];
-                          if (item.isVehicle) {
-                            isPassed = true;
-                          } else {
-                            final stopIndex = stops.indexOf(item.stop!);
-                            isPassed = stopIndex <= currentStopIndex;
-                          }
-                        }
-
-                        return SolidLineConnector(
-                          color: isPassed
-                              ? routeColor.withValues(alpha: 0.6)
-                              : routeColor,
-                        );
-                      },
-                    ),
+                        ),
+                    ],
                   ),
+                ),
+                SizedBox(height: 100),
               ],
             ),
           ),
-          SizedBox(height: 100),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
