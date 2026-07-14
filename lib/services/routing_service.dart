@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/prefs_keys.dart';
 import '../environment.dart';
 import '../models/itinerary.dart';
 import '../models/time_selection.dart';
@@ -38,6 +40,25 @@ class RoutingService {
       'withFares': 'true',
       'useRoutedTransfers': 'true',
     };
+
+    final prefs = SharedPreferencesAsync();
+    final walkingSpeedKmh = await prefs.getDouble(
+      PrefsKeys.transitWalkingSpeed,
+    );
+    final transferBuffer = await prefs.getInt(PrefsKeys.transitTransferBuffer);
+    final selectedModes = await prefs.getStringList(
+      PrefsKeys.transitSelectedModes,
+    );
+
+    if (walkingSpeedKmh != null) {
+      params['pedestrianSpeed'] = (walkingSpeedKmh / 3.6).toStringAsFixed(3);
+    }
+    if (transferBuffer != null && transferBuffer > 0) {
+      params['additionalTransferTime'] = transferBuffer.toString();
+    }
+    if (selectedModes != null && selectedModes.isNotEmpty) {
+      params['transitModes'] = selectedModes.join(',');
+    }
 
     if (pageCursor != null) {
       params['pageCursor'] = pageCursor;
