@@ -218,6 +218,26 @@ class Itinerary {
 
   bool get hasTicketInfo => ticketInfo.isNotEmpty;
 
+  /// Returns a copy of this itinerary with [newLegs] substituted in,
+  /// recomputing the fields derived from the leg list (e.g. after a
+  /// real-time refresh updates individual legs).
+  Itinerary withLegs(List<Leg> newLegs) {
+    if (newLegs.isEmpty) return this;
+    final transitLegCount = newLegs.where((l) => l.mode != 'WALK').length;
+    return Itinerary(
+      duration: newLegs.last.endTime
+          .difference(newLegs.first.startTime)
+          .inSeconds,
+      startTime: newLegs.first.startTime,
+      endTime: newLegs.last.endTime,
+      transfers: transitLegCount > 0 ? transitLegCount - 1 : 0,
+      legs: newLegs,
+      isDirect: isDirect,
+      fare: fare,
+      ticketInfo: ticketInfo,
+    );
+  }
+
   double get walkingDistance {
     double totalDistance = 0.0;
     for (final leg in legs) {
@@ -384,6 +404,8 @@ class Leg {
   final String? toTrack;
   final String? fromScheduledTrack;
   final String? toScheduledTrack;
+  final String? fromStopId;
+  final String? toStopId;
   final double fromLat;
   final double fromLon;
   final double toLat;
@@ -423,6 +445,8 @@ class Leg {
     this.toTrack,
     this.fromScheduledTrack,
     this.toScheduledTrack,
+    this.fromStopId,
+    this.toStopId,
     required this.fromLat,
     required this.fromLon,
     required this.toLat,
@@ -434,6 +458,56 @@ class Leg {
     this.fareTransferIndex,
     this.effectiveFareLegIndex,
   });
+
+  /// Returns a copy of this leg with the real-time fields (times, delay,
+  /// cancellation, track, intermediate stops, alerts) refreshed from
+  /// [fresh], while keeping itinerary-specific context (fare indices,
+  /// geometry) from this leg.
+  Leg withRealTimeFrom(Leg fresh) {
+    return Leg(
+      mode: mode,
+      fromName: fromName,
+      toName: toName,
+      startTime: fresh.startTime,
+      endTime: fresh.endTime,
+      scheduledStartTime: fresh.scheduledStartTime ?? scheduledStartTime,
+      scheduledEndTime: fresh.scheduledEndTime ?? scheduledEndTime,
+      duration: fresh.duration,
+      distance: distance,
+      routeShortName: routeShortName,
+      routeLongName: routeLongName,
+      displayName: displayName,
+      headsign: headsign,
+      routeColor: routeColor,
+      routeTextColor: routeTextColor,
+      routeType: routeType,
+      agencyName: agencyName,
+      agencyUrl: agencyUrl,
+      agencyId: agencyId,
+      tripId: tripId,
+      tripShortName: tripShortName,
+      realTime: fresh.realTime,
+      cancelled: fresh.cancelled,
+      fromTrack: fresh.fromTrack ?? fromTrack,
+      toTrack: fresh.toTrack ?? toTrack,
+      fromScheduledTrack: fromScheduledTrack,
+      toScheduledTrack: toScheduledTrack,
+      fromStopId: fromStopId,
+      toStopId: toStopId,
+      fromLat: fromLat,
+      fromLon: fromLon,
+      toLat: toLat,
+      toLon: toLon,
+      intermediateStops: fresh.intermediateStops.isNotEmpty
+          ? fresh.intermediateStops
+          : intermediateStops,
+      alerts: fresh.alerts.isNotEmpty ? fresh.alerts : alerts,
+      legGeometry: legGeometry,
+      interlineWithPreviousLeg: interlineWithPreviousLeg,
+      fareTransferIndex: fareTransferIndex,
+      effectiveFareLegIndex: effectiveFareLegIndex,
+    );
+  }
 
   factory Leg.fromJson(Map<String, dynamic> json) {
     try {
@@ -524,6 +598,8 @@ class Leg {
         toTrack: toMap['track'],
         fromScheduledTrack: fromMap['scheduledTrack'],
         toScheduledTrack: toMap['scheduledTrack'],
+        fromStopId: fromMap['stopId'],
+        toStopId: toMap['stopId'],
         fromLat: fromMap['lat']?.toDouble() ?? 0.0,
         fromLon: fromMap['lon']?.toDouble() ?? 0.0,
         toLat: toMap['lat']?.toDouble() ?? 0.0,

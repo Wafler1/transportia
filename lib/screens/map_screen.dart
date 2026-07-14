@@ -58,6 +58,8 @@ import '../widgets/selectable_icon_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/skeletons/skeleton_card.dart';
 import '../widgets/skeletons/skeleton_shimmer.dart';
+import '../widgets/last_updated_footer.dart';
+import '../widgets/stop_departures_sheet.dart';
 import '../widgets/stop_schedule_row.dart';
 import '../widgets/timeline_indicator_box.dart';
 import '../widgets/map/long_press_selection_modal.dart';
@@ -186,6 +188,7 @@ class _MapScreenState extends State<MapScreen>
   String? _tripFocusError;
   String? _focusedTripId;
   Itinerary? _focusedItinerary;
+  DateTime? _tripFocusLastUpdated;
   bool _showStopsBeforeFocus = true;
   int _focusedTripRequestId = 0;
   final Map<String, _VehicleMarker> _focusedVehicles = {};
@@ -505,6 +508,7 @@ class _MapScreenState extends State<MapScreen>
     _focusedTripIds.clear();
     _focusedTripId = null;
     _focusedItinerary = null;
+    _tripFocusLastUpdated = null;
     _isTripFocus = false;
     _isQuickSettings = false;
     _isTripFocusLoading = false;
@@ -1812,6 +1816,9 @@ class _MapScreenState extends State<MapScreen>
                               isLoading: _isTripFocusLoading,
                               errorMessage: _tripFocusError,
                               bottomSpacer: bottomBarHeight,
+                              onStopTap: _openStopDeparturesSheet,
+                              onRefresh: _refreshTripFocus,
+                              lastUpdated: _tripFocusLastUpdated,
                             )
                           : _isQuickSettings
                           ? _QuickSettingsBottomCard(
@@ -3604,6 +3611,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = tripId;
       _focusedItinerary = null;
+      _tripFocusLastUpdated = null;
       _focusedStopsColor = null;
       _showStops = false;
     });
@@ -3638,6 +3646,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = null;
       _focusedItinerary = null;
+      _tripFocusLastUpdated = null;
       _focusedStopsColor = null;
       _showStops = _showStopsBeforeFocus;
     });
@@ -3657,6 +3666,33 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_refreshRouteMarkers(allowFit: false));
     _scheduleTripRefresh();
     _scheduleStopRefresh();
+  }
+
+  void _openStopDeparturesSheet({
+    required String? stopId,
+    required String stopName,
+    required DateTime referenceTime,
+  }) {
+    if (stopId == null || stopId.isEmpty) return;
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Stop departures',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return StopDeparturesSheet(
+          stopId: stopId,
+          stopName: stopName,
+          referenceTime: referenceTime,
+          onDismiss: () => Navigator.of(context, rootNavigator: true).pop(),
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
   }
 
   void _openQuickSettings() {
@@ -3691,6 +3727,7 @@ class _MapScreenState extends State<MapScreen>
       setState(() {
         _focusedItinerary = itinerary;
         _isTripFocusLoading = false;
+        _tripFocusLastUpdated = DateTime.now();
       });
       _focusedStopsColor = _focusedRouteColor(itinerary);
       _focusedRouteKeys
@@ -3711,11 +3748,19 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       if (!mounted || requestId != _focusedTripRequestId) return;
       setState(() {
-        _focusedItinerary = null;
         _isTripFocusLoading = false;
-        _tripFocusError = 'Failed to load trip.';
+        // Keep showing the previously loaded trip if this was a refresh.
+        if (_focusedItinerary == null) {
+          _tripFocusError = 'Failed to load trip.';
+        }
       });
     }
+  }
+
+  Future<void> _refreshTripFocus() async {
+    final tripId = _focusedTripId;
+    if (tripId == null) return;
+    await _loadFocusedTripDetails(tripId);
   }
 
   Future<void> _pushFocusedVehicleSource(DateTime now) async {
