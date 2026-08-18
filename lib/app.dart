@@ -39,8 +39,7 @@ class Transportia extends StatelessWidget {
               fontSize: 14,
             );
             return WidgetsApp(
-              onGenerateTitle: (context) =>
-                  AppLocalizations.of(context)!.appTitle,
+              title: Environment.appName,
               color: themeProvider.backgroundColor,
               debugShowCheckedModeBanner: false,
               localizationsDelegates: AppLocalizations.localizationsDelegates,

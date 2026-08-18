@@ -1,6 +1,5 @@
 {
   "@@locale": "en",
-  "appTitle": "Flutter Transportia",
   "widgetRouteBottomWhereTo": "Where To?",
   "widgetRouteFieldHintFrom": "From",
   "widgetRouteFieldHintTo": "To",
