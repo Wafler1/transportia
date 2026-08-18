@@ -6,6 +6,7 @@ import '../models/time_selection.dart';
 import '../theme/app_colors.dart';
 import 'bottom_overlay_card.dart';
 import 'pressable_highlight.dart';
+import 'l10n/app_localizations.dart';
 
 class TimeSelectionOverlay extends StatefulWidget {
   const TimeSelectionOverlay({
@@ -68,6 +69,8 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,7 +80,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
             children: [
               Expanded(
                 child: _ToggleButton(
-                  label: 'Depart at',
+                  label: l10n.widgetTimeSelectionOverlayDepartAt,
                   isSelected: !_isArriveBy,
                   onTap: () {
                     setState(() => _isArriveBy = false);
@@ -87,7 +90,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
               const SizedBox(width: 12),
               Expanded(
                 child: _ToggleButton(
-                  label: 'Arrive by',
+                  label: l10n.widgetTimeSelectionOverlayArriveBy,
                   isSelected: _isArriveBy,
                   onTap: () {
                     setState(() => _isArriveBy = true);
@@ -118,7 +121,11 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _ActionButton(label: 'Now', isPrimary: false, onTap: _handleSetNow),
+            _ActionButton(
+              label: l10n.widgetTimeSelectionOverlaySelectTimeNow,
+              isPrimary: false,
+              onTap: _handleSetNow,
+            ),
             PressableHighlight(
               onPressed: _handleConfirm,
               highlightColor: AppColors.accentOf(context),
@@ -129,7 +136,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
                 children: [
                   SizedBox(width: 8),
                   Text(
-                    'Confirm',
+                    l10n.widgetTimeSelectionOverlaySelectTimeConfirm,
                     style: TextStyle(
                       color: AppColors.accentOf(context),
                       fontWeight: FontWeight.w500,
@@ -145,7 +152,7 @@ class _TimeSelectionOverlayState extends State<TimeSelectionOverlay> {
     );
 
     return BottomOverlayCard(
-      title: 'Set time',
+      title: Text(l10n.widgetTimeSelectionOverlaySelectSetTime).data,
       maxHeightFactor: 0.8,
       padding: const EdgeInsets.all(16),
       onDismiss: widget.onDismiss,
@@ -219,9 +226,10 @@ class _DateSelectorState extends State<_DateSelector> {
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final selected = DateTime(date.year, date.month, date.day);
+    final l10n = AppLocalizations.of(context)!;
 
-    if (selected == today) return 'Today';
-    if (selected == tomorrow) return 'Tomorrow';
+    if (selected == today) return l10n.widgetTimeSelectionOverlayToday;
+    if (selected == tomorrow) return l10n.widgetTimeSelectionOverlayTomorrow;
 
     const months = [
       'Jan',

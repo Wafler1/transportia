@@ -1,0 +1,85 @@
+{
+  "@@locale": "en",
+  "appTitle": "Flutter Transportia",
+  "widgetRouteBottomWhereTo": "Where To?",
+  "widgetRouteFieldHintFrom": "From",
+  "widgetRouteFieldHintTo": "To",
+  "widgetRouteBottomSearchSelected": "Search",
+  "widgetRouteBottomTitleListOfFavourites": "Favourites",
+  "widgetRouteBottomTitleRecentTrips": "Recent trips",
+  "widgetRouteBottomTimeSelectDefaultNow": "Now",
+  "widgetRouteBottomNoFavouritesYet": "No favourites yet",
+  "widgetRouteBottomAddYourGoToDestinations": "Add your go-to destinations for quick routing.",
+  "widgetTimeSelectionOverlayDepartAt": "Depart at",
+  "widgetTimeSelectionOverlayArriveBy": "Arrive by",
+  "widgetTimeSelectionOverlaySelectTimeNow": "Now",
+  "widgetTimeSelectionOverlaySelectTimeConfirm": "Confirm",
+  "widgetTimeSelectionOverlaySelectSetTime": "Set time",
+  "widgetTimeSelectionOverlayToday": "Today",
+  "widgetTimeSelectionOverlayTomorrow": "Tomorrow",
+  "widgetRouteSuggestionsFieldOrigin": "Origin",
+  "widgetRouteSuggestionsFieldDestination": "Destination",
+  "widgetRouteSuggestionKeepTyping": "Keep typing",
+  "widgetRouteSuggestionKeepTypingSubTitle": "Enter at least 3 characters to search.",
+  "widgetRouteSuggestionFetching": "Fetching…",
+  "itineraryLabelSearchResults": "Search Results",
+  "itineraryLabelBack": "Back",
+  "itineraryLabelNoRoutesFound": "No routes found.",
+  "itineraryLabelSeePrevious": "See previous",
+  "itineraryListDirect": "Direct",
+  "itineraryListMoreRows": "More",
+  "itineraryListLoadMoreButton": "Load more",
+  "itineraryListDeparted": "Departed",
+  "itineraryListDepartNow": "Depart now",
+  "itineraryListDepartIn": "Depart in {timeUntil}",
+  "@itineraryListDepartIn": {
+    "description": "Time, when connection is leaving station",
+    "placeholders": {
+      "timeUntil": {
+        "type": "String",
+        "example": "30m"
+      }
+    }
+  },
+  "itineraryDetailTitle": "Itinerary Details",
+  "itineraryDetailNoAdditionalStepsRequired": "No additional steps required for this journey.",
+  "itineraryDetailShareThisTrip": "Share this trip",
+  "itineraryDetailDeparture": "Departure",
+  "itineraryDetailArrival": "Arrival",
+  "itineraryDetailTransfer": "Transfer",
+  "itineraryDetailTransfers": "Transfers",
+  "itineraryDetailCalories": "cal",
+  "itineraryDetailAlert": "Alert",
+  "itineraryDetailAlerts": "Alerts",
+  "itineraryDetailTicketInformation": "Ticket information",
+  "itineraryDetailValidFor": "Valid for",
+  "itineraryDetailCANCELLED": "CANCELLED",
+  "itineraryDetailTrack": "Track {tracknumber}",
+  "@itineraryDetailTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "itineraryDetailDelayed": "Delayed",
+  "itineraryDetailRealTime": "Real-time",
+  "itineraryDetailInterlined": "Interlined",
+  "itineraryDetailCustomCardTransfer": "Transfer",
+  "itineraryDetailAhead": "Ahead",
+  "itineraryDetailFinish": "Finish",
+  "itineraryDetailDistanceToWalk": "Approx. {distanceKm} km walk",
+  "@itineraryDetailDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "utilsLegHelperTransitModeWalk": "Walk"
+}
+

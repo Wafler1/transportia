@@ -6,6 +6,8 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    as flutter_localizations;
 import 'environment.dart';
 import 'constants/prefs_keys.dart';
 import 'models/time_selection.dart';
@@ -17,6 +19,7 @@ import 'screens/welcome_screen.dart';
 import 'services/location_service.dart';
 import 'services/transitous_geocode_service.dart';
 import 'widgets/offline_banner_shell.dart';
+import 'widgets/l10n/app_localizations.dart';
 
 class Transportia extends StatelessWidget {
   const Transportia({super.key});
@@ -36,14 +39,12 @@ class Transportia extends StatelessWidget {
               fontSize: 14,
             );
             return WidgetsApp(
-              title: Environment.appName,
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)!.appTitle,
               color: themeProvider.backgroundColor,
               debugShowCheckedModeBanner: false,
-              localizationsDelegates: const [
-                DefaultWidgetsLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [Locale('en', 'US'), Locale('en')],
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               pageRouteBuilder:
                   <T>(RouteSettings settings, WidgetBuilder builder) {
                     return PageRouteBuilder<T>(

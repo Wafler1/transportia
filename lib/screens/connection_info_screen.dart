@@ -23,6 +23,7 @@ import '../widgets/skeletons/skeleton_shimmer.dart';
 import '../widgets/stop_schedule_row.dart';
 import '../widgets/timeline_indicator_box.dart';
 import 'itinerary_map_screen.dart';
+import '../widgets/l10n/app_localizations.dart';
 
 class ConnectionInfoScreen extends StatefulWidget {
   final String tripId;
@@ -150,6 +151,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     return Container(
       color: AppColors.white,
@@ -159,6 +161,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
           children: [
             CustomAppBar(
               title: 'Connection Info',
+              backText: l10n.itineraryLabelBack,
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
 

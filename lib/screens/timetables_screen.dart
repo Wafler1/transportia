@@ -725,7 +725,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        _timeSelection.toDisplayString(),
+                                        _timeSelection.toDisplayString('Now'),
                                         style: TextStyle(
                                           color: AppColors.black,
                                           fontSize: 15,

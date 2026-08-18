@@ -20,6 +20,7 @@ import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/skeletons/skeleton_list.dart';
+import '../widgets/l10n/app_localizations.dart';
 
 class ItineraryListScreen extends StatefulWidget {
   final FutureOr<double> fromLat;
@@ -170,6 +171,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     return PopScope(
       onPopInvokedWithResult: (didPop, result) {
@@ -183,7 +185,8 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
           child: Column(
             children: [
               CustomAppBar(
-                title: 'Search Results',
+                title: l10n.itineraryLabelSearchResults,
+                backText: l10n.itineraryLabelBack,
                 onBackButtonPressed: () {
                   FocusScope.of(context).unfocus();
                   Navigator.of(context).pop();
@@ -195,7 +198,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                     : _itineraries.isEmpty
                     ? Center(
                         child: EmptyState(
-                          title: 'No routes found.',
+                          title: l10n.itineraryLabelNoRoutesFound,
                           titleStyle: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -256,7 +259,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                                   return LoadMoreButton(
                                     onTap: _loadPrevious,
                                     isLoading: _isLoadingPrevious,
-                                    label: 'See previous',
+                                    label: l10n.itineraryLabelSeePrevious,
                                     icon: LucideIcons.chevronUp,
                                   );
                                 }, childCount: beforeCount),
@@ -277,6 +280,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                                     return LoadMoreButton(
                                       onTap: _loadMore,
                                       isLoading: _isLoadingMore,
+                                      label: l10n.itineraryListLoadMoreButton,
                                     );
                                   }
                                   return const SizedBox.shrink();
@@ -347,6 +351,7 @@ class _ItineraryCardState extends State<ItineraryCard>
     final delaySummary = _delaySummaryLabel();
     final hasDeparted = _hasDeparted();
     final departureText = _departureText();
+    final l10n = AppLocalizations.of(context)!;
     final firstNonWalkingLeg = itinerary.legs
         .where((leg) => leg.mode != 'WALK')
         .firstOrNull;
@@ -390,7 +395,7 @@ class _ItineraryCardState extends State<ItineraryCard>
                 children: [
                   if (itinerary.isDirect) ...[
                     Text(
-                      'Direct',
+                      l10n.itineraryListDirect,
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -522,7 +527,7 @@ class _ItineraryCardState extends State<ItineraryCard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'More',
+                    l10n.itineraryListMoreRows,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -571,10 +576,11 @@ class _ItineraryCardState extends State<ItineraryCard>
   bool _hasDeparted() => _secondsUntilDeparture() <= 0;
 
   String _departureText() {
+    final l10n = AppLocalizations.of(context)!;
     final secondsUntil = _secondsUntilDeparture();
-    if (secondsUntil <= 0) return 'Departed';
-    if (secondsUntil < 60) return 'Depart now';
-    return 'Depart in ${formatDuration(secondsUntil)}';
+    if (secondsUntil <= 0) return l10n.itineraryListDeparted;
+    if (secondsUntil < 60) return l10n.itineraryListDepartNow;
+    return l10n.itineraryListDepartIn(formatDuration(secondsUntil));
   }
 }
 

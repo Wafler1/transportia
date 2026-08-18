@@ -18,7 +18,7 @@ dependencies:
     sdk: flutter
   maplibre_gl: ^0.25.0
   geolocator: ^14.0.2
-  lucide_icons_flutter: ^3.1.5
+  lucide_icons_flutter: ^3.1.15
   shared_preferences: ^2.5.4
   permission_handler: ^12.0.1
   vibration: ^3.1.8
@@ -32,6 +32,9 @@ dependencies:
   share_plus: ^12.0.1
   app_links: ^7.0.0
   connectivity_plus: ^6.1.0
+  flutter_localizations:
+    sdk: flutter
+  intl: any
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +52,7 @@ dependency_overrides:
 flutter:
 
   uses-material-design: false
+  generate: true
 
   assets:
     - assets/images/welcome-image.webp

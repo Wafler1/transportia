@@ -5,6 +5,7 @@ import '../widgets/validation_toast.dart';
 import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
 import 'skeletons/skeleton_shimmer.dart';
+import 'l10n/app_localizations.dart';
 
 class RouteFieldBox extends StatefulWidget {
   const RouteFieldBox({
@@ -70,6 +71,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CompositedTransformTarget(
       link: widget.layerLink,
       child: Container(
@@ -92,7 +94,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
               child: _InlineField(
                 controller: widget.fromController,
                 focusNode: widget.fromFocusNode,
-                hintText: 'From',
+                hintText: l10n.widgetRouteFieldHintFrom,
                 textAlign: TextAlign.left,
                 isFromField: true,
                 showMyLocationDefault: widget.showMyLocationDefault,
@@ -168,7 +170,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
               child: _InlineField(
                 controller: widget.toController,
                 focusNode: widget.toFocusNode,
-                hintText: 'To',
+                hintText: l10n.widgetRouteFieldHintTo,
                 textAlign: TextAlign.right,
                 isFromField: false,
                 showMyLocationDefault: false,

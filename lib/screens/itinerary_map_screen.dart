@@ -16,6 +16,7 @@ import '../utils/map_marker_utils.dart';
 import '../utils/polyline_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/l10n/app_localizations.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
   final Itinerary itinerary;
@@ -94,6 +95,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -103,6 +105,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
               children: [
                 CustomAppBar(
                   title: 'Journey Map',
+                  backText: l10n.itineraryLabelBack,
                   onBackButtonPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(

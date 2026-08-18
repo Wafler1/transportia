@@ -11,6 +11,7 @@ import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/validation_toast.dart';
 import '../widgets/skeletons/skeleton_shimmer.dart';
+import '../widgets/l10n/app_localizations.dart';
 
 class AddFavouriteMapScreen extends StatefulWidget {
   const AddFavouriteMapScreen({super.key});
@@ -29,6 +30,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       color: AppColors.white,
@@ -39,6 +41,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
               children: [
                 CustomAppBar(
                   title: 'Add Favourite',
+                  backText: l10n.itineraryLabelBack,
                   onBackButtonPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(

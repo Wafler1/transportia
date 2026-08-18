@@ -10,6 +10,7 @@ import '../utils/favorite_icons.dart';
 import 'buttons/pill_button.dart';
 import 'buttons/primary_button.dart';
 import 'skeletons/skeleton_shimmer.dart';
+import 'l10n/app_localizations.dart';
 
 class BottomCard extends StatefulWidget {
   const BottomCard({
@@ -84,6 +85,7 @@ class BottomCard extends StatefulWidget {
 class _BottomCardState extends State<BottomCard> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -164,7 +166,7 @@ class _BottomCardState extends State<BottomCard> {
                                 child: Align(
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    'Where to?',
+                                    l10n.widgetRouteBottomWhereTo,
                                     style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
@@ -242,8 +244,9 @@ class _BottomCardState extends State<BottomCard> {
                                             ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              widget.timeSelection
-                                                  .toDisplayString(),
+                                              widget.timeSelection.toDisplayString(
+                                                l10n.widgetRouteBottomTimeSelectDefaultNow,
+                                              ),
                                               style: TextStyle(
                                                 color: AppColors.black,
                                                 fontSize: 15,
@@ -264,9 +267,9 @@ class _BottomCardState extends State<BottomCard> {
                                           widget.onSearch(widget.timeSelection),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
-                                        children: const [
+                                        children: [
                                           Text(
-                                            'Search',
+                                            l10n.widgetRouteBottomSearchSelected,
                                             style: TextStyle(
                                               color: AppColors.solidWhite,
                                               fontSize: 15,
@@ -303,7 +306,7 @@ class _BottomCardState extends State<BottomCard> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Favourites',
+                                        l10n.widgetRouteBottomTitleListOfFavourites,
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
@@ -335,7 +338,7 @@ class _BottomCardState extends State<BottomCard> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Recent trips',
+                                          l10n.widgetRouteBottomTitleRecentTrips,
                                           style: TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w700,
@@ -574,6 +577,7 @@ class _FavoritesEmptyMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.accentOf(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -592,7 +596,7 @@ class _FavoritesEmptyMessage extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'No favourites yet',
+            l10n.widgetRouteBottomNoFavouritesYet,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -601,7 +605,7 @@ class _FavoritesEmptyMessage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Add your go-to destinations for quick routing.',
+            l10n.widgetRouteBottomAddYourGoToDestinations,
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
