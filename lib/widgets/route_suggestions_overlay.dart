@@ -7,7 +7,7 @@ import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/favorite_icons.dart';
 import '../utils/haptics.dart';
-import 'l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class RouteSuggestionsOverlay extends StatelessWidget {
   const RouteSuggestionsOverlay({

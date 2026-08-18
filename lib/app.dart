@@ -19,7 +19,7 @@ import 'screens/welcome_screen.dart';
 import 'services/location_service.dart';
 import 'services/transitous_geocode_service.dart';
 import 'widgets/offline_banner_shell.dart';
-import 'widgets/l10n/app_localizations.dart';
+import 'l10n/app_localizations.dart';
 
 class Transportia extends StatelessWidget {
   const Transportia({super.key});

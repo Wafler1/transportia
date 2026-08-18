@@ -23,7 +23,7 @@ import '../widgets/skeletons/skeleton_shimmer.dart';
 import '../widgets/stop_schedule_row.dart';
 import '../widgets/timeline_indicator_box.dart';
 import 'itinerary_map_screen.dart';
-import '../widgets/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class ConnectionInfoScreen extends StatefulWidget {
   final String tripId;

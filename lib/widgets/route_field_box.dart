@@ -5,7 +5,7 @@ import '../widgets/validation_toast.dart';
 import '../utils/haptics.dart';
 import '../theme/app_colors.dart';
 import 'skeletons/skeleton_shimmer.dart';
-import 'l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class RouteFieldBox extends StatefulWidget {
   const RouteFieldBox({

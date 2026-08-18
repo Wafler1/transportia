@@ -11,7 +11,7 @@ import '../theme/app_colors.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/validation_toast.dart';
 import '../widgets/skeletons/skeleton_shimmer.dart';
-import '../widgets/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class AddFavouriteMapScreen extends StatefulWidget {
   const AddFavouriteMapScreen({super.key});

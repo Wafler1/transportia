@@ -6,7 +6,7 @@ import '../models/time_selection.dart';
 import '../theme/app_colors.dart';
 import 'bottom_overlay_card.dart';
 import 'pressable_highlight.dart';
-import 'l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class TimeSelectionOverlay extends StatefulWidget {
   const TimeSelectionOverlay({

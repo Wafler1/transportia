@@ -10,7 +10,7 @@ import '../utils/favorite_icons.dart';
 import 'buttons/pill_button.dart';
 import 'buttons/primary_button.dart';
 import 'skeletons/skeleton_shimmer.dart';
-import 'l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class BottomCard extends StatefulWidget {
   const BottomCard({

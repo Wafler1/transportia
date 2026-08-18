@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/app_colors.dart';
 import 'custom_app_bar.dart';
-import 'l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class AppPageScaffold extends StatelessWidget {
   const AppPageScaffold({

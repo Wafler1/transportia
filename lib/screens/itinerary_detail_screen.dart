@@ -20,7 +20,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/info_chip.dart';
 import 'itinerary_map_screen.dart';
-import '../widgets/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class ItineraryDetailScreen extends StatefulWidget {
   final Itinerary itinerary;

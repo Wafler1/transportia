@@ -16,7 +16,7 @@ import '../utils/map_marker_utils.dart';
 import '../utils/polyline_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
   final Itinerary itinerary;

@@ -20,7 +20,7 @@ import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/skeletons/skeleton_list.dart';
-import '../widgets/l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class ItineraryListScreen extends StatefulWidget {
   final FutureOr<double> fromLat;
