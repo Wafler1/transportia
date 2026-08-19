@@ -1,0 +1,380 @@
+{
+  "@@locale": "en",
+  "widgetEditFavouriteOverlayEditFavorite": "Edit Favourite",
+  "widgetEditFavouriteOverlayName": "Name",
+  "widgetEditFavouriteOverlayPlaceholderName": "Enter name",
+  "widgetEditFavouriteOverlayIcon": "Icon",
+  "widgetEditFavouriteOverlayCancel": "Cancel",
+  "widgetEditFavouriteOverlaySave": "Save",
+  "widgetQuickButtonPickerSoon": "Soon",
+  "widgetRouteBottomWhereTo": "Where To?",
+  "widgetRouteFieldHintFrom": "From",
+  "widgetRouteFieldHintTo": "To",
+  "widgetRouteBottomSearchSelected": "Search",
+  "widgetRouteBottomTitleListOfFavourites": "Favourites",
+  "widgetRouteBottomTitleRecentTrips": "Recent trips",
+  "widgetRouteBottomTimeSelectDefaultNow": "Now",
+  "widgetRouteBottomNoFavouritesYet": "No favourites yet",
+  "widgetRouteBottomAddYourGoToDestinations": "Add your go-to destinations for quick routing.",
+  "widgetTimeSelectionOverlayDepartAt": "Depart at",
+  "widgetTimeSelectionOverlayArriveBy": "Arrive by",
+  "widgetTimeSelectionOverlaySelectTimeNow": "Now",
+  "widgetTimeSelectionOverlaySelectTimeConfirm": "Confirm",
+  "widgetTimeSelectionOverlaySelectSetTime": "Set time",
+  "widgetTimeSelectionOverlayToday": "Today",
+  "widgetTimeSelectionOverlayTomorrow": "Tomorrow",
+  "widgetTimeSelectionOverlayMonthJanuary": "Jan",
+  "widgetTimeSelectionOverlayMonthFebruary": "Feb",
+  "widgetTimeSelectionOverlayMonthMarch": "Mar",
+  "widgetTimeSelectionOverlayMonthApril": "Apr",
+  "widgetTimeSelectionOverlayMonthMay": "May",
+  "widgetTimeSelectionOverlayMonthJune": "Jun",
+  "widgetTimeSelectionOverlayMonthJuly": "Jul",
+  "widgetTimeSelectionOverlayMonthAugust": "Aug",
+  "widgetTimeSelectionOverlayMonthSeptember": "Sep",
+  "widgetTimeSelectionOverlayMonthOctober": "Oct",
+  "widgetTimeSelectionOverlayMonthNovember": "Nov",
+  "widgetTimeSelectionOverlayMonthDecember": "Dec",
+  "widgetTimeSelectionOverlayHour": "Hour",
+  "widgetTimeSelectionOverlayMinute": "Minute",
+  "widgetRouteSuggestionsFieldOrigin": "Origin",
+  "widgetRouteSuggestionsFieldDestination": "Destination",
+  "widgetRouteSuggestionKeepTyping": "Keep typing",
+  "widgetRouteSuggestionKeepTypingSubTitle": "Enter at least 3 characters to search.",
+  "widgetRouteSuggestionNoMatches": "No matches found",
+  "widgetRouteSuggestionNoMatchesSubTitle": "Try a nearby city or tweak the spelling.",
+  "widgetRouteSuggestionFetching": "Fetching…",
+  "itineraryLabelSearchResults": "Search Results",
+  "itineraryLabelNoRoutesFound": "No routes found.",
+  "itineraryLabelSeePrevious": "See previous",
+  "itineraryListDirect": "Direct",
+  "itineraryListMoreRows": "More",
+  "itineraryListLoadMoreButton": "Load more",
+  "itineraryListDeparted": "Departed",
+  "itineraryListDepartNow": "Depart now",
+  "itineraryListDepartIn": "Depart in {timeUntil}",
+  "@itineraryListDepartIn": {
+    "description": "Time, when connection is leaving station",
+    "placeholders": {
+      "timeUntil": {
+        "type": "String",
+        "example": "30m"
+      }
+    }
+  },
+  "itineraryDetailTitle": "Itinerary Details",
+  "itineraryDetailNoAdditionalStepsRequired": "No additional steps required for this journey.",
+  "itineraryDetailShareThisTrip": "Share this trip",
+  "itineraryDetailDeparture": "Departure",
+  "itineraryDetailArrival": "Arrival",
+  "itineraryDetailTransfer": "Transfer",
+  "itineraryDetailTransfers": "Transfers",
+  "itineraryDetailCalories": "cal",
+  "itineraryDetailAlert": "Alert",
+  "itineraryDetailAlerts": "Alerts",
+  "itineraryDetailTicketInformation": "Ticket information",
+  "itineraryDetailValidFor": "Valid for",
+  "itineraryDetailCANCELLED": "CANCELLED",
+  "itineraryDetailTrack": "Track {tracknumber}",
+  "@itineraryDetailTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "itineraryDetailDelayed": "Delayed",
+  "itineraryDetailRealTime": "Real-time",
+  "itineraryDetailInterlined": "Interlined",
+  "itineraryDetailCustomCardTransfer": "Transfer",
+  "itineraryDetailAhead": "Ahead",
+  "itineraryDetailFinish": "Finish",
+  "itineraryDetailDistanceToWalk": "Approx. {distanceKm} km walk",
+  "@itineraryDetailDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "utilsLegHelperTransitModeWalk": "Walk",
+  "screenTimetablesTitle": "Timetables",
+  "screenTimetablesSubtitle": "Stop departures & arrivals",
+  "screenTimetablesSearchButton": "Search",
+  "screenTimetablesTimeButtonNow": "Now",
+  "screenTimetablesSearchInputPlaceholder": "Search for a stop...",
+  "screenTimetablesResultPlaceholder": "Search for a stop",
+  "screenTimetablesResultPlaceholderSubtitle": "Enter a stop name above to view\ndepartures and arrivals",
+  "screenTimetablesResultStopSuggestions": "Stop suggestions",
+  "screenTimetablesRowArrival": "Arr",
+  "screenTimetablesRowDeparture": "Dep",
+  "screenTimetablesLoadMoreButton": "Load more",
+  "screenConnectionInfoTitle": "Connection Info",
+  "screenConnectionInfoFailedToLoadTripDetails": "Failed to load trip details",
+  "screenConnectionInfoNoTripDataAvailable": "No trip data available",
+  "screenConnectionWarnings": "Warnings",
+  "screenConnectionInformation": "Information",
+  "screenConnectionRealTime": "Real-time",
+  "screenConnectionCANCELLED": "CANCELLED",
+  "screenConnectionInfoJourney": "Journey",
+  "screenConnectionRowArrival": "Arr",
+  "screenConnectionRowDeparture": "Dep",
+  "screenConnectionUpcoming": "Upcoming",
+  "screenConnectionTrack": "Track {tracknumber}",
+  "@screenConnectionTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "screenItineraryMapTitle": "Journey Map",
+  "screenItineraryLabelBack": "Back",
+  "screenItineraryJourneyOverview": "Journey overview",
+  "screenItineraryJourneyDeparture": "Departure",
+  "screenItineraryJourneyArrival": "Arrival",
+  "screenItineraryTransferCarouselTransfer": "Transfer",
+  "screenItineraryTransferCarouselDistanceToWalk": "Approx. {distanceKm} km walk",
+  "@screenItineraryTransferCarouselDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "screenMapScreenQuickButtonHideStops": "Hide Stops",
+  "screenMapScreenQuickButtonShowStops": "Show Stops",
+  "screenMapScreenQuickButtonHideTransit": "Hide Transit",
+  "screenMapScreenQuickButtonShowTransit": "Show Transit",
+  "screenMapScreenQuickButtonHideRealtimeVehicles": "RT Only",
+  "screenMapScreenQuickButtonShowRealtimeVehicles": "All Data",
+  "screenMapScreenQuickButtonAutoCenter": "Auto-center",
+  "screenMapScreenQuickButtonNoCentering": "No centering",
+  "screenMapScreenQuickButtonChangeMapStyle": "Switch map",
+  "screenMapScreenMapScreenContolsLocate": "Locate",
+  "screenMapScreenMapScreenContolsBack": "Back",
+  "screenMapScreenMapScreenQuickQuickButton": "Quick button",
+  "screenMapScreenMapScreenQuickQuickMapLayers": "Map layers",
+  "screenMapScreenMapScreenQuickQuickVehicles": "Vehicles",
+  "screenMapScreenMapScreenQuickQuickStops": "Stops",
+  "screenMapScreenMapScreenQuickQuickLiveData": "Live data",
+  "screenMapScreenMapScreenQuickQuickLiveDataLabel": "Show only real-time data",
+  "screenMapScreenMapScreenQuickQuickVehicleTypes": "Vehicle types",
+  "screenMapScreenMapScreenQuickQuickAllSettings": "All settings",
+  "screenMapScreenMapScreenQuickVehicleGridTrains": "Trains",
+  "screenMapScreenMapScreenQuickVehicleGridMetro": "Metro",
+  "screenMapScreenMapScreenQuickVehicleGridTram": "Tram",
+  "screenMapScreenMapScreenQuickVehicleGridBus": "Bus",
+  "screenMapScreenMapScreenQuickVehicleGridFerries": "Ferries",
+  "screenMapScreenMapScreenQuickVehicleGridLifts": "Lifts",
+  "screenMapScreenMapScreenQuickVehicleGridOther": "Other",
+  "screensUserScreensSubtitleUser": "Settings & Information",
+  "screensUserScreensTitleUser": "User",
+  "screensUserScreensUnableToOpenLink": "Unable to open link.",
+  "screensUserScreensCreatedBy": "Created by ",
+  "screensUserScreensCreatedByCompany": "Wafler.one",
+  "screensUserScreensCreatedBySlogan": "Helping you travel smarter",
+  "screensUserScreensAnalyticsTitle": "Analytics",
+  "screensUserScreensStatisticsTitle": "Statistics",
+  "screensUserScreensStatisticsSubtitle": "View your travel statistics",
+  "screensUserScreensPreferencesTitle": "Preferences",
+  "screensUserScreensFavouritesTitle": "Favourites",
+  "screensUserScreensFavouritesSubtitle": "Manage your favourite places",
+  "screensUserScreensLocationTitle": "Location",
+  "screensUserScreensLocationSubtitle": "Location permissions",
+  "screensUserScreensAppearanceTitle": "Appearance",
+  "screensUserScreensAppearanceSubtitle": "Theme and display",
+  "screensUserScreensTransitOptionsTitle": "Transit options",
+  "screensUserScreensTransitOptionsSubtitle": "Modes, walking speed & transfers",
+  "screensUserScreensAboutTitle": "About",
+  "screensUserScreensAboutAppnameTitle": "About {AppName}",
+  "@screensUserScreensAboutAppnameTitle": {
+    "description": "Desciption of Application",
+    "placeholders": {
+      "AppName": {
+        "type": "String",
+        "example": "Transportia"
+      }
+    }
+  },
+  "screensUserScreensAboutSubtitle": "About, credits, and more",
+  "screensUserScreensLegalTitle": "Legal",
+  "screensUserScreensLegalSubtitle": "Privacy policy and terms of service",
+  "screensUserScreensVersionTitle": "About {AppVersion}",
+  "@screensUserScreensVersionTitle": {
+    "description": "Version of Application",
+    "placeholders": {
+      "AppVersion": {
+        "type": "String",
+        "example": "1.0.3"
+      }
+    }
+  },
+  "screensFavouriteInfoIsLoading": "Loading…",
+  "screensFavouritesScreenScreenTitle": "Favourites",
+  "screensFavouritesScreenBodyTitle": "Your favourite places",
+  "screensFavouritesScreenBodySubtitle": "Quickly reuse the stops and addresses you visit most.",
+  "screensFavouritesScreenHelpOrderEntries": "Long press and drag to reorder your favourites. Tap to edit.",
+  "screensFavouritesScreenEmptyTitle": "No favourites yet",
+  "screensFavouritesScreenEmptySubtitle": "Add the places you care about and they will show up here.",
+  "screensFavouritesScreenButtonAddFavourite": "Add Favourite",
+  "screensFafouritesScreenScreenTitle": "Favourites",
+  "screensFafouritesScreenBodyTitle": "Your favourite places",
+  "screensFafouritesScreenBodySubtitle": "Quickly reuse the stops and addresses you visit most.",
+  "screensFafouritesScreenHelpOrderEntries": "Long press and drag to reorder your favourites. Tap to edit.",
+  "screensFafouritesScreenEmptyTitle": "No favourites yet",
+  "screensFafouritesScreenEmptySubtitle": "Add the places you care about and they will show up here.",
+  "screensFafouritesScreenButtonAddFavourite": "Add Favourite",
+  "screensLocationSettingsScreenTitle": "Location",
+  "screensLocationSettingsScreenTitleIsLoading": "Checking location status...",
+  "screensLocationSettingsScreenSectionTitle": "Status Details",
+  "screensLocationSettingsScreenSectionCardLocationServices": "Location Services",
+  "screensLocationSettingsScreenSectionCardLocationServicesStatusEnabled": "Enabled",
+  "screensLocationSettingsScreenSectionCardLocationServicesStatusDisabled": "Disabled",
+  "screensLocationSettingsScreenSectionCardAppPermission": "App Permission",
+  "screensLocationSettingsScreenSectionCardOpenAppSettings": "Open settings",
+  "screensLocationSettingsScreenSectionCardRefreshStatus": "Refresh status",
+  "screensLocationSettingsScreenLocationEnabled": "Location Enabled",
+  "screensLocationSettingsScreenLocationDisnabled": "Location Disabled",
+  "screensLocationSettingsScreenLocationStatusDescriptionEnabled": "Your location is being used for navigation",
+  "screensLocationSettingsScreenLocationStatusDescriptionDisabled": "Enable location to use all features",
+  "screensLocationSettingsScreenLocationPermissionStatusTextAllowed": "Allowed",
+  "screensLocationSettingsScreenLocationPermissionStatusTextDenied": "Denied",
+  "screensLocationSettingsScreenLocationPermissionStatusTextRestricted": "Restricted",
+  "screensLocationSettingsScreenLocationPermissionStatusTextLimited": "Limited",
+  "screensLocationSettingsScreenLocationPermissionStatusTextPermanentlyDenied": "Permanently Denied",
+  "screensLocationSettingsScreenLocationPermissionStatusTextUnknown": "Unknown",
+  "screenAppearanceScreenTitle": "Appearance",
+  "screenAppearanceScreenAppIconHeaderTitle": "Customize Your Experience",
+  "screenAppearanceScreenAppIconHeaderSubtitle": "Personalize the look and feel of the app",
+  "screenAppearanceScreenAccentColorTitle": "Accent Color",
+  "screenAppearanceScreenAccentColorSubtitle": "Choose your preferred accent color",
+  "screenAppearanceScreenAccentColorResetToDefault": "Reset to default",
+  "screenAppearanceScreenAppThemeTitle": "App Theme",
+  "screenAppearanceScreenAppThemeSubtitle": "Pick light, dark, or follow your system",
+  "screenAppearanceScreenAppThemeColorWhite": "White",
+  "screenAppearanceScreenAppThemeColorDark": "Dark",
+  "screenAppearanceScreenAppThemeColorSystem": "System",
+  "screenAppearanceScreenMapStyleTitle": "Map Style",
+  "screenAppearanceScreenMapStyleSubtitle": "Select your preferred map appearance",
+  "screenAppearanceScreenMapStyleColorDefault": "Default",
+  "screenAppearanceScreenMapStyleColorLight": "Light",
+  "screenAppearanceScreenMapStyleColorDark": "Dark",
+  "screenAppearanceScreenInteractionTitle": "Interaction",
+  "screenAppearanceScreenInteractionSubtitle": "Choose whether the app should use tactile feedback",
+  "screenAppearanceScreenInteractionVibrations": "App vibrations",
+  "screenAppearanceScreenInteractionVibrationsEnabled": "Haptic feedback is enabled throughout the app",
+  "screenAppearanceScreenInteractionVibrationsDisabled": "Haptic feedback is disabled throughout the app",
+  "utilsLegHelperTransitionModeNameWalk": "Walk",
+  "@utilsLegHelperTransitionModeNameWalk": {
+    "description": "Label for the walking transit mode"
+  },
+  "utilsLegHelperTransitionModeNameBike": "Bike",
+  "@utilsLegHelperTransitionModeNameBike": {
+    "description": "Label for the bicycle transit mode"
+  },
+  "utilsLegHelperTransitionModeNameRental": "Rental",
+  "@utilsLegHelperTransitionModeNameRental": {
+    "description": "Label for vehicle/scooter rental mode"
+  },
+  "utilsLegHelperTransitionModeNameCar": "Car",
+  "@utilsLegHelperTransitionModeNameCar": {
+    "description": "Label for private car mode"
+  },
+  "utilsLegHelperTransitionModeNameCarParking": "Car Parking",
+  "@utilsLegHelperTransitionModeNameCarParking": {
+    "description": "Label for car parking"
+  },
+  "utilsLegHelperTransitionModeNameCarDropoff": "Car Drop-off",
+  "@utilsLegHelperTransitionModeNameCarDropoff": {
+    "description": "Label for car drop-off"
+  },
+  "utilsLegHelperTransitionModeNameOnDemand": "On-Demand",
+  "@utilsLegHelperTransitionModeNameOnDemand": {
+    "description": "Label for on-demand transport (ODM)"
+  },
+  "utilsLegHelperTransitionModeNameFlexibleService": "Flexible Service",
+  "@utilsLegHelperTransitionModeNameFlexibleService": {
+    "description": "Label for flexible service (FLEX)"
+  },
+  "utilsLegHelperTransitionModeNameTransit": "Transit",
+  "@utilsLegHelperTransitionModeNameTransit": {
+    "description": "Generic transit label"
+  },
+  "utilsLegHelperTransitionModeNameTram": "Tram",
+  "@utilsLegHelperTransitionModeNameTram": {
+    "description": "Label for tram"
+  },
+  "utilsLegHelperTransitionModeNameSubway": "Subway",
+  "@utilsLegHelperTransitionModeNameSubway": {
+    "description": "Label for subway/metro (SUBWAY)"
+  },
+  "utilsLegHelperTransitionModeNameFerry": "Ferry",
+  "@utilsLegHelperTransitionModeNameFerry": {
+    "description": "Label for ferry"
+  },
+  "utilsLegHelperTransitionModeNameAirplane": "Airplane",
+  "@utilsLegHelperTransitionModeNameAirplane": {
+    "description": "Label for airplane"
+  },
+  "utilsLegHelperTransitionModeNameSuburban": "Suburban",
+  "@utilsLegHelperTransitionModeNameSuburban": {
+    "description": "Label for suburban rail"
+  },
+  "utilsLegHelperTransitionModeNameBus": "Bus",
+  "@utilsLegHelperTransitionModeNameBus": {
+    "description": "Label for bus"
+  },
+  "utilsLegHelperTransitionModeNameCoachBus": "Coach Bus",
+  "@utilsLegHelperTransitionModeNameCoachBus": {
+    "description": "Label for coach/long-distance bus"
+  },
+  "utilsLegHelperTransitionModeNameTrain": "Train",
+  "@utilsLegHelperTransitionModeNameTrain": {
+    "description": "Label for generic train / rail"
+  },
+  "utilsLegHelperTransitionModeNameHighSpeedTrain": "High-speed Train",
+  "@utilsLegHelperTransitionModeNameHighSpeedTrain": {
+    "description": "Label for high-speed rail"
+  },
+  "utilsLegHelperTransitionModeNameNightTrain": "Night Train",
+  "@utilsLegHelperTransitionModeNameNightTrain": {
+    "description": "Label for night train services"
+  },
+  "utilsLegHelperTransitionModeNameExpressTrain": "Express Train",
+  "@utilsLegHelperTransitionModeNameExpressTrain": {
+    "description": "Label for regional fast/express rail"
+  },
+  "utilsLegHelperTransitionModeNameCableCar": "Cable Car",
+  "@utilsLegHelperTransitionModeNameCableCar": {
+    "description": "Label for cable car"
+  },
+  "utilsLegHelperTransitionModeNameAerialLift": "Aerial Lift",
+  "@utilsLegHelperTransitionModeNameAerialLift": {
+    "description": "Label for aerial lift"
+  },
+  "utilsLegHelperTransitionModeNameFunicular": "Funicular",
+  "@utilsLegHelperTransitionModeNameFunicular": {
+    "description": "Label for funicular"
+  },
+  "utilsLegHelperTransitionModeNameArealLift": "Areal Lift",
+  "@utilsLegHelperTransitionModeNameArealLift": {
+    "description": "Label for areal lift"
+  },
+  "utilsLegHelperTransitionModeNameMetro": "Metro",
+  "@utilsLegHelperTransitionModeNameMetro": {
+    "description": "Label for metro"
+  },
+  "utilsLegHelperTransitionModeNameOther": "Other",
+  "@utilsLegHelperTransitionModeNameOther": {
+    "description": "Fallback label for unknown/other modes"
+  }
+}

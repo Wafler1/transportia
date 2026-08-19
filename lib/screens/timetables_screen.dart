@@ -27,6 +27,7 @@ import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
 import '../widgets/time_selection_overlay.dart';
 import '../widgets/validation_toast.dart';
+import '../l10n/app_localizations.dart';
 
 class TimetablesScreen extends StatefulWidget {
   const TimetablesScreen({super.key, this.initialStop});
@@ -541,6 +542,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     final showSuggestions = _searchFocus.hasFocus;
 
@@ -594,7 +596,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Timetables',
+                                    l10n.screenTimetablesTitle,
                                     style: TextStyle(
                                       fontSize: 28,
                                       fontWeight: FontWeight.w800,
@@ -604,7 +606,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                    'Stop departures & arrivals',
+                                    l10n.screenTimetablesSubtitle,
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w500,
@@ -658,7 +660,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       child: CupertinoTextField(
                                         controller: _searchController,
                                         focusNode: _searchFocus,
-                                        placeholder: 'Search for a stop...',
+                                        placeholder: l10n
+                                            .screenTimetablesSearchInputPlaceholder,
                                         placeholderStyle: TextStyle(
                                           color: AppColors.black.withValues(
                                             alpha: 0.4,
@@ -725,7 +728,9 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
-                                        _timeSelection.toDisplayString(),
+                                        _timeSelection.toDisplayString(
+                                          l10n.screenTimetablesTimeButtonNow,
+                                        ),
                                         style: TextStyle(
                                           color: AppColors.black,
                                           fontSize: 15,
@@ -739,8 +744,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               const Spacer(),
                               PrimaryButton(
                                 onTap: _onSearch,
-                                child: const Text(
-                                  'Search',
+                                child: Text(
+                                  l10n.screenTimetablesSearchButton,
                                   style: TextStyle(
                                     color: AppColors.solidWhite,
                                     fontSize: 15,
@@ -843,6 +848,8 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                           if (hasNextSlot &&
                                               index == afterItems.length) {
                                             return LoadMoreButton(
+                                              label: l10n
+                                                  .screenTimetablesLoadMoreButton,
                                               onTap: _loadMore,
                                               isLoading: _isLoadingMore,
                                             );
@@ -884,9 +891,10 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                                           ),
                                         ),
                                       ),
-                                      title: 'Search for a stop',
-                                      subtitle:
-                                          'Enter a stop name above to view\ndepartures and arrivals',
+                                      title: l10n
+                                          .screenTimetablesResultPlaceholder,
+                                      subtitle: l10n
+                                          .screenTimetablesResultPlaceholderSubtitle,
                                       titleStyle: TextStyle(
                                         fontSize: 20,
                                         fontWeight: FontWeight.w700,
@@ -951,7 +959,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
                               onDismissRequest: () {
                                 _searchFocus.unfocus();
                               },
-                              title: "Stop suggestions",
+                              title: l10n.screenTimetablesResultStopSuggestions,
                             ),
                     ),
                   ),
@@ -977,6 +985,7 @@ class _StopTimeCard extends StatelessWidget {
         parseHexColor(stopTime.routeTextColor) ?? AppColors.solidWhite;
 
     final modeIcon = getLegIcon(stopTime.mode);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1050,13 +1059,13 @@ class _StopTimeCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 _TimeWithDelayText(
-                  label: 'Arr',
+                  label: l10n.screenTimetablesRowArrival,
                   scheduled: stopTime.place.scheduledArrival,
                   actual: stopTime.place.arrival,
                 ),
                 const SizedBox(height: 4),
                 _TimeWithDelayText(
-                  label: 'Dep',
+                  label: l10n.screenTimetablesRowDeparture,
                   scheduled: stopTime.place.scheduledDeparture,
                   actual: stopTime.place.departure,
                   subdued: true,

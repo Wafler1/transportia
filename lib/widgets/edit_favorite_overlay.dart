@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../services/favorites_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/favorite_icons.dart';
+import '../l10n/app_localizations.dart';
 
 class EditFavoriteOverlay extends StatefulWidget {
   final FavoritePlace favorite;
@@ -57,6 +58,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
       child: Container(
@@ -102,7 +104,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          'Edit Favourite',
+                          l10n.widgetEditFavouriteOverlayEditFavorite,
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -114,7 +116,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Name',
+                    l10n.widgetEditFavouriteOverlayName,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -124,7 +126,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                   const SizedBox(height: 8),
                   CupertinoTextField(
                     controller: _nameController,
-                    placeholder: 'Enter name',
+                    placeholder: l10n.widgetEditFavouriteOverlayPlaceholderName,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppColors.black.withValues(alpha: 0.03),
@@ -141,7 +143,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Icon',
+                    l10n.widgetEditFavouriteOverlayIcon,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -227,7 +229,7 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                               ),
                             ),
                             child: Text(
-                              'Cancel',
+                              l10n.widgetEditFavouriteOverlayCancel,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,
@@ -248,8 +250,8 @@ class _EditFavoriteOverlayState extends State<EditFavoriteOverlay> {
                               color: AppColors.accentOf(context),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
-                              'Save',
+                            child: Text(
+                              l10n.widgetEditFavouriteOverlaySave,
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 16,

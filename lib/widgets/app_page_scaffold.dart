@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../theme/app_colors.dart';
 import 'custom_app_bar.dart';
+import '../l10n/app_localizations.dart';
 
 class AppPageScaffold extends StatelessWidget {
   const AppPageScaffold({
@@ -31,6 +32,7 @@ class AppPageScaffold extends StatelessWidget {
             ? const EdgeInsets.symmetric(horizontal: 20, vertical: 16)
             : EdgeInsets.zero);
     final resolvedBackgroundColor = backgroundColor ?? AppColors.white;
+    final l10n = AppLocalizations.of(context)!;
 
     Widget content = body;
     if (scrollable) {
@@ -47,6 +49,7 @@ class AppPageScaffold extends StatelessWidget {
           children: [
             CustomAppBar(
               title: title,
+              backText: l10n.screenItineraryLabelBack,
               onBackButtonPressed: onBack ?? () => Navigator.of(context).pop(),
             ),
             Expanded(child: content),

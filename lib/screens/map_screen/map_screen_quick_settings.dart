@@ -124,6 +124,7 @@ class _QuickSettingsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final accent = AppColors.accentOf(context);
     Text sectionTitle(String title) {
       return Text(
@@ -154,7 +155,7 @@ class _QuickSettingsContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           sectionCard(
-            title: 'Quick button',
+            title: l10n.screenMapScreenMapScreenQuickQuickButton,
             child: _QuickButtonSelectField(
               value: quickButtonAction,
               options: quickButtonOptions,
@@ -162,7 +163,7 @@ class _QuickSettingsContent extends StatelessWidget {
             ),
           ),
           sectionCard(
-            title: 'Map layers',
+            title: l10n.screenMapScreenMapScreenQuickQuickMapLayers,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 const spacing = 12.0;
@@ -174,7 +175,7 @@ class _QuickSettingsContent extends StatelessWidget {
                     SizedBox(
                       width: width,
                       child: SelectableIconCard(
-                        label: 'Vehicles',
+                        label: l10n.screenMapScreenMapScreenQuickQuickVehicles,
                         icon: LucideIcons.busFront,
                         selected: showVehicles,
                         onTap: () => onShowVehiclesChanged(!showVehicles),
@@ -183,7 +184,7 @@ class _QuickSettingsContent extends StatelessWidget {
                     SizedBox(
                       width: width,
                       child: SelectableIconCard(
-                        label: 'Stops',
+                        label: l10n.screenMapScreenMapScreenQuickQuickStops,
                         icon: LucideIcons.mapPin,
                         selected: showStops,
                         onTap: () => onShowStopsChanged(!showStops),
@@ -213,15 +214,17 @@ class _QuickSettingsContent extends StatelessWidget {
                     key: const ValueKey('quick-settings-vehicles'),
                     children: [
                       sectionCard(
-                        title: 'Live data',
+                        title: l10n.screenMapScreenMapScreenQuickQuickLiveData,
                         child: _QuickToggleRow(
-                          label: 'Show only real-time data',
+                          label: l10n
+                              .screenMapScreenMapScreenQuickQuickLiveDataLabel,
                           value: hideNonRealtime,
                           onChanged: onHideNonRealtimeChanged,
                         ),
                       ),
                       sectionCard(
-                        title: 'Vehicle types',
+                        title:
+                            l10n.screenMapScreenMapScreenQuickQuickVehicleTypes,
                         child: _VehicleModesGrid(
                           visibility: vehicleModeVisibility,
                           onChanged: onVehicleModeChanged,
@@ -248,7 +251,7 @@ class _QuickSettingsContent extends StatelessWidget {
                     Icon(LucideIcons.settings, size: 18, color: accent),
                     const SizedBox(width: 8),
                     Text(
-                      'All settings',
+                      l10n.screenMapScreenMapScreenQuickQuickAllSettings,
                       style: TextStyle(
                         color: accent,
                         fontWeight: FontWeight.w600,
@@ -428,14 +431,20 @@ class _VehicleModesGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const entries = <_VehicleModeGroup, String>{
-      _VehicleModeGroup.train: 'Trains',
-      _VehicleModeGroup.metro: 'Metro',
-      _VehicleModeGroup.tram: 'Tram',
-      _VehicleModeGroup.bus: 'Bus',
-      _VehicleModeGroup.ferry: 'Ferries',
-      _VehicleModeGroup.lift: 'Lifts',
-      _VehicleModeGroup.other: 'Other',
+    final l10n = AppLocalizations.of(context)!;
+    final entries = <_VehicleModeGroup, String>{
+      _VehicleModeGroup.train:
+          l10n.screenMapScreenMapScreenQuickVehicleGridTrains,
+      _VehicleModeGroup.metro:
+          l10n.screenMapScreenMapScreenQuickVehicleGridMetro,
+      _VehicleModeGroup.tram: l10n.screenMapScreenMapScreenQuickVehicleGridTram,
+      _VehicleModeGroup.bus: l10n.screenMapScreenMapScreenQuickVehicleGridBus,
+      _VehicleModeGroup.ferry:
+          l10n.screenMapScreenMapScreenQuickVehicleGridFerries,
+      _VehicleModeGroup.lift:
+          l10n.screenMapScreenMapScreenQuickVehicleGridLifts,
+      _VehicleModeGroup.other:
+          l10n.screenMapScreenMapScreenQuickVehicleGridOther,
     };
 
     IconData iconFor(_VehicleModeGroup mode) {

@@ -1,0 +1,380 @@
+{
+  "@@locale": "de",
+  "widgetEditFavouriteOverlayEditFavorite": "Favoriten bearbeiten",
+  "widgetEditFavouriteOverlayName": "Name",
+  "widgetEditFavouriteOverlayPlaceholderName": "Namen eingeben",
+  "widgetEditFavouriteOverlayIcon": "Symbol",
+  "widgetEditFavouriteOverlayCancel": "Abbrechen",
+  "widgetEditFavouriteOverlaySave": "Speichern",
+  "widgetQuickButtonPickerSoon": "Bald",
+  "widgetRouteBottomWhereTo": "Wo geht es hin?",
+  "widgetRouteFieldHintFrom": "Von",
+  "widgetRouteFieldHintTo": "Nach",
+  "widgetRouteBottomSearchSelected": "Suchen",
+  "widgetRouteBottomTitleListOfFavourites": "Favoriten",
+  "widgetRouteBottomTitleRecentTrips": "Kürzliche Fahrten",
+  "widgetRouteBottomTimeSelectDefaultNow": "Jetzt",
+  "widgetRouteBottomNoFavouritesYet": "Noch keine Favoriten",
+  "widgetRouteBottomAddYourGoToDestinations": "Fügen Sie Ihre Lieblingsziele hinzu, um schnell eine Route zu berechnen.",
+  "widgetTimeSelectionOverlayDepartAt": "Abfahrt um",
+  "widgetTimeSelectionOverlayArriveBy": "Ankunft um",
+  "widgetTimeSelectionOverlaySelectTimeNow": "Jetzt",
+  "widgetTimeSelectionOverlaySelectTimeConfirm": "Bestätigen",
+  "widgetTimeSelectionOverlaySelectSetTime": "Zeit festlegen",
+  "widgetTimeSelectionOverlayToday": "Heute",
+  "widgetTimeSelectionOverlayTomorrow": "Morgen",
+  "widgetTimeSelectionOverlayMonthJanuary": "Jän",
+  "widgetTimeSelectionOverlayMonthFebruary": "Feb",
+  "widgetTimeSelectionOverlayMonthMarch": "Mär",
+  "widgetTimeSelectionOverlayMonthApril": "Apr",
+  "widgetTimeSelectionOverlayMonthMay": "Mai",
+  "widgetTimeSelectionOverlayMonthJune": "Jun",
+  "widgetTimeSelectionOverlayMonthJuly": "Jul",
+  "widgetTimeSelectionOverlayMonthAugust": "Aug",
+  "widgetTimeSelectionOverlayMonthSeptember": "Sep",
+  "widgetTimeSelectionOverlayMonthOctober": "Okt",
+  "widgetTimeSelectionOverlayMonthNovember": "Nov",
+  "widgetTimeSelectionOverlayMonthDecember": "Dez",
+  "widgetTimeSelectionOverlayHour": "Stunde",
+  "widgetTimeSelectionOverlayMinute": "Minute",
+  "widgetRouteSuggestionsFieldOrigin": "Ausgangsort",
+  "widgetRouteSuggestionsFieldDestination": "Ziel",
+  "widgetRouteSuggestionKeepTyping": "Weiter tippen",
+  "widgetRouteSuggestionKeepTypingSubTitle": "Geben Sie mindestens 3 Zeichen ein, um die Suche zu starten.",
+  "widgetRouteSuggestionNoMatches": "Keine Treffer gefunden",
+  "widgetRouteSuggestionNoMatchesSubTitle": "Versuchen Sie es mit einer Stadt in der Nähe oder ändern Sie die Schreibweise.",
+  "widgetRouteSuggestionFetching": "Wird abgerufen …",
+  "itineraryLabelSearchResults": "Suchergebnisse",
+  "itineraryLabelNoRoutesFound": "Keine Verbindungen gefunden.",
+  "itineraryLabelSeePrevious": "Vorherige anzeigen",
+  "itineraryListDirect": "Direkt",
+  "itineraryListMoreRows": "Mehr",
+  "itineraryListLoadMoreButton": "Mehr laden",
+  "itineraryListDeparted": "Abgefahren",
+  "itineraryListDepartNow": "Fährt jetzt ab",
+  "itineraryListDepartIn": "Abfahrt in {timeUntil}",
+  "@itineraryListDepartIn": {
+    "description": "Time, when connection is leaving station",
+    "placeholders": {
+      "timeUntil": {
+        "type": "String",
+        "example": "30m"
+      }
+    }
+  },
+  "itineraryDetailTitle": "Reisedetails",
+  "itineraryDetailNoAdditionalStepsRequired": "Für diese Reise sind keine weiteren Schritte erforderlich.",
+  "itineraryDetailShareThisTrip": "Diese Reise teilen",
+  "itineraryDetailDeparture": "Abfahrt",
+  "itineraryDetailArrival": "Ankunft",
+  "itineraryDetailTransfer": "Umstieg",
+  "itineraryDetailTransfers": "Umstiege",
+  "itineraryDetailCalories": "kal",
+  "itineraryDetailAlert": "Alarm",
+  "itineraryDetailAlerts": "Alarme",
+  "itineraryDetailTicketInformation": "Ticketinformation",
+  "itineraryDetailValidFor": "Gültig für",
+  "itineraryDetailCANCELLED": "STORNIERT",
+  "itineraryDetailTrack": "Gleis {tracknumber}",
+  "@itineraryDetailTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "itineraryDetailDelayed": "Verspätet",
+  "itineraryDetailRealTime": "Live-Daten",
+  "itineraryDetailInterlined": "Durchgebunden",
+  "itineraryDetailCustomCardTransfer": "Umstieg",
+  "itineraryDetailAhead": "Verfrüht",
+  "itineraryDetailFinish": "Ziel",
+  "itineraryDetailDistanceToWalk": "ca. {distanceKm} km Fußmarsch",
+  "@itineraryDetailDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "utilsLegHelperTransitModeWalk": "Gehen",
+  "screenTimetablesTitle": "Fahrpläne",
+  "screenTimetablesSubtitle": "Haltestellen Abfahrten & Ankünfte",
+  "screenTimetablesSearchButton": "Suchen",
+  "screenTimetablesTimeButtonNow": "Jetzt",
+  "screenTimetablesSearchInputPlaceholder": "Nach einer Haltestelle suchen …",
+  "screenTimetablesResultPlaceholder": "Suche nach einer Haltestelle",
+  "screenTimetablesResultPlaceholderSubtitle": "Geben Sie oben einen Haltestellennamen ein, um Abfahrts- und Ankunftszeiten anzuzeigen",
+  "screenTimetablesResultStopSuggestions": "Haltestellenvorschläge",
+  "screenTimetablesRowArrival": "Abf",
+  "screenTimetablesRowDeparture": "Ank",
+  "screenTimetablesLoadMoreButton": "Mehr laden",
+  "screenConnectionInfoTitle": "Verbindungsinformation",
+  "screenConnectionInfoFailedToLoadTripDetails": "Die Reisedaten konnten nicht geladen werden.",
+  "screenConnectionInfoNoTripDataAvailable": "Keine Reisedaten verfügbar",
+  "screenConnectionWarnings": "Warnungen",
+  "screenConnectionInformation": "Informationen",
+  "screenConnectionRealTime": "Live-Daten",
+  "screenConnectionCANCELLED": "STORNIERT",
+  "screenConnectionInfoJourney": "Fahrt",
+  "screenConnectionRowArrival": "Abf",
+  "screenConnectionRowDeparture": "Ank",
+  "screenConnectionUpcoming": "Als nächstes",
+  "screenConnectionTrack": "Gleis {tracknumber}",
+  "@screenConnectionTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "screenItineraryMapTitle": "Fahrplankarte",
+  "screenItineraryLabelBack": "Zurück",
+  "screenItineraryJourneyOverview": "Fahrplanübersicht",
+  "screenItineraryJourneyDeparture": "Abfahrt",
+  "screenItineraryJourneyArrival": "Ankunft",
+  "screenItineraryTransferCarouselTransfer": "Umstieg",
+  "screenItineraryTransferCarouselDistanceToWalk": "ca. {distanceKm} km Fußmarsch",
+  "@screenItineraryTransferCarouselDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "screenMapScreenQuickButtonHideStops": "Haltestellen ausblenden",
+  "screenMapScreenQuickButtonShowStops": "Haltestellen anzeigen",
+  "screenMapScreenQuickButtonHideTransit": "Umstiege ausblenden",
+  "screenMapScreenQuickButtonShowTransit": "Umstiege anzeigen",
+  "screenMapScreenQuickButtonHideRealtimeVehicles": "Nur Live",
+  "screenMapScreenQuickButtonShowRealtimeVehicles": "Alle Daten",
+  "screenMapScreenQuickButtonAutoCenter": "Automatisch zentriern",
+  "screenMapScreenQuickButtonNoCentering": "Nicht zentrieren",
+  "screenMapScreenQuickButtonChangeMapStyle": "Karte wechseln",
+  "screenMapScreenMapScreenContolsLocate": "Lokalisieren",
+  "screenMapScreenMapScreenContolsBack": "Zurück",
+  "screenMapScreenMapScreenQuickQuickButton": "Schnellzugriffsknopf",
+  "screenMapScreenMapScreenQuickQuickMapLayers": "Kartenebenen",
+  "screenMapScreenMapScreenQuickQuickVehicles": "Fahrzeuge",
+  "screenMapScreenMapScreenQuickQuickStops": "Haltestellen",
+  "screenMapScreenMapScreenQuickQuickLiveData": "Livedaten",
+  "screenMapScreenMapScreenQuickQuickLiveDataLabel": "Nur Livedaten anzeigen",
+  "screenMapScreenMapScreenQuickQuickVehicleTypes": "Fahrzeugtypen",
+  "screenMapScreenMapScreenQuickQuickAllSettings": "Alle Einstellungen",
+  "screenMapScreenMapScreenQuickVehicleGridTrains": "Züge",
+  "screenMapScreenMapScreenQuickVehicleGridMetro": "U-Bahn",
+  "screenMapScreenMapScreenQuickVehicleGridTram": "Straßenbahn",
+  "screenMapScreenMapScreenQuickVehicleGridBus": "Bus",
+  "screenMapScreenMapScreenQuickVehicleGridFerries": "Fähre",
+  "screenMapScreenMapScreenQuickVehicleGridLifts": "Lift",
+  "screenMapScreenMapScreenQuickVehicleGridOther": "Weitere",
+  "screensUserScreensSubtitleUser": "Einstellungen & Informationen",
+  "screensUserScreensTitleUser": "Benutzer",
+  "screensUserScreensUnableToOpenLink": "Der Link konnte nicht geöffnet werden.",
+  "screensUserScreensCreatedBy": "Erstellt von ",
+  "screensUserScreensCreatedByCompany": "Wafler.one",
+  "screensUserScreensCreatedBySlogan": "Helping you travel smarter",
+  "screensUserScreensAnalyticsTitle": "Datenauswertung",
+  "screensUserScreensStatisticsTitle": "Statistik",
+  "screensUserScreensStatisticsSubtitle": "Zeigen Sie Ihre Reisestatistiken an",
+  "screensUserScreensPreferencesTitle": "Einstellungen",
+  "screensUserScreensFavouritesTitle": "Favoriten",
+  "screensUserScreensFavouritesSubtitle": "Verwalten Sie Ihre Lieblingsorte",
+  "screensUserScreensLocationTitle": "Standort",
+  "screensUserScreensLocationSubtitle": "Standortberechtigungen",
+  "screensUserScreensAppearanceTitle": "Erscheinungsbild",
+  "screensUserScreensAppearanceSubtitle": "Design und Anzeige",
+  "screensUserScreensTransitOptionsTitle": "Verkehrsmitteloptionen",
+  "screensUserScreensTransitOptionsSubtitle": "Verkehrsmittel, Gehgeschwindigkeit und Umstiege",
+  "screensUserScreensAboutTitle": "Über",
+  "screensUserScreensAboutAppnameTitle": "Über {AppName}",
+  "@screensUserScreensAboutAppnameTitle": {
+    "description": "Desciption of Application",
+    "placeholders": {
+      "AppName": {
+        "type": "String",
+        "example": "Transportia"
+      }
+    }
+  },
+  "screensUserScreensAboutSubtitle": "Über, Mitwirkende und mehr",
+  "screensUserScreensLegalTitle": "Rechtliche Hinweise",
+  "screensUserScreensLegalSubtitle": "Datenschutzerklärung und Nutzungsbedingungen",
+  "screensUserScreensVersionTitle": "Über {AppVersion}",
+  "@screensUserScreensVersionTitle": {
+    "description": "Version of Application",
+    "placeholders": {
+      "AppVersion": {
+        "type": "String",
+        "example": "1.0.3"
+      }
+    }
+  },
+  "screensFavouriteInfoIsLoading": "Wird geladen …",
+  "screensFavouritesScreenScreenTitle": "Favoriten",
+  "screensFavouritesScreenBodyTitle": "Deine Lieblingsorte",
+  "screensFavouritesScreenBodySubtitle": "Verwende die Haltestellen und Adressen, die du am häufigsten besuchst, schnell wieder.",
+  "screensFavouritesScreenHelpOrderEntries": "Zum Neuanordnen deiner Favoriten lange drücken und ziehen. Zum Bearbeiten antippen.",
+  "screensFavouritesScreenEmptyTitle": "Noch keine Favoriten",
+  "screensFavouritesScreenEmptySubtitle": "Fügen Sie die Orte hinzu, die Ihnen wichtig sind – sie werden dann hier angezeigt.",
+  "screensFavouritesScreenButtonAddFavourite": "Favorit hinzufügen",
+  "screensFafouritesScreenScreenTitle": "Favoriten",
+  "screensFafouritesScreenBodyTitle": "Deine Lieblingsorte",
+  "screensFafouritesScreenBodySubtitle": "Verwende die Haltestellen und Adressen, die du am häufigsten besuchst, schnell wieder.",
+  "screensFafouritesScreenHelpOrderEntries": "Zum Neuanordnen deiner Favoriten lange drücken und ziehen. Zum Bearbeiten antippen.",
+  "screensFafouritesScreenEmptyTitle": "Noch keine Favoriten",
+  "screensFafouritesScreenEmptySubtitle": "Fügen Sie die Orte hinzu, die Ihnen wichtig sind – sie werden dann hier angezeigt.",
+  "screensFafouritesScreenButtonAddFavourite": "Favorit hinzufügen",
+  "screensLocationSettingsScreenTitle": "Standort",
+  "screensLocationSettingsScreenTitleIsLoading": "Standortstatus wird überprüft …",
+  "screensLocationSettingsScreenSectionTitle": "Statusdetails",
+  "screensLocationSettingsScreenSectionCardLocationServices": "Standortdienste",
+  "screensLocationSettingsScreenSectionCardLocationServicesStatusEnabled": "Aktiviert",
+  "screensLocationSettingsScreenSectionCardLocationServicesStatusDisabled": "Deaktiviert",
+  "screensLocationSettingsScreenSectionCardAppPermission": "App-Berechtigung",
+  "screensLocationSettingsScreenSectionCardOpenAppSettings": "Einstellungen öffnen",
+  "screensLocationSettingsScreenSectionCardRefreshStatus": "Status aktualisieren",
+  "screensLocationSettingsScreenLocationEnabled": "Standort aktiviert",
+  "screensLocationSettingsScreenLocationDisnabled": "Standort deaktiviert",
+  "screensLocationSettingsScreenLocationStatusDescriptionEnabled": "Ihr Standort wird für die Navigation verwendet",
+  "screensLocationSettingsScreenLocationStatusDescriptionDisabled": "Standort aktivieren, um alle Funktionen nutzen zu können",
+  "screensLocationSettingsScreenLocationPermissionStatusTextAllowed": "Erlaubt",
+  "screensLocationSettingsScreenLocationPermissionStatusTextDenied": "Verweigert",
+  "screensLocationSettingsScreenLocationPermissionStatusTextRestricted": "Eingeschränkt",
+  "screensLocationSettingsScreenLocationPermissionStatusTextLimited": "Begrenzt",
+  "screensLocationSettingsScreenLocationPermissionStatusTextPermanentlyDenied": "Dauerhaft verweigert",
+  "screensLocationSettingsScreenLocationPermissionStatusTextUnknown": "Unbekannt",
+  "screenAppearanceScreenTitle": "Erscheinungsbild",
+  "screenAppearanceScreenAppIconHeaderTitle": "Passen Sie Ihr Erlebnis an",
+  "screenAppearanceScreenAppIconHeaderSubtitle": "Passen Sie das Erscheinungsbild der App individuell an",
+  "screenAppearanceScreenAccentColorTitle": "Akzentfarbe",
+  "screenAppearanceScreenAccentColorSubtitle": "Wählen Sie Ihre bevorzugte Akzentfarbe",
+  "screenAppearanceScreenAccentColorResetToDefault": "Auf Standard zurücksetzen",
+  "screenAppearanceScreenAppThemeTitle": "App-Design",
+  "screenAppearanceScreenAppThemeSubtitle": "Wählen Sie „Hell“, „Dunkel“ oder folgen Sie den Systemeinstellungen",
+  "screenAppearanceScreenAppThemeColorWhite": "Weiss",
+  "screenAppearanceScreenAppThemeColorDark": "Dunkel",
+  "screenAppearanceScreenAppThemeColorSystem": "System",
+  "screenAppearanceScreenMapStyleTitle": "Kartenstil",
+  "screenAppearanceScreenMapStyleSubtitle": "Wähle dein bevorzugtes Karten-Design",
+  "screenAppearanceScreenMapStyleColorDefault": "Standard",
+  "screenAppearanceScreenMapStyleColorLight": "Hell",
+  "screenAppearanceScreenMapStyleColorDark": "Dunkel",
+  "screenAppearanceScreenInteractionTitle": "Interaktion",
+  "screenAppearanceScreenInteractionSubtitle": "Legen Sie fest, ob die App taktiles Feedback verwenden soll",
+  "screenAppearanceScreenInteractionVibrations": "App-Vibrationen",
+  "screenAppearanceScreenInteractionVibrationsEnabled": "Haptisches Feedback ist in der gesamten App aktiviert",
+  "screenAppearanceScreenInteractionVibrationsDisabled": "Haptisches Feedback ist in der gesamten App deaktiviert",
+  "utilsLegHelperTransitionModeNameWalk": "Zu Fuß",
+  "@utilsLegHelperTransitionModeNameWalk": {
+    "description": "Label for the walking transit mode"
+  },
+  "utilsLegHelperTransitionModeNameBike": "Fahrrad",
+  "@utilsLegHelperTransitionModeNameBike": {
+    "description": "Label for the bicycle transit mode"
+  },
+  "utilsLegHelperTransitionModeNameRental": "Mietwagen",
+  "@utilsLegHelperTransitionModeNameRental": {
+    "description": "Label for vehicle/scooter rental mode"
+  },
+  "utilsLegHelperTransitionModeNameCar": "Auto",
+  "@utilsLegHelperTransitionModeNameCar": {
+    "description": "Label for private car mode"
+  },
+  "utilsLegHelperTransitionModeNameCarParking": "Parken",
+  "@utilsLegHelperTransitionModeNameCarParking": {
+    "description": "Label for car parking"
+  },
+  "utilsLegHelperTransitionModeNameCarDropoff": "Ausstiegsstelle",
+  "@utilsLegHelperTransitionModeNameCarDropoff": {
+    "description": "Label for car drop-off"
+  },
+  "utilsLegHelperTransitionModeNameOnDemand": "Auf Abruf",
+  "@utilsLegHelperTransitionModeNameOnDemand": {
+    "description": "Label for on-demand transport (ODM)"
+  },
+  "utilsLegHelperTransitionModeNameFlexibleService": "Flexibler Service",
+  "@utilsLegHelperTransitionModeNameFlexibleService": {
+    "description": "Label for flexible service (FLEX)"
+  },
+  "utilsLegHelperTransitionModeNameTransit": "Nahverkehr",
+  "@utilsLegHelperTransitionModeNameTransit": {
+    "description": "Generic transit label"
+  },
+  "utilsLegHelperTransitionModeNameTram": "Straßenbahn",
+  "@utilsLegHelperTransitionModeNameTram": {
+    "description": "Label for tram"
+  },
+  "utilsLegHelperTransitionModeNameSubway": "U-Bahn",
+  "@utilsLegHelperTransitionModeNameSubway": {
+    "description": "Label for subway/metro (SUBWAY)"
+  },
+  "utilsLegHelperTransitionModeNameFerry": "Fähre",
+  "@utilsLegHelperTransitionModeNameFerry": {
+    "description": "Label for ferry"
+  },
+  "utilsLegHelperTransitionModeNameAirplane": "Flugzeug",
+  "@utilsLegHelperTransitionModeNameAirplane": {
+    "description": "Label for airplane"
+  },
+  "utilsLegHelperTransitionModeNameSuburban": "Vorortbahn",
+  "@utilsLegHelperTransitionModeNameSuburban": {
+    "description": "Label for suburban rail"
+  },
+  "utilsLegHelperTransitionModeNameBus": "Bus",
+  "@utilsLegHelperTransitionModeNameBus": {
+    "description": "Label for bus"
+  },
+  "utilsLegHelperTransitionModeNameCoachBus": "Reisebus",
+  "@utilsLegHelperTransitionModeNameCoachBus": {
+    "description": "Label for coach/long-distance bus"
+  },
+  "utilsLegHelperTransitionModeNameTrain": "Zug",
+  "@utilsLegHelperTransitionModeNameTrain": {
+    "description": "Label for generic train / rail"
+  },
+  "utilsLegHelperTransitionModeNameHighSpeedTrain": "Hochgeschwindigkeitszug",
+  "@utilsLegHelperTransitionModeNameHighSpeedTrain": {
+    "description": "Label for high-speed rail"
+  },
+  "utilsLegHelperTransitionModeNameNightTrain": "Nachtzug",
+  "@utilsLegHelperTransitionModeNameNightTrain": {
+    "description": "Label for night train services"
+  },
+  "utilsLegHelperTransitionModeNameExpressTrain": "Schnellzug",
+  "@utilsLegHelperTransitionModeNameExpressTrain": {
+    "description": "Label for regional fast/express rail"
+  },
+  "utilsLegHelperTransitionModeNameCableCar": "Straßenbahn",
+  "@utilsLegHelperTransitionModeNameCableCar": {
+    "description": "Label for cable car"
+  },
+  "utilsLegHelperTransitionModeNameAerialLift": "Seilbahn",
+  "@utilsLegHelperTransitionModeNameAerialLift": {
+    "description": "Label for aerial lift"
+  },
+  "utilsLegHelperTransitionModeNameFunicular": "Standseilbahn",
+  "@utilsLegHelperTransitionModeNameFunicular": {
+    "description": "Label for funicular"
+  },
+  "utilsLegHelperTransitionModeNameArealLift": "Lift",
+  "@utilsLegHelperTransitionModeNameArealLift": {
+    "description": "Label for areal lift"
+  },
+  "utilsLegHelperTransitionModeNameMetro": "Stadtbahn",
+  "@utilsLegHelperTransitionModeNameMetro": {
+    "description": "Label for metro"
+  },
+  "utilsLegHelperTransitionModeNameOther": "Andere",
+  "@utilsLegHelperTransitionModeNameOther": {
+    "description": "Fallback label for unknown/other modes"
+  }
+}

@@ -10,6 +10,7 @@ import '../widgets/app_page_scaffold.dart';
 import '../widgets/app_toggle_switch.dart';
 import '../widgets/section_title.dart';
 import '../widgets/settings_tile.dart';
+import '../l10n/app_localizations.dart';
 
 class AppearanceScreen extends StatefulWidget {
   const AppearanceScreen({super.key});
@@ -57,13 +58,14 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = context.watch<ThemeProvider>();
     final selectedAccentColor = themeProvider.accentColor;
     final selectedAppThemeMode = themeProvider.appThemeMode;
     final vibrationsEnabled = themeProvider.vibrationsEnabled;
 
     return AppPageScaffold(
-      title: 'Appearance',
+      title: l10n.screenAppearanceScreenTitle,
       scrollable: true,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       body: Column(
@@ -71,8 +73,8 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
         children: [
           AppIconHeader(
             icon: LucideIcons.palette,
-            title: 'Customize Your Experience',
-            subtitle: 'Personalize the look and feel of the app',
+            title: l10n.screenAppearanceScreenAppIconHeaderTitle,
+            subtitle: l10n.screenAppearanceScreenAppIconHeaderSubtitle,
             iconColor: selectedAccentColor,
             backgroundColor: selectedAccentColor.withValues(alpha: 0.12),
           ),
@@ -80,10 +82,10 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 32),
-              const SectionTitle(text: 'Accent Color'),
+              SectionTitle(text: l10n.screenAppearanceScreenAccentColorTitle),
               const SizedBox(height: 8),
               Text(
-                'Choose your preferred accent color',
+                l10n.screenAppearanceScreenAccentColorSubtitle,
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -151,7 +153,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Reset to default',
+                        l10n.screenAppearanceScreenAccentColorResetToDefault,
                         style: TextStyle(
                           fontSize: 16,
                           color: selectedAccentColor,
@@ -168,10 +170,10 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              const SectionTitle(text: 'App Theme'),
+              SectionTitle(text: l10n.screenAppearanceScreenAppThemeTitle),
               const SizedBox(height: 8),
               Text(
-                'Pick light, dark, or follow your system',
+                l10n.screenAppearanceScreenAppThemeSubtitle,
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -182,7 +184,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 children: [
                   Expanded(
                     child: _buildInlineThemeOption(
-                      'White',
+                      l10n.screenAppearanceScreenAppThemeColorWhite,
                       AppThemeMode.light,
                       LucideIcons.sun,
                       const [ThemeProvider.lightBackground, Color(0xFFECECEC)],
@@ -192,7 +194,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildInlineThemeOption(
-                      'Dark',
+                      l10n.screenAppearanceScreenAppThemeColorDark,
                       AppThemeMode.dark,
                       LucideIcons.moon,
                       const [ThemeProvider.darkBackground, Color(0xFF1D1D1D)],
@@ -202,7 +204,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildInlineThemeOption(
-                      'System',
+                      l10n.screenAppearanceScreenAppThemeColorSystem,
                       AppThemeMode.system,
                       LucideIcons.settings2,
                       const [
@@ -215,10 +217,10 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              const SectionTitle(text: 'Map Style'),
+              SectionTitle(text: l10n.screenAppearanceScreenMapStyleTitle),
               const SizedBox(height: 8),
               Text(
-                'Select your preferred map appearance',
+                l10n.screenAppearanceScreenMapStyleSubtitle,
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -229,7 +231,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 children: [
                   Expanded(
                     child: _buildInlineMapStyleOption(
-                      'Default',
+                      l10n.screenAppearanceScreenMapStyleColorDefault,
                       'default',
                       LucideIcons.map,
                       const [
@@ -242,7 +244,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildInlineMapStyleOption(
-                      'Light',
+                      l10n.screenAppearanceScreenMapStyleColorLight,
                       'light',
                       LucideIcons.sun,
                       const [
@@ -255,7 +257,7 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildInlineMapStyleOption(
-                      'Dark',
+                      l10n.screenAppearanceScreenMapStyleColorDark,
                       'dark',
                       LucideIcons.moon,
                       const [
@@ -268,10 +270,10 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ],
               ),
               const SizedBox(height: 32),
-              const SectionTitle(text: 'Interaction'),
+              SectionTitle(text: l10n.screenAppearanceScreenInteractionTitle),
               const SizedBox(height: 8),
               Text(
-                'Choose whether the app should use tactile feedback',
+                l10n.screenAppearanceScreenInteractionSubtitle,
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -290,10 +292,10 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                   icon: vibrationsEnabled
                       ? LucideIcons.vibrate
                       : LucideIcons.vibrateOff,
-                  title: 'App vibrations',
+                  title: l10n.screenAppearanceScreenInteractionVibrations,
                   subtitle: vibrationsEnabled
-                      ? 'Haptic feedback is enabled throughout the app'
-                      : 'Haptic feedback is disabled throughout the app',
+                      ? l10n.screenAppearanceScreenInteractionVibrationsEnabled
+                      : l10n.screenAppearanceScreenInteractionVibrationsDisabled,
                   trailingIcon: null,
                   trailing: AppToggleSwitch(
                     value: vibrationsEnabled,

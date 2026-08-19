@@ -20,6 +20,7 @@ import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/info_chip.dart';
 import 'itinerary_map_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class ItineraryDetailScreen extends StatefulWidget {
   final Itinerary itinerary;
@@ -37,6 +38,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
     final displayLegs = buildDisplayLegs(widget.itinerary.legs);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       color: AppColors.white,
@@ -45,7 +47,8 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CustomAppBar(
-              title: 'Itinerary Details',
+              title: l10n.itineraryDetailTitle,
+              backText: l10n.screenItineraryLabelBack,
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
             JourneyOverviewWidget(itinerary: widget.itinerary),
@@ -82,7 +85,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Center(
                             child: Text(
-                              'No additional steps required for this journey.',
+                              l10n.itineraryDetailNoAdditionalStepsRequired,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: AppColors.black.withValues(alpha: 0.4),
@@ -113,7 +116,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                         return LoadMoreButton(
                           onTap: _shareItinerary,
                           isLoading: _isSharing,
-                          label: 'Share this trip',
+                          label: l10n.itineraryDetailShareThisTrip,
                           icon: LucideIcons.share2,
                         );
                       }
@@ -173,6 +176,7 @@ class JourneyOverviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +189,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Departure',
+                      l10n.itineraryDetailDeparture,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.black.withValues(alpha: 0.5),
@@ -224,7 +228,7 @@ class JourneyOverviewWidget extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'Arrival',
+                      l10n.itineraryDetailArrival,
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.black.withValues(alpha: 0.5),
@@ -254,13 +258,15 @@ class JourneyOverviewWidget extends StatelessWidget {
                   _buildStatChip(
                     LucideIcons.repeat,
                     '${itinerary.transfers}',
-                    itinerary.transfers == 1 ? 'transfer' : 'transfers',
+                    itinerary.transfers == 1
+                        ? l10n.itineraryDetailTransfer
+                        : l10n.itineraryDetailTransfers,
                   ),
                   if (itinerary.walkingDistance > 0)
                     _buildStatChip(
                       LucideIcons.flame,
                       '${itinerary.calories}',
-                      'cal',
+                      l10n.itineraryDetailCalories,
                     ),
                   if (itinerary.fare != null && itinerary.fare!.amount > 0)
                     _buildStatChip(
@@ -272,7 +278,9 @@ class JourneyOverviewWidget extends StatelessWidget {
                     _buildStatChip(
                       LucideIcons.triangleAlert,
                       '${itinerary.alertsCount}',
-                      itinerary.alertsCount == 1 ? 'alert' : 'alerts',
+                      itinerary.alertsCount == 1
+                          ? l10n.itineraryDetailAlert
+                          : l10n.itineraryDetailAlerts,
                     ),
                 ],
               ),
@@ -330,6 +338,7 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: () => setState(() => _isExpanded = !_isExpanded),
       child: CustomCard(
@@ -346,7 +355,7 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Ticket information',
+                    l10n.itineraryDetailTicketInformation,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -381,6 +390,7 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
   }
 
   Widget _buildFareLegOptions(FareLegInfo legInfo) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -395,7 +405,7 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
                 runSpacing: 4,
                 children: [
                   Text(
-                    'Valid for',
+                    l10n.itineraryDetailValidFor,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -630,7 +640,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   String _buildModeText() {
-    final modeName = getTransitModeName(widget.leg.mode);
+    final loc = AppLocalizations.of(context)!;
+    final modeName = getTransitModeName(loc, widget.leg.mode);
 
     if (widget.leg.mode == 'WALK') {
       final distance = widget.leg.distance;
@@ -741,12 +752,13 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     final metadata = <Widget>[];
     final departureDelay = _departureDelay;
     final arrivalDelay = _arrivalDelay;
+    final l10n = AppLocalizations.of(context)!;
 
     if (widget.leg.cancelled) {
       metadata.add(
         InfoChip(
           icon: LucideIcons.circleAlert,
-          label: 'CANCELLED',
+          label: l10n.itineraryDetailCANCELLED,
           tint: const Color(0xFFD32F2F),
         ),
       );
@@ -756,13 +768,15 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       metadata.add(
         InfoChip(
           icon: LucideIcons.trainTrack,
-          label: 'Track ${widget.leg.fromTrack}',
+          label: l10n.itineraryDetailTrack(widget.leg.fromTrack),
         ),
       );
     }
 
     if (widget.leg.realTime) {
-      metadata.add(const InfoChip(icon: LucideIcons.radio, label: 'Real-time'));
+      metadata.add(
+        InfoChip(icon: LucideIcons.radio, label: l10n.itineraryDetailRealTime),
+      );
     }
 
     if (widget.leg.distance != null && widget.leg.distance! > 0) {
@@ -796,9 +810,9 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
     if (hasDelay) {
       metadata.add(
-        const InfoChip(
+        InfoChip(
           icon: LucideIcons.circleAlert,
-          label: 'Delayed',
+          label: l10n.itineraryDetailDelayed,
           tint: Color(0xFFB26A00),
         ),
       );
@@ -806,16 +820,18 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
     if (!hasDelay && hasAhead) {
       metadata.add(
-        const InfoChip(
+        InfoChip(
           icon: LucideIcons.check,
-          label: 'Ahead',
+          label: l10n.itineraryDetailAhead,
           tint: Color(0xFF2E7D32),
         ),
       );
     }
 
     if (widget.leg.interlineWithPreviousLeg) {
-      metadata.add(const InfoChip(icon: LucideIcons.link, label: 'Interlined'));
+      metadata.add(
+        InfoChip(icon: LucideIcons.link, label: l10n.itineraryDetailInterlined),
+      );
     }
 
     if (metadata.isEmpty) return const SizedBox.shrink();
@@ -953,6 +969,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   Widget _buildTitleWidget() {
+    final loc = AppLocalizations.of(context)!;
     if (widget.leg.displayName != null) {
       final routeColor = parseHexColor(widget.leg.routeColor);
       final isWalkLeg = widget.leg.mode == 'WALK';
@@ -973,7 +990,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
           child: Text(
             widget.leg.displayName!.length > 0
                 ? widget.leg.displayName!
-                : getTransitModeName(widget.leg.mode),
+                : getTransitModeName(loc, widget.leg.mode),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -986,7 +1003,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
     return Text(
-      getTransitModeName(widget.leg.mode),
+      getTransitModeName(loc, widget.leg.mode),
       style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
@@ -1005,6 +1022,7 @@ class TransferLegCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1014,7 +1032,7 @@ class TransferLegCard extends StatelessWidget {
               Icon(LucideIcons.arrowLeftRight, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Transfer',
+                l10n.itineraryDetailCustomCardTransfer,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -1053,7 +1071,9 @@ class TransferLegCard extends StatelessWidget {
           if (leg.distance != null && leg.distance! > 0) ...[
             const SizedBox(height: 4),
             Text(
-              'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
+              l10n.itineraryDetailDistanceToWalk(
+                (leg.distance! / 1000).toStringAsFixed(2),
+              ),
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.black.withValues(alpha: 0.6),
@@ -1108,6 +1128,7 @@ class FinishLegCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return CustomCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1117,7 +1138,7 @@ class FinishLegCard extends StatelessWidget {
               const Icon(LucideIcons.flag, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Finish',
+                l10n.itineraryDetailFinish,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

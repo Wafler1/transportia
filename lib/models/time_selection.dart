@@ -27,8 +27,8 @@ class TimeSelection {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}:${dateTime.second.toString().padLeft(2, '0')}';
   }
 
-  String toDisplayString() {
-    if (isNow) return 'Now';
+  String toDisplayString(String defaultTextNow) {
+    if (isNow) return defaultTextNow;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
