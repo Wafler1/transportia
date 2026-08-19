@@ -190,11 +190,11 @@ class _SuggestionsOverlayCard extends StatelessWidget {
     } else if (showLoading) {
       body = const Center(child: _SuggestionLoading());
     } else if (!hasResults) {
-      body = const Center(
+      body = Center(
         child: _SuggestionPlaceholder(
           icon: LucideIcons.searchX,
-          title: 'No matches found',
-          subtitle: 'Try a nearby city or tweak the spelling.',
+          title: l10n.widgetRouteSuggestionNoMatches,
+          subtitle: l10n.widgetRouteSuggestionNoMatchesSubTitle,
         ),
       );
     } else {

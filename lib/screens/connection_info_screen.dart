@@ -160,7 +160,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             CustomAppBar(
-              title: 'Connection Info',
+              title: l10n.screenConnectionInfoTitle,
               backText: l10n.itineraryLabelBack,
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
@@ -173,7 +173,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       child: Padding(
                         padding: const EdgeInsets.all(32),
                         child: Text(
-                          'Failed to load trip details',
+                          l10n.screenConnectionInfoFailedToLoadTripDetails,
                           style: TextStyle(
                             fontSize: 16,
                             color: AppColors.black.withValues(alpha: 0.5),
@@ -191,10 +191,11 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
   }
 
   Widget _buildContent() {
+    final l10n = AppLocalizations.of(context)!;
     if (_itinerary == null || _itinerary!.legs.isEmpty) {
       return Center(
         child: EmptyState(
-          title: 'No trip data available',
+          title: l10n.screenConnectionInfoNoTripDataAvailable,
           titleStyle: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
@@ -358,7 +359,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                   Row(
                     children: [
                       Text(
-                        'Warnings',
+                        l10n.screenConnectionWarnings,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -438,7 +439,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Information',
+                  l10n.screenConnectionInformation,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -451,14 +452,14 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                   runSpacing: 8,
                   children: [
                     if (leg.realTime)
-                      const InfoChip(
+                      InfoChip(
                         icon: LucideIcons.radio,
-                        label: 'Real-time',
+                        label: l10n.screenConnectionRealTime,
                       ),
                     if (leg.cancelled == true)
-                      const InfoChip(
+                      InfoChip(
                         icon: LucideIcons.x,
-                        label: 'CANCELLED',
+                        label: l10n.screenConnectionCANCELLED,
                         tint: Color(0xFFD32F2F),
                       ),
                     InfoChip(
@@ -494,7 +495,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Journey',
+                  l10n.screenConnectionInfoJourney,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -525,13 +526,13 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                       final isUpcoming = stopIndex == upcomingStopIndex;
 
                       final arrRow = buildStopScheduleRow(
-                        'Arr',
+                        l10n.screenConnectionRowArrival,
                         stop.scheduledArrival,
                         stop.arrival,
                         isPassed,
                       );
                       final depRow = buildStopScheduleRow(
-                        'Dep',
+                        l10n.screenConnectionRowDeparture,
                         stop.scheduledDeparture,
                         stop.departure,
                         isPassed,
@@ -575,7 +576,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      'Upcoming',
+                                      l10n.screenConnectionUpcoming,
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
@@ -597,7 +598,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                             if (stop.track != null) ...[
                               const SizedBox(height: 2),
                               Text(
-                                'Track ${stop.track}',
+                                l10n.screenConnectionTrack(stop.track),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: isPassed
@@ -608,8 +609,8 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                             ],
                             if (stop.cancelled == true) ...[
                               const SizedBox(height: 2),
-                              const Text(
-                                'CANCELLED',
+                              Text(
+                                l10n.screenConnectionCANCELLED,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Color(0xFFD32F2F),

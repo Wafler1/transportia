@@ -20,6 +20,8 @@
   "widgetRouteSuggestionsFieldDestination": "Destination",
   "widgetRouteSuggestionKeepTyping": "Keep typing",
   "widgetRouteSuggestionKeepTypingSubTitle": "Enter at least 3 characters to search.",
+  "widgetRouteSuggestionNoMatches": "No matches found",
+  "widgetRouteSuggestionNoMatchesSubTitle": "Try a nearby city or tweak the spelling.",
   "widgetRouteSuggestionFetching": "Fetching…",
   "itineraryLabelSearchResults": "Search Results",
   "itineraryLabelBack": "Back",
@@ -79,6 +81,38 @@
       }
     }
   },
-  "utilsLegHelperTransitModeWalk": "Walk"
+  "utilsLegHelperTransitModeWalk": "Walk",
+  "screenTimetablesTitle": "Timetables",
+  "screenTimetablesSubtitle": "Stop departures & arrivals",
+  "screenTimetablesSearchButton": "Search",
+  "screenTimetablesTimeButtonNow": "Now",
+  "screenTimetablesSearchInputPlaceholder": "Search for a stop...",
+  "screenTimetablesResultPlaceholder": "Search for a stop",
+  "screenTimetablesResultPlaceholderSubtitle": "Enter a stop name above to view\ndepartures and arrivals",
+  "screenTimetablesResultStopSuggestions": "Stop suggestions",
+  "screenTimetablesRowArrival": "Arr",
+  "screenTimetablesRowDeparture": "Dep",
+  "screenTimetablesLoadMoreButton": "Load more",
+  "screenConnectionInfoTitle": "Connection Info",
+  "screenConnectionInfoFailedToLoadTripDetails": "Failed to load trip details",
+  "screenConnectionInfoNoTripDataAvailable": "No trip data available",
+  "screenConnectionWarnings": "Warnings",
+  "screenConnectionInformation": "Information",
+  "screenConnectionRealTime": "Real-time",
+  "screenConnectionCANCELLED": "CANCELLED",
+  "screenConnectionInfoJourney": "Journey",
+  "screenConnectionRowArrival": "Arr",
+  "screenConnectionRowDeparture": "Dep",
+  "screenConnectionUpcoming": "Upcoming",
+  "screenConnectionTrack": "Track {tracknumber}",
+  "@screenConnectionTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  }
 }
 
