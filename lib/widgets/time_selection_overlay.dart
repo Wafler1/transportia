@@ -231,19 +231,19 @@ class _DateSelectorState extends State<_DateSelector> {
     if (selected == today) return l10n.widgetTimeSelectionOverlayToday;
     if (selected == tomorrow) return l10n.widgetTimeSelectionOverlayTomorrow;
 
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
+    final months = [
+      l10n.widgetTimeSelectionOverlayMonthJanuary,
+      l10n.widgetTimeSelectionOverlayMonthFebruary,
+      l10n.widgetTimeSelectionOverlayMonthMarch,
+      l10n.widgetTimeSelectionOverlayMonthApril,
+      l10n.widgetTimeSelectionOverlayMonthMay,
+      l10n.widgetTimeSelectionOverlayMonthJune,
+      l10n.widgetTimeSelectionOverlayMonthJuly,
+      l10n.widgetTimeSelectionOverlayMonthAugust,
+      l10n.widgetTimeSelectionOverlayMonthSeptember,
+      l10n.widgetTimeSelectionOverlayMonthOctober,
+      l10n.widgetTimeSelectionOverlayMonthNovember,
+      l10n.widgetTimeSelectionOverlayMonthDecember,
     ];
     return '${date.day} ${months[date.month - 1]}';
   }
@@ -387,6 +387,7 @@ class _TimeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
@@ -395,7 +396,7 @@ class _TimeSelector extends StatelessWidget {
             minValue: 0,
             maxValue: 23,
             onChanged: onHourChanged,
-            label: 'Hour',
+            label: l10n.widgetTimeSelectionOverlayHour,
           ),
         ),
         const SizedBox(width: 12),
@@ -405,7 +406,7 @@ class _TimeSelector extends StatelessWidget {
             minValue: 0,
             maxValue: 59,
             onChanged: onMinuteChanged,
-            label: 'Minute',
+            label: l10n.widgetTimeSelectionOverlayMinute,
           ),
         ),
       ],

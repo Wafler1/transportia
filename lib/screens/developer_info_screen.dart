@@ -13,6 +13,7 @@ import '../utils/app_version.dart';
 import '../widgets/app_page_scaffold.dart';
 import '../widgets/custom_card.dart';
 import '../constants/prefs_keys.dart';
+import '../l10n/app_localizations.dart';
 
 class DeveloperInfoScreen extends StatefulWidget {
   const DeveloperInfoScreen({super.key});
@@ -130,8 +131,9 @@ class _DeveloperInfoScreenState extends State<DeveloperInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final content = _isLoading
-        ? const Center(child: Text('Loading…'))
+        ? Center(child: Text(l10n.screensFavouriteInfoIsLoading))
         : _errorMessage != null
         ? Center(child: Text(_errorMessage!))
         : _buildSections();
