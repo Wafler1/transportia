@@ -192,6 +192,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
 
   Widget _buildContent() {
     final l10n = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context)!;
     if (_itinerary == null || _itinerary!.legs.isEmpty) {
       return Center(
         child: EmptyState(
@@ -313,7 +314,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
                           if (leg.headsign != null) ...[
                             const SizedBox(height: 8),
                             Text(
-                              '${getTransitModeName(leg.mode)} • ${leg.headsign!}',
+                              '${getTransitModeName(loc, leg.mode)} • ${leg.headsign!}',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

@@ -793,8 +793,8 @@ class _LegCarouselCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headline = _resolveHeadline(leg);
-    final subtitle = _resolveSubtitle(leg);
+    final headline = _resolveHeadline(context, leg);
+    final subtitle = _resolveSubtitle(context, leg);
 
     return _CarouselCard(
       child: Column(
@@ -841,7 +841,8 @@ class _LegCarouselCard extends StatelessWidget {
     );
   }
 
-  String _resolveHeadline(Leg leg) {
+  String _resolveHeadline(BuildContext context, Leg leg) {
+    final loc = AppLocalizations.of(context)!;
     if (leg.displayName != null && leg.displayName!.isNotEmpty) {
       return leg.displayName!;
     }
@@ -857,11 +858,12 @@ class _LegCarouselCard extends StatelessWidget {
     if (leg.headsign != null && leg.headsign!.isNotEmpty) {
       return leg.headsign!;
     }
-    return getTransitModeName(leg.mode);
+    return getTransitModeName(loc, leg.mode);
   }
 
-  String _resolveSubtitle(Leg leg) {
-    final mode = getTransitModeName(leg.mode);
+  String _resolveSubtitle(BuildContext context, Leg leg) {
+    final loc = AppLocalizations.of(context)!;
+    final mode = getTransitModeName(loc, leg.mode);
     if (leg.headsign != null && leg.headsign!.isNotEmpty) {
       return '$mode • ${leg.headsign}';
     }

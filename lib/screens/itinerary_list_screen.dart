@@ -591,6 +591,7 @@ class LegWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     IconData icon = getLegIcon(leg.mode);
     final routeColor = parseHexColor(leg.routeColor);
     final badgeColor =
@@ -628,7 +629,7 @@ class LegWidget extends StatelessWidget {
             child: Text(
               leg.displayName!.length > 0
                   ? leg.displayName!
-                  : getTransitModeName(leg.mode),
+                  : getTransitModeName(loc, leg.mode),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,

@@ -640,7 +640,8 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   String _buildModeText() {
-    final modeName = getTransitModeName(widget.leg.mode);
+    final loc = AppLocalizations.of(context)!;
+    final modeName = getTransitModeName(loc, widget.leg.mode);
 
     if (widget.leg.mode == 'WALK') {
       final distance = widget.leg.distance;
@@ -968,6 +969,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
   }
 
   Widget _buildTitleWidget() {
+    final loc = AppLocalizations.of(context)!;
     if (widget.leg.displayName != null) {
       final routeColor = parseHexColor(widget.leg.routeColor);
       final isWalkLeg = widget.leg.mode == 'WALK';
@@ -988,7 +990,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
           child: Text(
             widget.leg.displayName!.length > 0
                 ? widget.leg.displayName!
-                : getTransitModeName(widget.leg.mode),
+                : getTransitModeName(loc, widget.leg.mode),
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -1001,7 +1003,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       );
     }
     return Text(
-      getTransitModeName(widget.leg.mode),
+      getTransitModeName(loc, widget.leg.mode),
       style: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.bold,
