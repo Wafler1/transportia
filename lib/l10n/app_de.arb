@@ -1,4 +1,3 @@
-
 {
   "@@locale": "de",
   "widgetRouteBottomWhereTo": "Wo geht es hin?",
@@ -25,7 +24,6 @@
   "widgetRouteSuggestionNoMatchesSubTitle": "Versuchen Sie es mit einer Stadt in der Nähe oder ändern Sie die Schreibweise.",
   "widgetRouteSuggestionFetching": "Wird abgerufen …",
   "itineraryLabelSearchResults": "Suchergebnisse",
-  "itineraryLabelBack": "Zurück",
   "itineraryLabelNoRoutesFound": "Keine Verbindungen gefunden.",
   "itineraryLabelSeePrevious": "Vorherige anzeigen",
   "itineraryListDirect": "Direkt",
@@ -34,6 +32,15 @@
   "itineraryListDeparted": "Abgefahren",
   "itineraryListDepartNow": "Fährt jetzt ab",
   "itineraryListDepartIn": "Abfahrt in {timeUntil}",
+  "@itineraryListDepartIn": {
+    "description": "Time, when connection is leaving station",
+    "placeholders": {
+      "timeUntil": {
+        "type": "String",
+        "example": "30m"
+      }
+    }
+  },
   "itineraryDetailTitle": "Reisedetails",
   "itineraryDetailNoAdditionalStepsRequired": "Für diese Reise sind keine weiteren Schritte erforderlich.",
   "itineraryDetailShareThisTrip": "Diese Reise teilen",
@@ -48,6 +55,15 @@
   "itineraryDetailValidFor": "Gültig für",
   "itineraryDetailCANCELLED": "STORNIERT",
   "itineraryDetailTrack": "Gleis {tracknumber}",
+  "@itineraryDetailTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
   "itineraryDetailDelayed": "Verspätet",
   "itineraryDetailRealTime": "Live-Daten",
   "itineraryDetailInterlined": "Durchgebunden",
@@ -55,6 +71,15 @@
   "itineraryDetailAhead": "Verfrüht",
   "itineraryDetailFinish": "Ziel",
   "itineraryDetailDistanceToWalk": "ca. {distanceKm} km Fußmarsch",
+  "@itineraryDetailDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
   "utilsLegHelperTransitModeWalk": "Gehen",
   "screenTimetablesTitle": "Fahrpläne",
   "screenTimetablesSubtitle": "Haltestellen Abfahrten & Ankünfte",
@@ -78,5 +103,56 @@
   "screenConnectionRowArrival": "Abf",
   "screenConnectionRowDeparture": "Ank",
   "screenConnectionUpcoming": "Als nächstes",
-  "screenConnectionTrack": "Gleis {tracknumber}"
+  "screenConnectionTrack": "Gleis {tracknumber}",
+  "@screenConnectionTrack": {
+    "description": "Number of the track",
+    "placeholders": {
+      "tracknumber": {
+        "type": "String?",
+        "example": "3"
+      }
+    }
+  },
+  "screenItineraryMapTitle": "Fahrplankarte",
+  "screenItineraryLabelBack": "Zurück",
+  "screenItineraryJourneyOverview": "Fahrplanübersicht",
+  "screenItineraryJourneyDeparture": "Abfahrt",
+  "screenItineraryJourneyArrival": "Ankunft",
+  "screenItineraryTransferCarouselTransfer": "Umstieg",
+  "screenItineraryTransferCarouselDistanceToWalk": "ca. {distanceKm} km Fußmarsch",
+  "@screenItineraryTransferCarouselDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "screenMapScreenQuickButtonHideStops": "Haltestellen ausblenden",
+  "screenMapScreenQuickButtonShowStops": "Haltestellen anzeigen",
+  "screenMapScreenQuickButtonHideTransit": "Umstiege ausblenden",
+  "screenMapScreenQuickButtonShowTransit": "Umstiege anzeigen",
+  "screenMapScreenQuickButtonHideRealtimeVehicles": "Nur Live",
+  "screenMapScreenQuickButtonShowRealtimeVehicles": "Alle Daten",
+  "screenMapScreenQuickButtonAutoCenter": "Automatisch zentriern",
+  "screenMapScreenQuickButtonNoCentering": "Nicht zentrieren",
+  "screenMapScreenQuickButtonChangeMapStyle": "Karte wechseln",
+  "screenMapScreenMapScreenContolsLocate": "Lokalisieren",
+  "screenMapScreenMapScreenContolsBack": "Zurück",
+  "screenMapScreenMapScreenQuickQuickButton": "Schnellzugriffsknopf",
+  "screenMapScreenMapScreenQuickQuickMapLayers": "Kartenebenen",
+  "screenMapScreenMapScreenQuickQuickVehicles": "Fahrzeuge",
+  "screenMapScreenMapScreenQuickQuickStops": "Haltestellen",
+  "screenMapScreenMapScreenQuickQuickLiveData": "Livedaten",
+  "screenMapScreenMapScreenQuickQuickLiveDataLabel": "Nur Livedaten anzeigen",
+  "screenMapScreenMapScreenQuickQuickVehicleTypes": "Fahrzeugtypen",
+  "screenMapScreenMapScreenQuickQuickAllSettings": "Alle Einstellungen",
+  "screenMapScreenMapScreenQuickVehicleGridTrains": "Züge",
+  "screenMapScreenMapScreenQuickVehicleGridMetro": "U-Bahn",
+  "screenMapScreenMapScreenQuickVehicleGridTram": "Straßenbahn",
+  "screenMapScreenMapScreenQuickVehicleGridBus": "Bus",
+  "screenMapScreenMapScreenQuickVehicleGridFerries": "Fähre",
+  "screenMapScreenMapScreenQuickVehicleGridLifts": "Lift",
+  "screenMapScreenMapScreenQuickVehicleGridOther": "Weitere"
 }

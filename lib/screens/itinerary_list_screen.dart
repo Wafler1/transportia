@@ -186,7 +186,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
             children: [
               CustomAppBar(
                 title: l10n.itineraryLabelSearchResults,
-                backText: l10n.itineraryLabelBack,
+                backText: l10n.screenItineraryLabelBack,
                 onBackButtonPressed: () {
                   FocusScope.of(context).unfocus();
                   Navigator.of(context).pop();

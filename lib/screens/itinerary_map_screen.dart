@@ -104,8 +104,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
             Column(
               children: [
                 CustomAppBar(
-                  title: 'Journey Map',
-                  backText: l10n.itineraryLabelBack,
+                  title: l10n.screenItineraryMapTitle,
+                  backText: l10n.screenItineraryLabelBack,
                   onBackButtonPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(
@@ -704,6 +704,7 @@ class _JourneySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final firstLeg = itinerary.legs.isNotEmpty ? itinerary.legs.first : null;
     final lastLeg = itinerary.legs.isNotEmpty ? itinerary.legs.last : null;
     return _CarouselCard(
@@ -711,7 +712,7 @@ class _JourneySummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Journey overview',
+            l10n.screenItineraryJourneyOverview,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -723,7 +724,7 @@ class _JourneySummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _JourneyTimeTile(
-                  label: 'Departure',
+                  label: l10n.screenItineraryJourneyDeparture,
                   actualTime: firstLeg?.startTime ?? itinerary.startTime,
                   scheduledTime: firstLeg?.scheduledStartTime,
                 ),
@@ -748,7 +749,7 @@ class _JourneySummaryCard extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: _JourneyTimeTile(
-                    label: 'Arrival',
+                    label: l10n.screenItineraryJourneyArrival,
                     actualTime: lastLeg?.endTime ?? itinerary.endTime,
                     scheduledTime: lastLeg?.scheduledEndTime,
                     alignEnd: true,
@@ -881,6 +882,7 @@ class _TransferCarouselCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final depDelay = computeDelay(leg.scheduledStartTime, leg.startTime);
     final arrDelay = computeDelay(leg.scheduledEndTime, leg.endTime);
     final depTime = formatTime(leg.scheduledStartTime ?? leg.startTime);
@@ -894,7 +896,7 @@ class _TransferCarouselCard extends StatelessWidget {
               const Icon(LucideIcons.arrowLeftRight, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Transfer',
+                l10n.screenItineraryTransferCarouselTransfer,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -958,7 +960,9 @@ class _TransferCarouselCard extends StatelessWidget {
           if (leg.distance != null && leg.distance! > 0) ...[
             const SizedBox(height: 4),
             Text(
-              'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
+              l10n.screenItineraryTransferCarouselDistanceToWalk(
+                (leg.distance! / 1000).toStringAsFixed(2),
+              ),
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.black.withValues(alpha: 0.6),

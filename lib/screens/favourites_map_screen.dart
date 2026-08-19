@@ -41,7 +41,7 @@ class _AddFavouriteMapScreenState extends State<AddFavouriteMapScreen> {
               children: [
                 CustomAppBar(
                   title: 'Add Favourite',
-                  backText: l10n.itineraryLabelBack,
+                  backText: l10n.screenItineraryLabelBack,
                   onBackButtonPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(

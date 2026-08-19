@@ -24,7 +24,6 @@
   "widgetRouteSuggestionNoMatchesSubTitle": "Try a nearby city or tweak the spelling.",
   "widgetRouteSuggestionFetching": "Fetching…",
   "itineraryLabelSearchResults": "Search Results",
-  "itineraryLabelBack": "Back",
   "itineraryLabelNoRoutesFound": "No routes found.",
   "itineraryLabelSeePrevious": "See previous",
   "itineraryListDirect": "Direct",
@@ -113,6 +112,47 @@
         "example": "3"
       }
     }
-  }
+  },
+  "screenItineraryMapTitle": "Journey Map",
+  "screenItineraryLabelBack": "Back",
+  "screenItineraryJourneyOverview": "Journey overview",
+  "screenItineraryJourneyDeparture": "Departure",
+  "screenItineraryJourneyArrival": "Arrival",
+  "screenItineraryTransferCarouselTransfer": "Transfer",
+  "screenItineraryTransferCarouselDistanceToWalk": "Approx. {distanceKm} km walk",
+  "@screenItineraryTransferCarouselDistanceToWalk": {
+    "description": "Amount of km to go by feet",
+    "placeholders": {
+      "distanceKm": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "screenMapScreenQuickButtonHideStops": "Hide Stops",
+  "screenMapScreenQuickButtonShowStops": "Show Stops",
+  "screenMapScreenQuickButtonHideTransit": "Hide Transit",
+  "screenMapScreenQuickButtonShowTransit": "Show Transit",
+  "screenMapScreenQuickButtonHideRealtimeVehicles": "RT Only",
+  "screenMapScreenQuickButtonShowRealtimeVehicles": "All Data",
+  "screenMapScreenQuickButtonAutoCenter": "Auto-center",
+  "screenMapScreenQuickButtonNoCentering": "No centering",
+  "screenMapScreenQuickButtonChangeMapStyle": "Switch map",
+  "screenMapScreenMapScreenContolsLocate": "Locate",
+  "screenMapScreenMapScreenContolsBack": "Back",
+  "screenMapScreenMapScreenQuickQuickButton": "Quick button",
+  "screenMapScreenMapScreenQuickQuickMapLayers": "Map layers",
+  "screenMapScreenMapScreenQuickQuickVehicles": "Vehicles",
+  "screenMapScreenMapScreenQuickQuickStops": "Stops",
+  "screenMapScreenMapScreenQuickQuickLiveData": "Live data",
+  "screenMapScreenMapScreenQuickQuickLiveDataLabel": "Show only real-time data",
+  "screenMapScreenMapScreenQuickQuickVehicleTypes": "Vehicle types",
+  "screenMapScreenMapScreenQuickQuickAllSettings": "All settings",
+  "screenMapScreenMapScreenQuickVehicleGridTrains": "Trains",
+  "screenMapScreenMapScreenQuickVehicleGridMetro": "Metro",
+  "screenMapScreenMapScreenQuickVehicleGridTram": "Tram",
+  "screenMapScreenMapScreenQuickVehicleGridBus": "Bus",
+  "screenMapScreenMapScreenQuickVehicleGridFerries": "Ferries",
+  "screenMapScreenMapScreenQuickVehicleGridLifts": "Lifts",
+  "screenMapScreenMapScreenQuickVehicleGridOther": "Other"
 }
-

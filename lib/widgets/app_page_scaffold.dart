@@ -49,7 +49,7 @@ class AppPageScaffold extends StatelessWidget {
           children: [
             CustomAppBar(
               title: title,
-              backText: l10n.itineraryLabelBack,
+              backText: l10n.screenItineraryLabelBack,
               onBackButtonPressed: onBack ?? () => Navigator.of(context).pop(),
             ),
             Expanded(child: content),

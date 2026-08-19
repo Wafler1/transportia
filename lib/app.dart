@@ -6,8 +6,6 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    as flutter_localizations;
 import 'environment.dart';
 import 'constants/prefs_keys.dart';
 import 'models/time_selection.dart';

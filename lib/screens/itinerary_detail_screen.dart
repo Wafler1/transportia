@@ -48,7 +48,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
           children: [
             CustomAppBar(
               title: l10n.itineraryDetailTitle,
-              backText: l10n.itineraryLabelBack,
+              backText: l10n.screenItineraryLabelBack,
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
             JourneyOverviewWidget(itinerary: widget.itinerary),

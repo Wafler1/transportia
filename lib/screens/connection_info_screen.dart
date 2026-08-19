@@ -161,7 +161,7 @@ class _ConnectionInfoScreenState extends State<ConnectionInfoScreen> {
           children: [
             CustomAppBar(
               title: l10n.screenConnectionInfoTitle,
-              backText: l10n.itineraryLabelBack,
+              backText: l10n.screenItineraryLabelBack,
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
 
