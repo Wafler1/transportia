@@ -5,7 +5,8 @@
 </p>
 
 <p align="center">
-  <b>Transportia</b> is a modern travel companion designed to make public transportation easier and more accessible.
+  <b>Transportia</b> is a modern travel companion designed to make public transportation easier and more accessible. </br>
+  <span>Are you looking for a more feature-rich implementation? Check out <a href="https://github.com/blauertee/transportia" target="_blank">Transportia+</a>!</span>
 </p>
 
 ---
@@ -13,15 +14,17 @@
 
 
 <p align="center">
-<a href="https://peerpush.net/p/transportia"
+<a href="https://lift-off.sh/p/transportia"
   target="_blank"
   rel="noopener"
+  title="LiftOff award badge"
   style="width: 230px;"
 >
   <img
-    src="https://peerpush.net/p/transportia/badge.png"
-    alt="Transportia badge"
-    style="width: 230px;"
+    src="https://lift-off.sh/images/badges/month/badge2MonthDark.webp"
+    alt="LiftOff award badge"
+    width="200"
+    height="auto"
   />
 </a>
 </p>
@@ -54,7 +57,7 @@
 
 ## Suggestions, issues, or bugs
 
-Please open a GitHub issue (click-through):
+Please open a GitHub issue:
 
 - https://github.com/Wafler1/transportia/issues/new/choose
 
