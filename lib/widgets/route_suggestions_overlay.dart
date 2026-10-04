@@ -7,6 +7,7 @@ import '../services/transitous_geocode_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/favorite_icons.dart';
 import '../utils/haptics.dart';
+import '../l10n/app_localizations.dart';
 
 class RouteSuggestionsOverlay extends StatelessWidget {
   const RouteSuggestionsOverlay({
@@ -42,13 +43,17 @@ class RouteSuggestionsOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final field = activeField;
     if (field == null) return const SizedBox.shrink();
     final controller = field == RouteFieldKind.from
         ? fromController
         : toController;
     final label =
-        title ?? (field == RouteFieldKind.to ? 'Destination' : 'Origin');
+        title ??
+        (field == RouteFieldKind.to
+            ? l10n.widgetRouteSuggestionsFieldDestination
+            : l10n.widgetRouteSuggestionsFieldOrigin);
 
     return _SuggestionsOverlayCard(
       width: width,
@@ -131,6 +136,7 @@ class _SuggestionsOverlayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final savedMatches = _filterSavedPlaces(savedPlaces, query);
     final favMatches = _filterFavorites(favorites, query);
+    final l10n = AppLocalizations.of(context)!;
 
     Widget body;
     final bool hasFullQuery = query.length >= 3;
@@ -174,21 +180,21 @@ class _SuggestionsOverlayCard extends StatelessWidget {
         },
       );
     } else if (!hasFullQuery) {
-      body = const Center(
+      body = Center(
         child: _SuggestionPlaceholder(
           icon: LucideIcons.type,
-          title: 'Keep typing',
-          subtitle: 'Enter at least 3 characters to search.',
+          title: l10n.widgetRouteSuggestionKeepTyping,
+          subtitle: l10n.widgetRouteSuggestionKeepTypingSubTitle,
         ),
       );
     } else if (showLoading) {
       body = const Center(child: _SuggestionLoading());
     } else if (!hasResults) {
-      body = const Center(
+      body = Center(
         child: _SuggestionPlaceholder(
           icon: LucideIcons.searchX,
-          title: 'No matches found',
-          subtitle: 'Try a nearby city or tweak the spelling.',
+          title: l10n.widgetRouteSuggestionNoMatches,
+          subtitle: l10n.widgetRouteSuggestionNoMatchesSubTitle,
         ),
       );
     } else {
@@ -367,13 +373,14 @@ class _SuggestionLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(LucideIcons.cloudDownload, size: 28, color: AppColors.black),
         const SizedBox(height: 10),
         Text(
-          'Fetching…',
+          l10n.widgetRouteSuggestionFetching,
           style: TextStyle(
             color: AppColors.black,
             fontSize: 14,

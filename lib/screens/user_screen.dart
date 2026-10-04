@@ -23,6 +23,7 @@ import '../utils/app_version.dart';
 import '../widgets/settings_tile.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/custom_card.dart';
+import '../l10n/app_localizations.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -62,6 +63,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     return Container(
       color: AppColors.white,
@@ -89,7 +91,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'User',
+                          l10n.screensUserScreensTitleUser,
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
@@ -99,7 +101,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'Settings & Information',
+                          l10n.screensUserScreensSubtitleUser,
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -126,7 +128,10 @@ class _AccountScreenState extends State<AccountScreen> {
                         mode: LaunchMode.externalApplication,
                       );
                     } catch (e) {
-                      showValidationToast(context, "Unable to open link.");
+                      showValidationToast(
+                        context,
+                        l10n.screensUserScreensUnableToOpenLink,
+                      );
                     }
                   },
                   child: CustomCard(
@@ -152,7 +157,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               Row(
                                 children: [
                                   Text(
-                                    'Created by ',
+                                    l10n.screensUserScreensCreatedBy,
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -162,7 +167,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                     ),
                                   ),
                                   Text(
-                                    'Wafler.one',
+                                    l10n.screensUserScreensCreatedByCompany,
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700,
@@ -173,7 +178,7 @@ class _AccountScreenState extends State<AccountScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Helping you travel smarter',
+                                l10n.screensUserScreensCreatedBySlogan,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -193,12 +198,12 @@ class _AccountScreenState extends State<AccountScreen> {
               const SizedBox(height: 12),
 
               SettingsSection(
-                title: 'Analytics',
+                title: l10n.screensUserScreensAnalyticsTitle,
                 children: [
                   SettingsTile(
                     icon: LucideIcons.chartPie,
-                    title: 'Statistics',
-                    subtitle: 'View your travel statistics',
+                    title: l10n.screensUserScreensStatisticsTitle,
+                    subtitle: l10n.screensUserScreensStatisticsSubtitle,
                     onPressed: () {
                       Navigator.of(
                         context,
@@ -211,12 +216,12 @@ class _AccountScreenState extends State<AccountScreen> {
               const SizedBox(height: 12),
 
               SettingsSection(
-                title: 'Preferences',
+                title: l10n.screensUserScreensPreferencesTitle,
                 children: [
                   SettingsTile(
                     icon: LucideIcons.heart,
-                    title: 'Favourites',
-                    subtitle: 'Manage your favourite places',
+                    title: l10n.screensUserScreensFavouritesTitle,
+                    subtitle: l10n.screensUserScreensFavouritesSubtitle,
                     onPressed: () {
                       Navigator.of(
                         context,
@@ -225,8 +230,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   SettingsTile(
                     icon: LucideIcons.mapPin,
-                    title: 'Location',
-                    subtitle: 'Location permissions',
+                    title: l10n.screensUserScreensLocationTitle,
+                    subtitle: l10n.screensUserScreensLocationSubtitle,
                     onPressed: () {
                       Navigator.of(context).push(
                         CustomPageRoute(child: const LocationSettingsScreen()),
@@ -235,8 +240,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   SettingsTile(
                     icon: LucideIcons.palette,
-                    title: 'Appearance',
-                    subtitle: 'Theme and display',
+                    title: l10n.screensUserScreensAppearanceTitle,
+                    subtitle: l10n.screensUserScreensAppearanceSubtitle,
                     onPressed: () {
                       Navigator.of(
                         context,
@@ -245,8 +250,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   SettingsTile(
                     icon: LucideIcons.settings2,
-                    title: 'Transit options',
-                    subtitle: 'Modes, walking speed & transfers',
+                    title: l10n.screensUserScreensTransitOptionsSubtitle,
+                    subtitle: l10n.screensUserScreensTransitOptionsSubtitle,
                     onPressed: () {
                       Navigator.of(context).push(
                         CustomPageRoute(child: const TransitOptionsScreen()),
@@ -259,12 +264,14 @@ class _AccountScreenState extends State<AccountScreen> {
               const SizedBox(height: 12),
 
               SettingsSection(
-                title: 'About',
+                title: l10n.screensUserScreensAboutTitle,
                 children: [
                   SettingsTile(
                     icon: LucideIcons.info,
-                    title: 'About ${Environment.appName}',
-                    subtitle: 'About, credits, and more',
+                    title: l10n.screensUserScreensAboutAppnameTitle(
+                      Environment.appName,
+                    ),
+                    subtitle: l10n.screensUserScreensAboutSubtitle,
                     onPressed: () {
                       Navigator.of(
                         context,
@@ -273,8 +280,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   SettingsTile(
                     icon: LucideIcons.scale,
-                    title: 'Legal',
-                    subtitle: 'Privacy policy and terms of service',
+                    title: l10n.screensUserScreensLegalTitle,
+                    subtitle: l10n.screensUserScreensLegalSubtitle,
                     onPressed: () {
                       Navigator.of(
                         context,
@@ -314,7 +321,7 @@ class _AccountScreenState extends State<AccountScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Version ${AppVersion.current}',
+                      l10n.screensUserScreensVersionTitle(AppVersion.current),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

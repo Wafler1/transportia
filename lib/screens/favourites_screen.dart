@@ -16,6 +16,7 @@ import '../widgets/app_page_scaffold.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/edit_favorite_overlay.dart';
 import '../widgets/empty_state.dart';
+import '../l10n/app_localizations.dart';
 
 class FavouritesScreen extends StatefulWidget {
   const FavouritesScreen({super.key});
@@ -72,19 +73,20 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     return AppPageScaffold(
-      title: 'Favourites',
+      title: l10n.screensFavouritesScreenScreenTitle,
       scrollable: false,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 12),
-          const AppIconHeader(
+          AppIconHeader(
             icon: LucideIcons.heart,
-            title: 'Your favourite places',
-            subtitle: 'Quickly reuse the stops and addresses you visit most.',
+            title: l10n.screensFavouritesScreenBodyTitle,
+            subtitle: l10n.screensFavouritesScreenBodySubtitle,
           ),
           const SizedBox(height: 24),
           if (_isLoading)
@@ -103,7 +105,7 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Long press and drag to reorder your favourites. Tap to edit.',
+                        l10n.screensFavouritesScreenHelpOrderEntries,
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -141,14 +143,16 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
   }
 
   Widget _buildEmptyState() {
-    return const EmptyState(
-      title: 'No favourites yet',
-      subtitle: 'Add the places you care about and they will show up here.',
+    final l10n = AppLocalizations.of(context)!;
+    return EmptyState(
+      title: l10n.screensFafouritesScreenEmptyTitle,
+      subtitle: l10n.screensFafouritesScreenEmptySubtitle,
       padding: EdgeInsets.symmetric(vertical: 32),
     );
   }
 
   Widget _buildAddButton() {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: _openAddFavoriteMap,
       child: Container(
@@ -157,13 +161,13 @@ class _FavouritesScreenState extends State<FavouritesScreen> {
           color: AppColors.accentOf(context),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(LucideIcons.plus, size: 20, color: AppColors.solidWhite),
             SizedBox(width: 8),
             Text(
-              'Add Favourite',
+              l10n.screensFafouritesScreenButtonAddFavourite,
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,

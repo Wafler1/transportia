@@ -12,6 +12,7 @@ import '../widgets/pressable_highlight.dart';
 import '../widgets/section_title.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/custom_card.dart';
+import '../l10n/app_localizations.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   const LocationSettingsScreen({super.key});
@@ -63,6 +64,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     context.watch<ThemeProvider>();
     return AppPageScaffold(
       title: 'Location',
@@ -71,7 +73,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
       body: _isLoading
           ? Center(
               child: Text(
-                'Checking location status...',
+                l10n.screensLocationSettingsScreenTitleIsLoading,
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.black.withValues(alpha: 0.4),
@@ -84,6 +86,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   Widget _buildContent() {
     final accent = AppColors.accentOf(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -96,17 +99,19 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 32),
-            const SectionTitle(text: 'Status Details'),
-            const SizedBox(height: 16),
+            SectionTitle(text: l10n.screensLocationSettingsScreenSectionTitle),
+            SizedBox(height: 16),
             _buildStatusCard(
-              'Location Services',
-              _isLocationServiceEnabled ? 'Enabled' : 'Disabled',
+              l10n.screensLocationSettingsScreenSectionCardLocationServices,
+              _isLocationServiceEnabled
+                  ? l10n.screensLocationSettingsScreenSectionCardLocationServicesStatusEnabled
+                  : l10n.screensLocationSettingsScreenSectionCardLocationServicesStatusDisabled,
               _isLocationServiceEnabled ? LucideIcons.check : LucideIcons.x,
               _isLocationServiceEnabled ? accent : const Color(0xFFFF3B30),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _buildStatusCard(
-              'App Permission',
+              l10n.screensLocationSettingsScreenSectionCardAppPermission,
               _getPermissionStatusText(),
               _getPermissionStatusIcon(),
               _getPermissionStatusColor(),
@@ -122,7 +127,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Open settings',
+                        l10n.screensLocationSettingsScreenSectionCardOpenAppSettings,
                         style: TextStyle(fontSize: 16, color: accent),
                       ),
                       const SizedBox(width: 8),
@@ -142,7 +147,7 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Refresh status',
+                        l10n.screensLocationSettingsScreenSectionCardRefreshStatus,
                         style: TextStyle(fontSize: 16, color: accent),
                       ),
                       const SizedBox(width: 8),
@@ -216,33 +221,42 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
   }
 
   String _getStatusTitle() {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLocationEnabled()) {
-      return 'Location Enabled';
+      return l10n.screensLocationSettingsScreenLocationEnabled;
     }
-    return 'Location Disabled';
+    return l10n.screensLocationSettingsScreenLocationDisnabled;
   }
 
   String _getStatusDescription() {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLocationEnabled()) {
-      return 'Your location is being used for navigation';
+      return l10n.screensLocationSettingsScreenLocationStatusDescriptionEnabled;
     }
-    return 'Enable location to use all features';
+    return l10n.screensLocationSettingsScreenLocationStatusDescriptionDisabled;
   }
 
   String _getPermissionStatusText() {
+    final l10n = AppLocalizations.of(context)!;
     switch (_permissionStatus) {
       case PermissionStatus.granted:
-        return 'Allowed';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextAllowed;
       case PermissionStatus.denied:
-        return 'Denied';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextDenied;
       case PermissionStatus.restricted:
-        return 'Restricted';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextRestricted;
       case PermissionStatus.limited:
-        return 'Limited';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextLimited;
       case PermissionStatus.permanentlyDenied:
-        return 'Permanently Denied';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextPermanentlyDenied;
       default:
-        return 'Unknown';
+        return l10n
+            .screensLocationSettingsScreenLocationPermissionStatusTextUnknown;
     }
   }
 

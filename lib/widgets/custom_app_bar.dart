@@ -7,10 +7,12 @@ import '../theme/app_colors.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onBackButtonPressed;
+  final String backText;
 
   const CustomAppBar({
     super.key,
     required this.title,
+    required this.backText,
     this.onBackButtonPressed,
   });
 
@@ -41,7 +43,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      'Back',
+                      backText,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,

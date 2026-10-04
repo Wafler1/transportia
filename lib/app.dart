@@ -17,6 +17,7 @@ import 'screens/welcome_screen.dart';
 import 'services/location_service.dart';
 import 'services/transitous_geocode_service.dart';
 import 'widgets/offline_banner_shell.dart';
+import 'l10n/app_localizations.dart';
 
 class Transportia extends StatelessWidget {
   const Transportia({super.key});
@@ -39,11 +40,8 @@ class Transportia extends StatelessWidget {
               title: Environment.appName,
               color: themeProvider.backgroundColor,
               debugShowCheckedModeBanner: false,
-              localizationsDelegates: const [
-                DefaultWidgetsLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [Locale('en', 'US'), Locale('en')],
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               pageRouteBuilder:
                   <T>(RouteSettings settings, WidgetBuilder builder) {
                     return PageRouteBuilder<T>(

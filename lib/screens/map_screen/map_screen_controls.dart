@@ -13,6 +13,7 @@ class _MapControlPills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final TextStyle quickLabelStyle = TextStyle(
       color: quickButton.color,
       fontSize: 14,
@@ -50,7 +51,7 @@ class _MapControlPills extends StatelessWidget {
                 color: AppColors.black,
               ),
               label: Text(
-                'Locate',
+                l10n.screenMapScreenMapScreenContolsLocate,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.black,
@@ -119,6 +120,7 @@ class _BottomSheetBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final accent = AppColors.accentOf(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -135,7 +137,7 @@ class _BottomSheetBackButton extends StatelessWidget {
               Icon(LucideIcons.chevronLeft, size: 18, color: accent),
               const SizedBox(width: 6),
               Text(
-                'Back',
+                l10n.screenMapScreenMapScreenContolsBack,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,

@@ -79,6 +79,7 @@ class _TripFocusContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context)!;
     if (isLoading) {
       return SkeletonShimmer(
         child: SingleChildScrollView(
@@ -138,7 +139,7 @@ class _TripFocusContent extends StatelessWidget {
         ? focusLeg.displayName!
         : focusLeg.routeShortName?.trim().isNotEmpty == true
         ? focusLeg.routeShortName!
-        : getTransitModeName(focusLeg.mode);
+        : getTransitModeName(loc, focusLeg.mode);
     final headsign = focusLeg.headsign?.trim().isNotEmpty == true
         ? focusLeg.headsign
         : null;
@@ -230,7 +231,7 @@ class _TripFocusContent extends StatelessWidget {
                           if (headsign != null) ...[
                             const SizedBox(height: 8),
                             Text(
-                              '${getTransitModeName(focusLeg.mode)} • $headsign',
+                              '${getTransitModeName(loc, focusLeg.mode)} • $headsign',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

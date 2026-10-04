@@ -62,6 +62,7 @@ import '../widgets/stop_schedule_row.dart';
 import '../widgets/timeline_indicator_box.dart';
 import '../widgets/map/long_press_selection_modal.dart';
 import '../widgets/map/stop_selection_modal.dart';
+import '../l10n/app_localizations.dart';
 
 part 'map_screen/map_screen_models.dart';
 part 'map_screen/map_screen_controls.dart';
@@ -853,13 +854,16 @@ class _MapScreenState extends State<MapScreen>
   }
 
   _QuickButtonConfig _quickButtonConfig(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     switch (_quickButtonAction) {
       case _QuickButtonAction.toggleStops:
         final color = _showStops
             ? AppColors.accentOf(context)
             : AppColors.black;
         return _QuickButtonConfig(
-          label: _showStops ? 'Hide Stops' : 'Show Stops',
+          label: _showStops
+              ? l10n.screenMapScreenQuickButtonHideStops
+              : l10n.screenMapScreenQuickButtonShowStops,
           icon: _showStops ? LucideIcons.mapPinOff : LucideIcons.mapPin,
           color: color,
           onTap: _toggleStops,
@@ -869,7 +873,9 @@ class _MapScreenState extends State<MapScreen>
             ? AppColors.accentOf(context)
             : AppColors.black;
         return _QuickButtonConfig(
-          label: _showVehicles ? 'Hide Transit' : 'Show Transit',
+          label: _showVehicles
+              ? l10n.screenMapScreenQuickButtonHideTransit
+              : l10n.screenMapScreenQuickButtonShowTransit,
           icon: LucideIcons.busFront,
           color: color,
           onTap: _toggleVehicles,
@@ -879,7 +885,9 @@ class _MapScreenState extends State<MapScreen>
             ? AppColors.accentOf(context)
             : AppColors.black;
         return _QuickButtonConfig(
-          label: _hideNonRealtimeVehicles ? 'RT Only' : 'All Data',
+          label: _hideNonRealtimeVehicles
+              ? l10n.screenMapScreenQuickButtonHideRealtimeVehicles
+              : l10n.screenMapScreenQuickButtonShowRealtimeVehicles,
           icon: LucideIcons.radio,
           color: color,
           onTap: _toggleRealtimeOnly,
@@ -889,14 +897,16 @@ class _MapScreenState extends State<MapScreen>
             ? AppColors.accentOf(context)
             : AppColors.black;
         return _QuickButtonConfig(
-          label: _autoCenterEnabled ? 'Auto-center' : 'No centering',
+          label: _autoCenterEnabled
+              ? l10n.screenMapScreenQuickButtonAutoCenter
+              : l10n.screenMapScreenQuickButtonNoCentering,
           icon: LucideIcons.compass,
           color: color,
           onTap: _toggleAutoCenter,
         );
       case _QuickButtonAction.changeMapStyle:
         return _QuickButtonConfig(
-          label: 'Switch Map',
+          label: l10n.screenMapScreenQuickButtonChangeMapStyle,
           icon: LucideIcons.map,
           color: AppColors.black,
           onTap: _changeMapStyle,

@@ -16,6 +16,7 @@ import '../utils/map_marker_utils.dart';
 import '../utils/polyline_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
+import '../l10n/app_localizations.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
   final Itinerary itinerary;
@@ -94,6 +95,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -102,7 +104,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
             Column(
               children: [
                 CustomAppBar(
-                  title: 'Journey Map',
+                  title: l10n.screenItineraryMapTitle,
+                  backText: l10n.screenItineraryLabelBack,
                   onBackButtonPressed: () => Navigator.of(context).pop(),
                 ),
                 Expanded(
@@ -701,6 +704,7 @@ class _JourneySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final firstLeg = itinerary.legs.isNotEmpty ? itinerary.legs.first : null;
     final lastLeg = itinerary.legs.isNotEmpty ? itinerary.legs.last : null;
     return _CarouselCard(
@@ -708,7 +712,7 @@ class _JourneySummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Journey overview',
+            l10n.screenItineraryJourneyOverview,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
@@ -720,7 +724,7 @@ class _JourneySummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _JourneyTimeTile(
-                  label: 'Departure',
+                  label: l10n.screenItineraryJourneyDeparture,
                   actualTime: firstLeg?.startTime ?? itinerary.startTime,
                   scheduledTime: firstLeg?.scheduledStartTime,
                 ),
@@ -745,7 +749,7 @@ class _JourneySummaryCard extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: _JourneyTimeTile(
-                    label: 'Arrival',
+                    label: l10n.screenItineraryJourneyArrival,
                     actualTime: lastLeg?.endTime ?? itinerary.endTime,
                     scheduledTime: lastLeg?.scheduledEndTime,
                     alignEnd: true,
@@ -789,8 +793,8 @@ class _LegCarouselCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headline = _resolveHeadline(leg);
-    final subtitle = _resolveSubtitle(leg);
+    final headline = _resolveHeadline(context, leg);
+    final subtitle = _resolveSubtitle(context, leg);
 
     return _CarouselCard(
       child: Column(
@@ -837,7 +841,8 @@ class _LegCarouselCard extends StatelessWidget {
     );
   }
 
-  String _resolveHeadline(Leg leg) {
+  String _resolveHeadline(BuildContext context, Leg leg) {
+    final loc = AppLocalizations.of(context)!;
     if (leg.displayName != null && leg.displayName!.isNotEmpty) {
       return leg.displayName!;
     }
@@ -853,11 +858,12 @@ class _LegCarouselCard extends StatelessWidget {
     if (leg.headsign != null && leg.headsign!.isNotEmpty) {
       return leg.headsign!;
     }
-    return getTransitModeName(leg.mode);
+    return getTransitModeName(loc, leg.mode);
   }
 
-  String _resolveSubtitle(Leg leg) {
-    final mode = getTransitModeName(leg.mode);
+  String _resolveSubtitle(BuildContext context, Leg leg) {
+    final loc = AppLocalizations.of(context)!;
+    final mode = getTransitModeName(loc, leg.mode);
     if (leg.headsign != null && leg.headsign!.isNotEmpty) {
       return '$mode • ${leg.headsign}';
     }
@@ -878,6 +884,7 @@ class _TransferCarouselCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final depDelay = computeDelay(leg.scheduledStartTime, leg.startTime);
     final arrDelay = computeDelay(leg.scheduledEndTime, leg.endTime);
     final depTime = formatTime(leg.scheduledStartTime ?? leg.startTime);
@@ -891,7 +898,7 @@ class _TransferCarouselCard extends StatelessWidget {
               const Icon(LucideIcons.arrowLeftRight, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Transfer',
+                l10n.screenItineraryTransferCarouselTransfer,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
@@ -955,7 +962,9 @@ class _TransferCarouselCard extends StatelessWidget {
           if (leg.distance != null && leg.distance! > 0) ...[
             const SizedBox(height: 4),
             Text(
-              'Approx. ${(leg.distance! / 1000).toStringAsFixed(2)} km walk',
+              l10n.screenItineraryTransferCarouselDistanceToWalk(
+                (leg.distance! / 1000).toStringAsFixed(2),
+              ),
               style: TextStyle(
                 fontSize: 12,
                 color: AppColors.black.withValues(alpha: 0.6),

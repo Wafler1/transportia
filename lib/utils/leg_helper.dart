@@ -1,5 +1,6 @@
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/widgets.dart';
+import '../l10n/app_localizations.dart';
 
 IconData getLegIcon(String mode) {
   switch (mode) {
@@ -64,64 +65,64 @@ IconData getLegIcon(String mode) {
   }
 }
 
-String getTransitModeName(String mode) {
+String getTransitModeName(AppLocalizations l10n, String mode) {
   switch (mode) {
     case 'WALK':
-      return 'Walk';
+      return l10n.utilsLegHelperTransitionModeNameWalk;
     case 'BIKE':
-      return 'Bike';
+      return l10n.utilsLegHelperTransitionModeNameBike;
     case 'RENTAL':
-      return 'Rental';
+      return l10n.utilsLegHelperTransitionModeNameRental;
     case 'CAR':
-      return 'Car';
+      return l10n.utilsLegHelperTransitionModeNameCar;
     case 'CAR_PARKING':
-      return 'Car Parking';
+      return l10n.utilsLegHelperTransitionModeNameCarParking;
     case 'CAR_DROPOFF':
-      return 'Car Drop-off';
+      return l10n.utilsLegHelperTransitionModeNameCarDropoff;
     case 'ODM':
-      return 'On-Demand';
+      return l10n.utilsLegHelperTransitionModeNameOnDemand;
     case 'FLEX':
-      return 'Flexible Service';
+      return l10n.utilsLegHelperTransitionModeNameFlexibleService;
     case 'TRANSIT':
-      return 'Transit';
+      return l10n.utilsLegHelperTransitionModeNameTransit;
     case 'TRAM':
-      return 'Tram';
+      return l10n.utilsLegHelperTransitionModeNameTram;
     case 'SUBWAY':
-      return 'Subway';
+      return l10n.utilsLegHelperTransitionModeNameSubway;
     case 'FERRY':
-      return 'Ferry';
+      return l10n.utilsLegHelperTransitionModeNameFerry;
     case 'AIRPLANE':
-      return 'Airplane';
+      return l10n.utilsLegHelperTransitionModeNameAirplane;
     case 'SUBURBAN':
-      return 'Suburban';
+      return l10n.utilsLegHelperTransitionModeNameSuburban;
     case 'BUS':
-      return 'Bus';
+      return l10n.utilsLegHelperTransitionModeNameBus;
     case 'COACH':
-      return 'Coach Bus';
+      return l10n.utilsLegHelperTransitionModeNameCoachBus;
     case 'RAIL':
-      return 'Train';
+      return l10n.utilsLegHelperTransitionModeNameTrain;
     case 'HIGHSPEED_RAIL':
-      return 'High-speed Train';
+      return l10n.utilsLegHelperTransitionModeNameHighSpeedTrain;
     case 'LONG_DISTANCE':
-      return 'Train';
+      return l10n.utilsLegHelperTransitionModeNameTrain;
     case 'NIGHT_RAIL':
-      return 'Night Train';
+      return l10n.utilsLegHelperTransitionModeNameNightTrain;
     case 'REGIONAL_FAST_RAIL':
-      return 'Express Train';
+      return l10n.utilsLegHelperTransitionModeNameExpressTrain;
     case 'REGIONAL_RAIL':
-      return 'Train';
+      return l10n.utilsLegHelperTransitionModeNameTrain;
     case 'CABLE_CAR':
-      return 'Cable Car';
+      return l10n.utilsLegHelperTransitionModeNameCableCar;
     case 'AERIAL_LIFT':
-      return 'Aerial Lift';
+      return l10n.utilsLegHelperTransitionModeNameAerialLift;
     case 'FUNICULAR':
-      return 'Funicular';
+      return l10n.utilsLegHelperTransitionModeNameFunicular;
     case 'AREAL_LIFT':
-      return 'Areal Lift';
+      return l10n.utilsLegHelperTransitionModeNameArealLift;
     case 'METRO':
-      return 'Metro';
+      return l10n.utilsLegHelperTransitionModeNameMetro;
     case 'OTHER':
-      return 'Other';
+      return l10n.utilsLegHelperTransitionModeNameOther;
     default:
       return mode;
   }

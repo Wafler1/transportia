@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import '../theme/app_colors.dart';
 import 'bottom_overlay_card.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../l10n/app_localizations.dart';
 
 class QuickButtonPickerOption<T> {
   const QuickButtonPickerOption({
@@ -79,6 +80,7 @@ class _QuickButtonOptionTile<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final accent = AppColors.accentOf(context);
     final enabled = option.enabled;
     final textColor = enabled
@@ -152,7 +154,7 @@ class _QuickButtonOptionTile<T> extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  'Soon',
+                  l10n.widgetQuickButtonPickerSoon,
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
