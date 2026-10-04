@@ -14,6 +14,7 @@ import '../services/location_service.dart';
 import '../services/saved_places_service.dart';
 import '../services/stop_times_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../utils/adhoc_tracking.dart';
 import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
 import '../utils/leg_helper.dart' show getLegIcon;
@@ -22,6 +23,8 @@ import '../utils/time_utils.dart';
 import '../widgets/buttons/pill_button.dart';
 import '../widgets/buttons/primary_button.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/gtfs_fields_row.dart';
+import '../widgets/pressable_highlight.dart';
 import '../widgets/skeletons/skeleton_list.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/route_suggestions_overlay.dart';
@@ -51,6 +54,11 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
   int _suggestionRequestId = 0;
   List<SavedPlace> _savedTimetablePlaces = [];
   LatLng? _lastUserLatLng;
+
+  LatLng? get _placeBias =>
+      context.read<ThemeProvider>().geocodeLocationBiasEnabled
+      ? _lastUserLatLng
+      : null;
   TransitousLocationSuggestion? _selectedStop;
   List<StopTime>? _stopTimes;
   int _centerIndex = 0;
@@ -274,7 +282,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       final results = await TransitousGeocodeService.fetchSuggestions(
         text: query,
         type: 'STOP',
-        placeBias: _lastUserLatLng,
+        placeBias: _placeBias,
       );
 
       if (requestId != _suggestionRequestId) return;
@@ -408,7 +416,7 @@ class _TimetablesScreenState extends State<TimetablesScreen> {
       final results = await TransitousGeocodeService.fetchSuggestions(
         text: query,
         type: 'STOP',
-        placeBias: _lastUserLatLng,
+        placeBias: _placeBias,
       );
       final ordered = _prioritizeSavedSuggestions(results);
       if (ordered.isEmpty) return null;
@@ -1041,6 +1049,12 @@ class _StopTimeCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  GtfsFieldsRow(
+                    fields: {
+                      'trip': stopTime.tripId,
+                      'stop': stopTime.place.stopId,
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1062,6 +1076,20 @@ class _StopTimeCard extends StatelessWidget {
                   subdued: true,
                 ),
               ],
+            ),
+            const SizedBox(width: 8),
+            PressableHighlight(
+              onPressed: () => startAdHocTracking(context, stopTime),
+              borderRadius: BorderRadius.circular(10),
+              enableHaptics: false,
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  LucideIcons.navigation,
+                  size: 18,
+                  color: AppColors.accentOf(context),
+                ),
+              ),
             ),
           ],
         ),

@@ -29,6 +29,34 @@ class LocationService {
     return granted;
   }
 
+  /// Read-only status checks (never prompt), used to explain why the
+  /// background-tracking setting is unavailable.
+  static Future<bool> hasLocationAlwaysPermission() async {
+    final status = await Permission.locationAlways.status;
+    return status.isGranted;
+  }
+
+  static Future<bool> hasNotificationPermission() async {
+    final status = await Permission.notification.status;
+    return status.isGranted;
+  }
+
+  /// Requests "allow all the time" location plus notification permission,
+  /// needed to keep itinerary tracking running via a background notification.
+  /// Never throws; returns false on denial so callers can silently fall back
+  /// to foreground-only tracking.
+  static Future<bool> ensureBackgroundPermission() async {
+    try {
+      if (!await ensurePermission()) return false;
+      final backgroundStatus = await Permission.locationAlways.request();
+      if (!backgroundStatus.isGranted) return false;
+      final notificationStatus = await Permission.notification.request();
+      return notificationStatus.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Stream<Position> positionStream({
     LocationAccuracy accuracy = LocationAccuracy.high,
     int distanceFilter = 10,

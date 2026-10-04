@@ -10,9 +10,12 @@ import '../models/time_selection.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/empty_state.dart';
 import '../models/itinerary.dart';
+import '../models/saved_trip.dart';
 import '../providers/theme_provider.dart';
 import '../services/routing_service.dart';
+import '../services/saved_trips_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/haptics.dart';
 import '../widgets/custom_app_bar.dart';
 import '../utils/color_utils.dart';
 import '../utils/duration_formatter.dart';
@@ -20,6 +23,7 @@ import '../utils/time_utils.dart';
 import 'itinerary_detail_screen.dart';
 import '../widgets/load_more_button.dart';
 import '../widgets/skeletons/skeleton_list.dart';
+import '../widgets/validation_toast.dart';
 
 class ItineraryListScreen extends StatefulWidget {
   final FutureOr<double> fromLat;
@@ -73,6 +77,25 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
     super.dispose();
   }
 
+  /// Replaces placeholder "START"/"END" leg endpoint names with the real
+  /// place names the user searched for, so every screen that reads a leg's
+  /// name directly (notification, stop rows, map markers, ...) shows
+  /// something meaningful instead. `'My Location'` mirrors the same
+  /// fallback already used for a from-point with no explicit selection
+  /// (e.g. current GPS position) in [TripHistoryItem.fromSelections].
+  List<Itinerary> _resolveEndpointNames(List<Itinerary> itineraries) {
+    final fromLabel = widget.fromSelection?.name ?? 'My Location';
+    final toLabel = widget.toSelection?.name;
+    return itineraries
+        .map(
+          (itin) => itin.withResolvedEndpointNames(
+            fromLabel: fromLabel,
+            toLabel: toLabel,
+          ),
+        )
+        .toList();
+  }
+
   Future<void> _loadInitial() async {
     setState(() => _isLoading = true);
     try {
@@ -88,7 +111,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       setState(() {
         _fromLat = fromLat;
         _fromLon = fromLon;
-        _itineraries = response.itineraries;
+        _itineraries = _resolveEndpointNames(response.itineraries);
         _centerIndex = 0;
         _nextPageCursor = response.nextPageCursor;
         _previousPageCursor = response.previousPageCursor;
@@ -117,7 +140,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       setState(() {
         _fromLat = fromLat;
         _fromLon = fromLon;
-        _itineraries.addAll(response.itineraries);
+        _itineraries.addAll(_resolveEndpointNames(response.itineraries));
         _nextPageCursor = response.nextPageCursor;
         _previousPageCursor =
             response.previousPageCursor ?? _previousPageCursor;
@@ -146,8 +169,9 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
       setState(() {
         _fromLat = fromLat;
         _fromLon = fromLon;
-        _itineraries = [...response.itineraries, ..._itineraries];
-        _centerIndex += response.itineraries.length;
+        final resolved = _resolveEndpointNames(response.itineraries);
+        _itineraries = [...resolved, ..._itineraries];
+        _centerIndex += resolved.length;
         _previousPageCursor = response.previousPageCursor;
       });
     } catch (_) {
@@ -228,6 +252,7 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
                                   ),
                                 );
                               },
+                              onLongPress: () => _saveTrip(itin),
                               child: ItineraryCard(itinerary: itin),
                             );
                           }
@@ -294,6 +319,20 @@ class _ItineraryListScreenState extends State<ItineraryListScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _saveTrip(Itinerary itin) async {
+    if (itin.legs.isEmpty) return;
+    unawaited(Haptics.mediumTick());
+    final saved = await SavedTripsService.saveTrip(
+      SavedTrip.fromItinerary(itin),
+    );
+    if (!mounted) return;
+    showValidationToast(
+      context,
+      saved ? 'Trip saved' : 'Already saved',
+      accentColor: AppColors.accentOf(context),
     );
   }
 

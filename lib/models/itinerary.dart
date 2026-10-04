@@ -1,5 +1,47 @@
 import 'dart:developer' as developer;
 
+import 'package:maplibre_gl/maplibre_gl.dart' show LatLng;
+
+import '../utils/geo_utils.dart';
+import '../utils/polyline_utils.dart';
+
+/// The routing API's generic placeholder for a walk leg endpoint that isn't
+/// a named GTFS stop (e.g. an arbitrary address or "my location").
+bool _isPlaceholderEndpointName(String name) {
+  final normalized = name.trim().toUpperCase();
+  return normalized == 'START' || normalized == 'END';
+}
+
+/// Finds the stop in [sequence] matching [stopId] (preferred) or nearest to
+/// ([lat], [lon]) otherwise — used to re-locate a leg's boarding/alighting
+/// point within a freshly re-fetched full trip.
+int? _matchStopIndex(
+  List<TripStop> sequence,
+  String? stopId,
+  double lat,
+  double lon,
+) {
+  if (stopId != null) {
+    final byId = sequence.indexWhere((s) => s.stopId == stopId);
+    if (byId != -1) return byId;
+  }
+  int? bestIndex;
+  double bestDistance = double.infinity;
+  for (int i = 0; i < sequence.length; i++) {
+    final distance = coordinateDistanceInMeters(
+      sequence[i].lat,
+      sequence[i].lon,
+      lat,
+      lon,
+    );
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = i;
+    }
+  }
+  return bestIndex;
+}
+
 class FareInfo {
   final double amount;
   final String currency;
@@ -71,7 +113,20 @@ class FareLegInfo {
   final List<RouteBadge> routeBadges;
   final List<FareOption> options;
 
-  FareLegInfo({required this.routeBadges, required this.options});
+  /// A deep link straight to buying this fare, when the agency exposes one
+  /// (GTFS `ticketUrls`) — preferred over [fareUrl] wherever both exist.
+  final String? ticketUrl;
+
+  /// The agency's general fare-information page (GTFS `agencyFareUrl`),
+  /// shown only when there's no more specific [ticketUrl].
+  final String? fareUrl;
+
+  FareLegInfo({
+    required this.routeBadges,
+    required this.options,
+    this.ticketUrl,
+    this.fareUrl,
+  });
 
   String get _optionsKey => options
       .map(
@@ -117,6 +172,19 @@ class Alert {
       descriptionText: json['descriptionText'],
       severityLevel: json['severityLevel'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'cause': cause,
+      'causeDetail': causeDetail,
+      'effect': effect,
+      'effectDetail': effectDetail,
+      'url': url,
+      'headerText': headerText,
+      'descriptionText': descriptionText,
+      'severityLevel': severityLevel,
+    };
   }
 }
 
@@ -173,6 +241,23 @@ class IntermediateStop {
           : [],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'stopId': stopId,
+      'lat': lat,
+      'lon': lon,
+      'arrival': arrival?.toIso8601String(),
+      'departure': departure?.toIso8601String(),
+      'scheduledArrival': scheduledArrival?.toIso8601String(),
+      'scheduledDeparture': scheduledDeparture?.toIso8601String(),
+      'track': track,
+      'scheduledTrack': scheduledTrack,
+      'cancelled': cancelled,
+      'alerts': alerts.map((a) => a.toJson()).toList(),
+    };
+  }
 }
 
 class EncodedPolyline {
@@ -192,6 +277,10 @@ class EncodedPolyline {
       precision: json['precision'] ?? 5,
       length: json['length'] ?? 0,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'points': points, 'precision': precision, 'length': length};
   }
 }
 
@@ -217,6 +306,67 @@ class Itinerary {
   });
 
   bool get hasTicketInfo => ticketInfo.isNotEmpty;
+
+  /// Serializes the core fields needed to re-render this itinerary later
+  /// (e.g. a saved trip snapshot). Deliberately omits [fare]/[ticketInfo],
+  /// which have no JSON round-trip of their own and are decorative on the
+  /// detail screen — it renders fine without them.
+  Map<String, dynamic> toJson() {
+    return {
+      'duration': duration,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'transfers': transfers,
+      'legs': legs.map((leg) => leg.toJson()).toList(),
+      'isDirect': isDirect,
+    };
+  }
+
+  /// Returns a copy of this itinerary with [newLegs] substituted in,
+  /// recomputing the fields derived from the leg list (e.g. after a
+  /// real-time refresh updates individual legs).
+  Itinerary withLegs(List<Leg> newLegs) {
+    if (newLegs.isEmpty) return this;
+    final transitLegCount = newLegs.where((l) => l.mode != 'WALK').length;
+    return Itinerary(
+      duration: newLegs.last.endTime
+          .difference(newLegs.first.startTime)
+          .inSeconds,
+      startTime: newLegs.first.startTime,
+      endTime: newLegs.last.endTime,
+      transfers: transitLegCount > 0 ? transitLegCount - 1 : 0,
+      legs: newLegs,
+      isDirect: isDirect,
+      fare: fare,
+      ticketInfo: ticketInfo,
+    );
+  }
+
+  /// Replaces a placeholder first/last leg endpoint name ("START"/"END",
+  /// what the routing API returns for a walk leg whose endpoint isn't a
+  /// named GTFS stop) with [fromLabel]/[toLabel] — the place the user
+  /// actually searched for. No-ops wherever a label isn't available or the
+  /// existing name isn't a placeholder, so it's safe to call unconditionally.
+  Itinerary withResolvedEndpointNames({String? fromLabel, String? toLabel}) {
+    if (legs.isEmpty) return this;
+    final newLegs = List<Leg>.from(legs);
+
+    final first = newLegs.first;
+    if (fromLabel != null &&
+        fromLabel.isNotEmpty &&
+        _isPlaceholderEndpointName(first.fromName)) {
+      newLegs[0] = first.withEndpointNames(fromName: fromLabel);
+    }
+
+    final last = newLegs.last;
+    if (toLabel != null &&
+        toLabel.isNotEmpty &&
+        _isPlaceholderEndpointName(last.toName)) {
+      newLegs[newLegs.length - 1] = last.withEndpointNames(toName: toLabel);
+    }
+
+    return withLegs(newLegs);
+  }
 
   double get walkingDistance {
     double totalDistance = 0.0;
@@ -267,14 +417,26 @@ class Itinerary {
 
       try {
         final routeBadgesByFareLeg = <String, List<RouteBadge>>{};
+        // Prefer a leg's own ticketing deep link over its agency's general
+        // fare page; both are keyed the same way as the route badges above
+        // so they land on the right merged FareLegInfo below.
+        final ticketUrlByFareLeg = <String, String>{};
+        final fareUrlByFareLeg = <String, String>{};
         for (final leg in legs) {
           if (leg.fareTransferIndex == null ||
               leg.effectiveFareLegIndex == null) {
             continue;
           }
+          final key = '${leg.fareTransferIndex}:${leg.effectiveFareLegIndex}';
+          if (leg.ticketUrl != null && !ticketUrlByFareLeg.containsKey(key)) {
+            ticketUrlByFareLeg[key] = leg.ticketUrl!;
+          }
+          if (leg.agencyFareUrl != null && !fareUrlByFareLeg.containsKey(key)) {
+            fareUrlByFareLeg[key] = leg.agencyFareUrl!;
+          }
+
           final name = leg.routeShortName ?? leg.displayName;
           if (name == null || name.isEmpty) continue;
-          final key = '${leg.fareTransferIndex}:${leg.effectiveFareLegIndex}';
           final badges = routeBadgesByFareLeg.putIfAbsent(key, () => []);
           if (!badges.any((b) => b.name == name)) {
             badges.add(
@@ -301,10 +463,13 @@ class Itinerary {
                 .where((o) => o.products.isNotEmpty)
                 .toList();
             if (options.isEmpty) continue;
+            final key = '$t:$i';
             rawTicketInfo.add(
               FareLegInfo(
-                routeBadges: routeBadgesByFareLeg['$t:$i'] ?? const [],
+                routeBadges: routeBadgesByFareLeg[key] ?? const [],
                 options: options,
+                ticketUrl: ticketUrlByFareLeg[key],
+                fareUrl: fareUrlByFareLeg[key],
               ),
             );
           }
@@ -329,6 +494,8 @@ class Itinerary {
             mergedByKey[key] = FareLegInfo(
               routeBadges: combinedBadges,
               options: existing.options,
+              ticketUrl: existing.ticketUrl ?? entry.ticketUrl,
+              fareUrl: existing.fareUrl ?? entry.fareUrl,
             );
           }
         }
@@ -354,6 +521,32 @@ class Itinerary {
       ticketInfo: ticketInfo,
     );
   }
+}
+
+/// A single stop along a leg's full run, used by [Leg.fullStopSequence] /
+/// [Leg.sliceBetween] to locate and slice out a boarding→alighting range.
+class TripStop {
+  final String name;
+  final String? stopId;
+  final double lat;
+  final double lon;
+  final DateTime? arrival;
+  final DateTime? departure;
+  final DateTime? scheduledArrival;
+  final DateTime? scheduledDeparture;
+  final String? track;
+
+  const TripStop({
+    required this.name,
+    this.stopId,
+    required this.lat,
+    required this.lon,
+    this.arrival,
+    this.departure,
+    this.scheduledArrival,
+    this.scheduledDeparture,
+    this.track,
+  });
 }
 
 class Leg {
@@ -384,6 +577,8 @@ class Leg {
   final String? toTrack;
   final String? fromScheduledTrack;
   final String? toScheduledTrack;
+  final String? fromStopId;
+  final String? toStopId;
   final double fromLat;
   final double fromLon;
   final double toLat;
@@ -394,6 +589,12 @@ class Leg {
   final bool interlineWithPreviousLeg;
   final int? fareTransferIndex;
   final int? effectiveFareLegIndex;
+
+  /// A deep link straight to buying this leg's fare (GTFS `ticketUrls.web`).
+  final String? ticketUrl;
+
+  /// The agency's general fare-information page (GTFS `agencyFareUrl`).
+  final String? agencyFareUrl;
 
   Leg({
     required this.mode,
@@ -423,6 +624,8 @@ class Leg {
     this.toTrack,
     this.fromScheduledTrack,
     this.toScheduledTrack,
+    this.fromStopId,
+    this.toStopId,
     required this.fromLat,
     required this.fromLon,
     required this.toLat,
@@ -433,7 +636,311 @@ class Leg {
     this.interlineWithPreviousLeg = false,
     this.fareTransferIndex,
     this.effectiveFareLegIndex,
+    this.ticketUrl,
+    this.agencyFareUrl,
   });
+
+  /// Returns a copy of this leg with the real-time fields (times, delay,
+  /// cancellation, track, intermediate stops, alerts) refreshed from
+  /// [fresh], while keeping itinerary-specific context (fare indices,
+  /// geometry) from this leg. [fresh] is typically a full re-fetch of the
+  /// same trip and may cover more stops than this leg does (e.g. this leg
+  /// only boards partway through); it's narrowed down to this leg's own
+  /// boarding→alighting range first, so a refresh can't silently expand a
+  /// partial-trip leg into the whole trip.
+  Leg withRealTimeFrom(Leg fresh) {
+    final matched = fresh._slicedToMatch(this);
+    return Leg(
+      mode: mode,
+      fromName: fromName,
+      toName: toName,
+      startTime: matched.startTime,
+      endTime: matched.endTime,
+      scheduledStartTime: matched.scheduledStartTime ?? scheduledStartTime,
+      scheduledEndTime: matched.scheduledEndTime ?? scheduledEndTime,
+      duration: matched.duration,
+      distance: distance,
+      routeShortName: routeShortName,
+      routeLongName: routeLongName,
+      displayName: displayName,
+      headsign: headsign,
+      routeColor: routeColor,
+      routeTextColor: routeTextColor,
+      routeType: routeType,
+      agencyName: agencyName,
+      agencyUrl: agencyUrl,
+      agencyId: agencyId,
+      tripId: tripId,
+      tripShortName: tripShortName,
+      realTime: matched.realTime,
+      cancelled: matched.cancelled,
+      fromTrack: matched.fromTrack ?? fromTrack,
+      toTrack: matched.toTrack ?? toTrack,
+      fromScheduledTrack: fromScheduledTrack,
+      toScheduledTrack: toScheduledTrack,
+      fromStopId: fromStopId,
+      toStopId: toStopId,
+      fromLat: fromLat,
+      fromLon: fromLon,
+      toLat: toLat,
+      toLon: toLon,
+      intermediateStops: matched.intermediateStops.isNotEmpty
+          ? matched.intermediateStops
+          : intermediateStops,
+      alerts: matched.alerts.isNotEmpty ? matched.alerts : alerts,
+      legGeometry: legGeometry,
+      interlineWithPreviousLeg: interlineWithPreviousLeg,
+      fareTransferIndex: fareTransferIndex,
+      effectiveFareLegIndex: effectiveFareLegIndex,
+      ticketUrl: matched.ticketUrl ?? ticketUrl,
+      agencyFareUrl: matched.agencyFareUrl ?? agencyFareUrl,
+    );
+  }
+
+  /// Narrows this leg (assumed to be the same trip as [original], but
+  /// possibly covering more of it — e.g. a full trip re-fetched for a
+  /// real-time refresh) down to just [original]'s own boarding→alighting
+  /// range. Falls back to itself unsliced if the endpoints can't be
+  /// matched (e.g. it turns out to be a genuinely different trip).
+  Leg _slicedToMatch(Leg original) {
+    final sequence = fullStopSequence;
+    if (sequence.length < 2) return this;
+    final boardingIndex = _matchStopIndex(
+      sequence,
+      original.fromStopId,
+      original.fromLat,
+      original.fromLon,
+    );
+    final alightingIndex = _matchStopIndex(
+      sequence,
+      original.toStopId,
+      original.toLat,
+      original.toLon,
+    );
+    if (boardingIndex == null ||
+        alightingIndex == null ||
+        boardingIndex >= alightingIndex) {
+      return this;
+    }
+    return sliceBetween(boardingIndex, alightingIndex);
+  }
+
+  /// Returns a copy with [fromName]/[toName] overridden — used to replace a
+  /// placeholder endpoint name (e.g. "START"/"END", returned by the routing
+  /// API for a walk leg whose endpoint isn't a named GTFS stop) with the
+  /// place name the user actually searched for.
+  Leg withEndpointNames({String? fromName, String? toName}) {
+    return Leg(
+      mode: mode,
+      fromName: fromName ?? this.fromName,
+      toName: toName ?? this.toName,
+      startTime: startTime,
+      endTime: endTime,
+      scheduledStartTime: scheduledStartTime,
+      scheduledEndTime: scheduledEndTime,
+      duration: duration,
+      distance: distance,
+      routeShortName: routeShortName,
+      routeLongName: routeLongName,
+      displayName: displayName,
+      headsign: headsign,
+      routeColor: routeColor,
+      routeTextColor: routeTextColor,
+      routeType: routeType,
+      agencyName: agencyName,
+      agencyUrl: agencyUrl,
+      agencyId: agencyId,
+      tripId: tripId,
+      tripShortName: tripShortName,
+      realTime: realTime,
+      cancelled: cancelled,
+      fromTrack: fromTrack,
+      toTrack: toTrack,
+      fromScheduledTrack: fromScheduledTrack,
+      toScheduledTrack: toScheduledTrack,
+      fromStopId: fromStopId,
+      toStopId: toStopId,
+      fromLat: fromLat,
+      fromLon: fromLon,
+      toLat: toLat,
+      toLon: toLon,
+      intermediateStops: intermediateStops,
+      alerts: alerts,
+      legGeometry: legGeometry,
+      interlineWithPreviousLeg: interlineWithPreviousLeg,
+      fareTransferIndex: fareTransferIndex,
+      effectiveFareLegIndex: effectiveFareLegIndex,
+      ticketUrl: ticketUrl,
+      agencyFareUrl: agencyFareUrl,
+    );
+  }
+
+  /// Every stop this leg passes through, from origin to terminus, as a flat
+  /// ordered list — its own endpoints plus its intermediate stops. Used for
+  /// ad-hoc tracking (started by picking a stop directly rather than
+  /// searching an itinerary), where the leg fetched from [TripDetailsService]
+  /// covers the trip's full run and needs narrowing to the boarding→alighting
+  /// sub-range the user actually picked.
+  List<TripStop> get fullStopSequence {
+    return [
+      TripStop(
+        name: fromName,
+        stopId: fromStopId,
+        lat: fromLat,
+        lon: fromLon,
+        arrival: startTime,
+        departure: startTime,
+        scheduledArrival: scheduledStartTime,
+        scheduledDeparture: scheduledStartTime,
+        track: fromTrack,
+      ),
+      for (final stop in intermediateStops)
+        TripStop(
+          name: stop.name,
+          stopId: stop.stopId,
+          lat: stop.lat,
+          lon: stop.lon,
+          arrival: stop.arrival,
+          departure: stop.departure,
+          scheduledArrival: stop.scheduledArrival,
+          scheduledDeparture: stop.scheduledDeparture,
+          track: stop.track,
+        ),
+      TripStop(
+        name: toName,
+        stopId: toStopId,
+        lat: toLat,
+        lon: toLon,
+        arrival: endTime,
+        departure: endTime,
+        scheduledArrival: scheduledEndTime,
+        scheduledDeparture: scheduledEndTime,
+        track: toTrack,
+      ),
+    ];
+  }
+
+  /// Builds a synthetic leg covering only the [boardingIndex]→[alightingIndex]
+  /// sub-range of [fullStopSequence] — route/trip metadata (route name,
+  /// colors, agency, tripId, ...) is copied as-is; endpoints, times,
+  /// intermediate stops and [legGeometry] are all narrowed to that range, so
+  /// the map draws the real route shape rather than a straight line between
+  /// the new endpoints.
+  Leg sliceBetween(int boardingIndex, int alightingIndex) {
+    final sequence = fullStopSequence;
+    final boarding = sequence[boardingIndex];
+    final alighting = sequence[alightingIndex];
+    final between = sequence.sublist(boardingIndex + 1, alightingIndex);
+    final legStartTime = boarding.departure ?? boarding.arrival ?? startTime;
+    final legEndTime = alighting.arrival ?? alighting.departure ?? endTime;
+
+    return Leg(
+      mode: mode,
+      fromName: boarding.name,
+      toName: alighting.name,
+      startTime: legStartTime,
+      endTime: legEndTime,
+      scheduledStartTime: boarding.scheduledDeparture ?? boarding.scheduledArrival,
+      scheduledEndTime: alighting.scheduledArrival ?? alighting.scheduledDeparture,
+      duration: legEndTime.difference(legStartTime).inSeconds,
+      routeShortName: routeShortName,
+      routeLongName: routeLongName,
+      displayName: displayName,
+      headsign: headsign,
+      routeColor: routeColor,
+      routeTextColor: routeTextColor,
+      routeType: routeType,
+      agencyName: agencyName,
+      agencyUrl: agencyUrl,
+      agencyId: agencyId,
+      tripId: tripId,
+      tripShortName: tripShortName,
+      realTime: realTime,
+      cancelled: cancelled,
+      fromTrack: boarding.track,
+      toTrack: alighting.track,
+      fromStopId: boarding.stopId,
+      toStopId: alighting.stopId,
+      fromLat: boarding.lat,
+      fromLon: boarding.lon,
+      toLat: alighting.lat,
+      toLon: alighting.lon,
+      intermediateStops: [
+        for (final stop in between)
+          IntermediateStop(
+            name: stop.name,
+            stopId: stop.stopId,
+            lat: stop.lat,
+            lon: stop.lon,
+            arrival: stop.arrival,
+            departure: stop.departure,
+            scheduledArrival: stop.scheduledArrival,
+            scheduledDeparture: stop.scheduledDeparture,
+            track: stop.track,
+          ),
+      ],
+      alerts: alerts,
+      legGeometry: _slicedGeometry(boarding, alighting),
+      interlineWithPreviousLeg: false,
+      ticketUrl: ticketUrl,
+      agencyFareUrl: agencyFareUrl,
+    );
+  }
+
+  /// Narrows this leg's route shape down to just the boarding→alighting
+  /// sub-range, by finding the polyline points nearest each stop and
+  /// keeping only what's between them. Returns null (map falls back to a
+  /// straight line) if there's no geometry to slice, or if the nearest
+  /// points can't be resolved into a sensible sub-range.
+  EncodedPolyline? _slicedGeometry(TripStop boarding, TripStop alighting) {
+    final geometry = legGeometry;
+    if (geometry == null || geometry.points.isEmpty) return null;
+
+    List<LatLng> points;
+    try {
+      points = decodePolyline(geometry.points, geometry.precision);
+    } catch (_) {
+      return null;
+    }
+    if (points.length < 2) return null;
+
+    final startIndex = _nearestPolylinePointIndex(
+      points,
+      boarding.lat,
+      boarding.lon,
+    );
+    final endIndex = _nearestPolylinePointIndex(
+      points,
+      alighting.lat,
+      alighting.lon,
+    );
+    if (startIndex >= endIndex) return null;
+
+    final sliced = points.sublist(startIndex, endIndex + 1);
+    return EncodedPolyline(
+      points: encodePolyline(sliced, geometry.precision),
+      precision: geometry.precision,
+      length: sliced.length,
+    );
+  }
+
+  int _nearestPolylinePointIndex(List<LatLng> points, double lat, double lon) {
+    int bestIndex = 0;
+    double bestDistance = double.infinity;
+    for (int i = 0; i < points.length; i++) {
+      final distance = coordinateDistanceInMeters(
+        points[i].latitude,
+        points[i].longitude,
+        lat,
+        lon,
+      );
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = i;
+      }
+    }
+    return bestIndex;
+  }
 
   factory Leg.fromJson(Map<String, dynamic> json) {
     try {
@@ -524,6 +1031,8 @@ class Leg {
         toTrack: toMap['track'],
         fromScheduledTrack: fromMap['scheduledTrack'],
         toScheduledTrack: toMap['scheduledTrack'],
+        fromStopId: fromMap['stopId'],
+        toStopId: toMap['stopId'],
         fromLat: fromMap['lat']?.toDouble() ?? 0.0,
         fromLon: fromMap['lon']?.toDouble() ?? 0.0,
         toLat: toMap['lat']?.toDouble() ?? 0.0,
@@ -534,6 +1043,10 @@ class Leg {
         interlineWithPreviousLeg: json['interlineWithPreviousLeg'] ?? false,
         fareTransferIndex: json['fareTransferIndex'],
         effectiveFareLegIndex: json['effectiveFareLegIndex'],
+        ticketUrl: (json['ticketUrls'] is Map)
+            ? (json['ticketUrls'] as Map)['web'] as String?
+            : null,
+        agencyFareUrl: json['agencyFareUrl'],
       );
     } catch (e, stackTrace) {
       developer.log(
@@ -545,5 +1058,53 @@ class Leg {
       developer.log('Leg JSON: $json', name: 'Itinerary');
       rethrow;
     }
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'mode': mode,
+      'from': {
+        'name': fromName,
+        'track': fromTrack,
+        'scheduledTrack': fromScheduledTrack,
+        'lat': fromLat,
+        'lon': fromLon,
+      },
+      'to': {
+        'name': toName,
+        'track': toTrack,
+        'scheduledTrack': toScheduledTrack,
+        'lat': toLat,
+        'lon': toLon,
+      },
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
+      'scheduledStartTime': scheduledStartTime?.toIso8601String(),
+      'scheduledEndTime': scheduledEndTime?.toIso8601String(),
+      'duration': duration,
+      'distance': distance,
+      'routeShortName': routeShortName,
+      'routeLongName': routeLongName,
+      'displayName': displayName,
+      'headsign': headsign,
+      'routeColor': routeColor,
+      'routeTextColor': routeTextColor,
+      'routeType': routeType,
+      'agencyName': agencyName,
+      'agencyUrl': agencyUrl,
+      'agencyId': agencyId,
+      'tripId': tripId,
+      'tripShortName': tripShortName,
+      'realTime': realTime,
+      'cancelled': cancelled,
+      'intermediateStops': intermediateStops.map((s) => s.toJson()).toList(),
+      'alerts': alerts.map((a) => a.toJson()).toList(),
+      'legGeometry': legGeometry?.toJson(),
+      'interlineWithPreviousLeg': interlineWithPreviousLeg,
+      'fareTransferIndex': fareTransferIndex,
+      'effectiveFareLegIndex': effectiveFareLegIndex,
+      'ticketUrls': ticketUrl == null ? null : {'web': ticketUrl},
+      'agencyFareUrl': agencyFareUrl,
+    };
   }
 }

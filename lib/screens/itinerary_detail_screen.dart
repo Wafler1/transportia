@@ -1,14 +1,22 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:transportia/widgets/load_more_button.dart';
+import 'package:flutter/cupertino.dart' show CupertinoSliverRefreshControl;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:timelines_plus/timelines_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/itinerary.dart';
+import '../models/saved_trip.dart';
+import '../models/time_selection.dart';
 import '../providers/theme_provider.dart';
+import '../services/itinerary_tracking_controller.dart';
+import '../services/saved_trips_service.dart';
+import '../services/trip_details_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
 import '../utils/custom_page_route.dart';
@@ -18,13 +26,40 @@ import '../utils/leg_helper.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/gtfs_fields_row.dart';
 import '../widgets/info_chip.dart';
+import '../widgets/last_updated_footer.dart';
+import '../widgets/pressable_highlight.dart';
+import '../widgets/stop_departures_sheet.dart';
+import '../widgets/validation_toast.dart';
+import 'connection_info_screen.dart';
+import 'itinerary_list_screen.dart';
 import 'itinerary_map_screen.dart';
+
+/// Opens the [StopDeparturesSheet] for a tapped stop. Passed down through
+/// the leg widgets so they don't need to know how the sheet is presented.
+typedef OpenStopSheet =
+    void Function({
+      required String? stopId,
+      required String stopName,
+      required DateTime referenceTime,
+    });
 
 class ItineraryDetailScreen extends StatefulWidget {
   final Itinerary itinerary;
 
-  const ItineraryDetailScreen({super.key, required this.itinerary});
+  /// True when viewing this itinerary from the Saved Trips list — swaps the
+  /// "Save" row for "Remove from saved" and adds a "Find current
+  /// connections" row that re-searches the itinerary's own endpoints.
+  final bool isSavedTrip;
+  final String? savedTripId;
+
+  const ItineraryDetailScreen({
+    super.key,
+    required this.itinerary,
+    this.isSavedTrip = false,
+    this.savedTripId,
+  });
 
   @override
   State<ItineraryDetailScreen> createState() => _ItineraryDetailScreenState();
@@ -32,11 +67,113 @@ class ItineraryDetailScreen extends StatefulWidget {
 
 class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
   bool _isSharing = false;
+  bool _isSaving = false;
+  bool _isRemoving = false;
+  late Itinerary _itinerary;
+  DateTime? _lastUpdated;
+  bool _isRefreshing = false;
+  Timer? _agoTicker;
+
+  @override
+  void initState() {
+    super.initState();
+    _itinerary = widget.itinerary;
+    _lastUpdated = DateTime.now();
+    _agoTicker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _agoTicker?.cancel();
+    // Leaving the itinerary entirely (back to search results/saved list)
+    // stops tracking — unlike popping the map view back to *this* screen,
+    // which only detaches a listener and leaves tracking running.
+    ItineraryTrackingController.stopIfMatches(
+      ItineraryTrackingController.fingerprintFor(_itinerary),
+    );
+    super.dispose();
+  }
+
+  void _openStopSheet({
+    required String? stopId,
+    required String stopName,
+    required DateTime referenceTime,
+  }) {
+    if (stopId == null || stopId.isEmpty) return;
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Stop departures',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return StopDeparturesSheet(
+          stopId: stopId,
+          stopName: stopName,
+          referenceTime: referenceTime,
+          onDismiss: () => Navigator.of(context, rootNavigator: true).pop(),
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
+  }
+
+  Future<void> _refreshRealTimeInfo() async {
+    if (_isRefreshing) return;
+
+    final tripIds = _itinerary.legs
+        .map((leg) => leg.tripId)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    if (tripIds.isEmpty) return;
+
+    _isRefreshing = true;
+    final updates = <String, Leg>{};
+    await Future.wait(
+      tripIds.map((tripId) async {
+        try {
+          final details = await TripDetailsService.fetchTripDetails(
+            tripId: tripId,
+          );
+          if (details.legs.isNotEmpty) {
+            updates[tripId] = details.legs.first;
+          }
+        } catch (_) {}
+      }),
+    );
+
+    if (!mounted) {
+      _isRefreshing = false;
+      return;
+    }
+
+    if (updates.isNotEmpty) {
+      final newLegs = _itinerary.legs.map((leg) {
+        final fresh = leg.tripId != null ? updates[leg.tripId] : null;
+        return fresh != null ? leg.withRealTimeFrom(fresh) : leg;
+      }).toList();
+      setState(() {
+        _itinerary = _itinerary.withLegs(newLegs);
+        _lastUpdated = DateTime.now();
+      });
+    } else {
+      setState(() => _lastUpdated = DateTime.now());
+    }
+
+    _isRefreshing = false;
+  }
 
   @override
   Widget build(BuildContext context) {
     context.watch<ThemeProvider>();
-    final displayLegs = buildDisplayLegs(widget.itinerary.legs);
+    final displayLegs = buildDisplayLegs(_itinerary.legs);
 
     return Container(
       color: AppColors.white,
@@ -48,13 +185,13 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
               title: 'Itinerary Details',
               onBackButtonPressed: () => Navigator.of(context).pop(),
             ),
-            JourneyOverviewWidget(itinerary: widget.itinerary),
+            JourneyOverviewWidget(itinerary: _itinerary),
             Expanded(
               child: Builder(
                 builder: (context) {
-                  final hasTicketInfo = widget.itinerary.hasTicketInfo;
+                  final hasTicketInfo = _itinerary.hasTicketInfo;
                   final ticketInsertIndex = hasTicketInfo ? 1 : 0;
-                  final hasFinishCard = widget.itinerary.legs.isNotEmpty;
+                  final hasFinishCard = _itinerary.legs.isNotEmpty;
                   final legsInsertIndex = ticketInsertIndex;
                   final emptyMessageIndex = displayLegs.isEmpty
                       ? legsInsertIndex
@@ -65,61 +202,125 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
                   final finishInsertIndex = legsEndIndex;
                   final shareIndex =
                       finishInsertIndex + (hasFinishCard ? 1 : 0);
-                  final totalItems = shareIndex + 1;
+                  final saveIndex = shareIndex + 1;
+                  final findConnectionsIndex = widget.isSavedTrip
+                      ? saveIndex + 1
+                      : -1;
+                  final footerIndex =
+                      (widget.isSavedTrip ? findConnectionsIndex : saveIndex) +
+                      1;
+                  final totalItems = footerIndex + 1;
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    itemCount: totalItems,
-                    itemBuilder: (context, index) {
-                      if (hasTicketInfo && index == 0) {
-                        return TicketInfoCard(
-                          ticketInfo: widget.itinerary.ticketInfo,
-                        );
-                      }
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    slivers: [
+                      CupertinoSliverRefreshControl(
+                        onRefresh: _refreshRealTimeInfo,
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            if (hasTicketInfo && index == 0) {
+                              return TicketInfoCard(
+                                ticketInfo: _itinerary.ticketInfo,
+                              );
+                            }
 
-                      if (index == emptyMessageIndex) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              'No additional steps required for this journey.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.black.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
+                            if (index == emptyMessageIndex) {
+                              return Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Center(
+                                  child: Text(
+                                    'No additional steps required for this journey.',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.black.withValues(
+                                        alpha: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
 
-                      if (index >= legsInsertIndex && index < legsEndIndex) {
-                        final entry = displayLegs[index - legsInsertIndex];
-                        if (entry.isTransfer) {
-                          return TransferLegCard(leg: entry.leg);
-                        }
-                        return LegDetailsWidget(leg: entry.leg);
-                      }
+                            if (index >= legsInsertIndex &&
+                                index < legsEndIndex) {
+                              final entry =
+                                  displayLegs[index - legsInsertIndex];
+                              if (entry.isTransfer) {
+                                return TransferLegCard(
+                                  leg: entry.leg,
+                                  openStopSheet: _openStopSheet,
+                                );
+                              }
+                              return LegDetailsWidget(
+                                leg: entry.leg,
+                                openStopSheet: _openStopSheet,
+                              );
+                            }
 
-                      if (hasFinishCard && index == finishInsertIndex) {
-                        final finishLeg = widget.itinerary.legs.last;
-                        return FinishLegCard(
-                          leg: finishLeg,
-                          arrivalTime: widget.itinerary.endTime,
-                          totalDuration: widget.itinerary.duration,
-                        );
-                      }
+                            if (hasFinishCard && index == finishInsertIndex) {
+                              final finishLeg = _itinerary.legs.last;
+                              return FinishLegCard(
+                                leg: finishLeg,
+                                arrivalTime: _itinerary.endTime,
+                                totalDuration: _itinerary.duration,
+                                openStopSheet: _openStopSheet,
+                              );
+                            }
 
-                      if (index == shareIndex) {
-                        return LoadMoreButton(
-                          onTap: _shareItinerary,
-                          isLoading: _isSharing,
-                          label: 'Share this trip',
-                          icon: LucideIcons.share2,
-                        );
-                      }
+                            if (index == shareIndex) {
+                              return LoadMoreButton(
+                                onTap: _shareItinerary,
+                                isLoading: _isSharing,
+                                label: 'Share this trip',
+                                icon: LucideIcons.share2,
+                              );
+                            }
 
-                      return const SizedBox.shrink();
-                    },
+                            if (index == saveIndex) {
+                              return widget.isSavedTrip
+                                  ? LoadMoreButton(
+                                      onTap: _removeSavedTrip,
+                                      isLoading: _isRemoving,
+                                      label: 'Remove from saved',
+                                      icon: LucideIcons.bookmarkX,
+                                    )
+                                  : LoadMoreButton(
+                                      onTap: _saveTrip,
+                                      isLoading: _isSaving,
+                                      label: 'Save this trip',
+                                      icon: LucideIcons.bookmarkPlus,
+                                    );
+                            }
+
+                            if (widget.isSavedTrip &&
+                                index == findConnectionsIndex) {
+                              return LoadMoreButton(
+                                onTap: _findCurrentConnections,
+                                isLoading: false,
+                                label: 'Find current connections',
+                                icon: LucideIcons.refreshCw,
+                              );
+                            }
+
+                            if (index == footerIndex) {
+                              return LastUpdatedFooter(
+                                lastUpdated: _lastUpdated,
+                              );
+                            }
+
+                            return const SizedBox.shrink();
+                          }, childCount: totalItems),
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -133,7 +334,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
   Future<void> _shareItinerary() async {
     if (_isSharing) return;
 
-    final legs = widget.itinerary.legs;
+    final legs = _itinerary.legs;
     if (legs.isEmpty) {
       debugPrint('Cannot share itinerary without any legs.');
       return;
@@ -148,7 +349,7 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
       final payload = jsonEncode({
         'from': {'lat': firstLeg.fromLat, 'lon': firstLeg.fromLon},
         'to': {'lat': lastLeg.toLat, 'lon': lastLeg.toLon},
-        'time': widget.itinerary.startTime.toIso8601String(),
+        'time': _itinerary.startTime.toIso8601String(),
       });
 
       final encoded = base64Url.encode(utf8.encode(payload));
@@ -163,6 +364,59 @@ class _ItineraryDetailScreenState extends State<ItineraryDetailScreen> {
         setState(() => _isSharing = false);
       }
     }
+  }
+
+  Future<void> _saveTrip() async {
+    if (_isSaving || _itinerary.legs.isEmpty) return;
+    setState(() => _isSaving = true);
+    try {
+      final saved = await SavedTripsService.saveTrip(
+        SavedTrip.fromItinerary(_itinerary),
+      );
+      if (!mounted) return;
+      showValidationToast(
+        context,
+        saved ? 'Trip saved' : 'Already saved',
+        accentColor: AppColors.accentOf(context),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _removeSavedTrip() async {
+    final id = widget.savedTripId;
+    if (_isRemoving || id == null) return;
+    setState(() => _isRemoving = true);
+    try {
+      await SavedTripsService.removeTrip(id);
+      if (!mounted) return;
+      showValidationToast(
+        context,
+        'Removed from saved trips',
+        accentColor: AppColors.accentOf(context),
+      );
+      Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _isRemoving = false);
+    }
+  }
+
+  void _findCurrentConnections() {
+    if (_itinerary.legs.isEmpty) return;
+    final firstLeg = _itinerary.legs.first;
+    final lastLeg = _itinerary.legs.last;
+    Navigator.of(context).push(
+      CustomPageRoute(
+        child: ItineraryListScreen(
+          fromLat: firstLeg.fromLat,
+          fromLon: firstLeg.fromLon,
+          toLat: lastLeg.toLat,
+          toLon: lastLeg.toLon,
+          timeSelection: TimeSelection.now(),
+        ),
+      ),
+    );
   }
 }
 
@@ -407,9 +661,52 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
               ),
             ),
           ...legInfo.options.map(_buildFareOption),
+          if (legInfo.ticketUrl != null || legInfo.fareUrl != null)
+            _buildFareLink(legInfo),
         ],
       ),
     );
+  }
+
+  /// Prefers a direct ticket-purchase deep link over the agency's general
+  /// fare page — never shows both.
+  Widget _buildFareLink(FareLegInfo legInfo) {
+    final isTicketLink = legInfo.ticketUrl != null;
+    final url = legInfo.ticketUrl ?? legInfo.fareUrl!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: PressableHighlight(
+        onPressed: () => _openFareUrl(url),
+        borderRadius: BorderRadius.circular(8),
+        enableHaptics: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isTicketLink ? LucideIcons.ticket : LucideIcons.info,
+              size: 14,
+              color: AppColors.accentOf(context),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isTicketLink ? 'Buy tickets' : 'More info',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.accentOf(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openFareUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   Widget _buildRouteBadge(RouteBadge badge) {
@@ -486,8 +783,13 @@ class _TicketInfoCardState extends State<TicketInfoCard> {
 
 class LegDetailsWidget extends StatefulWidget {
   final Leg leg;
+  final OpenStopSheet openStopSheet;
 
-  const LegDetailsWidget({super.key, required this.leg});
+  const LegDetailsWidget({
+    super.key,
+    required this.leg,
+    required this.openStopSheet,
+  });
 
   @override
   State<LegDetailsWidget> createState() => _LegDetailsWidgetState();
@@ -569,44 +871,58 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
             if (!_isExpanded) ...[
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(LucideIcons.arrowRight, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${formatTime(scheduledStart)} - ${widget.leg.fromName}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.black.withValues(alpha: 0.5),
+              GestureDetector(
+                onTap: () => widget.openStopSheet(
+                  stopId: widget.leg.fromStopId,
+                  stopName: widget.leg.fromName,
+                  referenceTime: widget.leg.startTime,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.arrowRight, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${formatTime(scheduledStart)} - ${widget.leg.fromName}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.black.withValues(alpha: 0.5),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
                     ),
-                  ),
-                  if (departureDelay != null)
-                    _DelayChip(label: formatDelay(departureDelay)),
-                ],
+                    if (departureDelay != null)
+                      _DelayChip(label: formatDelay(departureDelay)),
+                  ],
+                ),
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(LucideIcons.arrowDown, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      '${formatTime(scheduledEnd)} - ${widget.leg.toName}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AppColors.black.withValues(alpha: 0.5),
+              GestureDetector(
+                onTap: () => widget.openStopSheet(
+                  stopId: widget.leg.toStopId,
+                  stopName: widget.leg.toName,
+                  referenceTime: widget.leg.endTime,
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.arrowDown, size: 16),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${formatTime(scheduledEnd)} - ${widget.leg.toName}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.black.withValues(alpha: 0.5),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
                     ),
-                  ),
-                  if (arrivalDelay != null)
-                    _DelayChip(label: formatDelay(arrivalDelay)),
-                ],
+                    if (arrivalDelay != null)
+                      _DelayChip(label: formatDelay(arrivalDelay)),
+                  ],
+                ),
               ),
             ],
 
@@ -652,6 +968,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     stops.add(
       _TimelineStop(
         name: widget.leg.fromName,
+        stopId: widget.leg.fromStopId,
         time: widget.leg.startTime,
         track: widget.leg.fromTrack,
         scheduledTime: widget.leg.scheduledStartTime,
@@ -665,6 +982,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       stops.add(
         _TimelineStop(
           name: stop.name,
+          stopId: stop.stopId,
           time: stop.arrival ?? stop.departure,
           track: stop.track,
           scheduledTime: stop.scheduledArrival ?? stop.scheduledDeparture,
@@ -678,6 +996,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
     stops.add(
       _TimelineStop(
         name: widget.leg.toName,
+        stopId: widget.leg.toStopId,
         time: widget.leg.endTime,
         track: widget.leg.toTrack,
         scheduledTime: widget.leg.scheduledEndTime,
@@ -714,7 +1033,16 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
               final stop = stops[index];
               return Padding(
                 padding: const EdgeInsets.only(left: 12, bottom: 16),
-                child: _buildStopInfo(stop),
+                child: GestureDetector(
+                  onTap: stop.stopId == null
+                      ? null
+                      : () => widget.openStopSheet(
+                          stopId: stop.stopId,
+                          stopName: stop.name,
+                          referenceTime: stop.time ?? widget.leg.startTime,
+                        ),
+                  child: _buildStopInfo(stop),
+                ),
               );
             },
             indicatorBuilder: (context, index) {
@@ -818,9 +1146,23 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
       metadata.add(const InfoChip(icon: LucideIcons.link, label: 'Interlined'));
     }
 
-    if (metadata.isEmpty) return const SizedBox.shrink();
+    final gtfsFields = GtfsFieldsRow(
+      fields: {
+        'trip': widget.leg.tripId,
+        'from stop': widget.leg.fromStopId,
+        'to stop': widget.leg.toStopId,
+      },
+    );
 
-    return Wrap(spacing: 8, runSpacing: 8, children: metadata);
+    if (metadata.isEmpty) return gtfsFields;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(spacing: 8, runSpacing: 8, children: metadata),
+        gtfsFields,
+      ],
+    );
   }
 
   Widget _buildStopInfo(_TimelineStop stop) {
@@ -888,6 +1230,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
             ),
           ),
         ],
+        GtfsFieldsRow(fields: {'stop': stop.stopId}),
       ],
     );
   }
@@ -962,7 +1305,7 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
           (routeColor == null && !isWalkLeg
               ? AppColors.solidWhite
               : AppColors.black);
-      return Align(
+      final badge = Align(
         alignment: Alignment.centerLeft,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -984,6 +1327,16 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
           ),
         ),
       );
+      final tripId = widget.leg.tripId;
+      if (isWalkLeg || tripId == null || tripId.isEmpty) return badge;
+      return GestureDetector(
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(CustomPageRoute(child: ConnectionInfoScreen(tripId: tripId)));
+        },
+        child: badge,
+      );
     }
     return Text(
       getTransitModeName(widget.leg.mode),
@@ -1000,8 +1353,13 @@ class _LegDetailsWidgetState extends State<LegDetailsWidget> {
 
 class TransferLegCard extends StatelessWidget {
   final Leg leg;
+  final OpenStopSheet openStopSheet;
 
-  const TransferLegCard({super.key, required this.leg});
+  const TransferLegCard({
+    super.key,
+    required this.leg,
+    required this.openStopSheet,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1033,22 +1391,29 @@ class TransferLegCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              const Icon(LucideIcons.arrowRight, size: 16),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  '${formatTime(leg.startTime)} - ${leg.fromName}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.black.withValues(alpha: 0.5),
+          GestureDetector(
+            onTap: () => openStopSheet(
+              stopId: leg.fromStopId,
+              stopName: leg.fromName,
+              referenceTime: leg.startTime,
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.arrowRight, size: 16),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${formatTime(leg.startTime)} - ${leg.fromName}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.black.withValues(alpha: 0.5),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           if (leg.distance != null && leg.distance! > 0) ...[
             const SizedBox(height: 4),
@@ -1098,44 +1463,53 @@ class FinishLegCard extends StatelessWidget {
   final Leg leg;
   final DateTime arrivalTime;
   final int totalDuration;
+  final OpenStopSheet openStopSheet;
 
   const FinishLegCard({
     super.key,
     required this.leg,
     required this.arrivalTime,
     required this.totalDuration,
+    required this.openStopSheet,
   });
 
   @override
   Widget build(BuildContext context) {
-    return CustomCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(LucideIcons.flag, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                'Finish',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black,
+    return GestureDetector(
+      onTap: () => openStopSheet(
+        stopId: leg.toStopId,
+        stopName: leg.toName,
+        referenceTime: leg.endTime,
+      ),
+      child: CustomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(LucideIcons.flag, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Finish',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.black,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                formatTime(arrivalTime),
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.black,
+                const Spacer(),
+                Text(
+                  formatTime(arrivalTime),
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.black,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1143,6 +1517,7 @@ class FinishLegCard extends StatelessWidget {
 
 class _TimelineStop {
   final String name;
+  final String? stopId;
   final DateTime? time;
   final String? track;
   final DateTime? scheduledTime;
@@ -1152,6 +1527,7 @@ class _TimelineStop {
 
   _TimelineStop({
     required this.name,
+    this.stopId,
     this.time,
     this.track,
     this.scheduledTime,

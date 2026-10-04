@@ -18,12 +18,14 @@ import '../providers/theme_provider.dart';
 import '../models/route_field_kind.dart';
 import '../models/itinerary.dart';
 import '../models/journey_stop.dart';
+import '../models/nav_destination.dart';
 import '../models/saved_place.dart';
 import '../models/stop_time.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../screens/itinerary_list_screen.dart';
 import '../screens/location_settings_screen.dart';
+import '../screens/suggestions_map_picker_screen.dart';
 import '../screens/timetables_screen.dart';
 import '../services/favorites_service.dart';
 import '../services/location_service.dart';
@@ -46,6 +48,7 @@ import '../utils/stop_time_utils.dart';
 import '../utils/journey_utils.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_notice.dart';
+import '../widgets/gtfs_fields_row.dart';
 import '../widgets/info_chip.dart';
 import '../widgets/app_toggle_switch.dart';
 import '../widgets/pressable_highlight.dart';
@@ -58,6 +61,8 @@ import '../widgets/selectable_icon_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/skeletons/skeleton_card.dart';
 import '../widgets/skeletons/skeleton_shimmer.dart';
+import '../widgets/last_updated_footer.dart';
+import '../widgets/stop_departures_sheet.dart';
 import '../widgets/stop_schedule_row.dart';
 import '../widgets/timeline_indicator_box.dart';
 import '../widgets/map/long_press_selection_modal.dart';
@@ -85,7 +90,7 @@ class MapScreen extends StatefulWidget {
   final ValueChanged<bool>? onCollapseChanged;
   final ValueChanged<double>? onCollapseProgressChanged;
   final ValueChanged<bool>? onOverlayVisibilityChanged;
-  final ValueChanged<int>? onTabChangeRequested;
+  final ValueChanged<NavDestination>? onTabChangeRequested;
   final ValueChanged<TransitousLocationSuggestion>? onTimetableRequested;
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -186,6 +191,7 @@ class _MapScreenState extends State<MapScreen>
   String? _tripFocusError;
   String? _focusedTripId;
   Itinerary? _focusedItinerary;
+  DateTime? _tripFocusLastUpdated;
   bool _showStopsBeforeFocus = true;
   int _focusedTripRequestId = 0;
   final Map<String, _VehicleMarker> _focusedVehicles = {};
@@ -505,6 +511,7 @@ class _MapScreenState extends State<MapScreen>
     _focusedTripIds.clear();
     _focusedTripId = null;
     _focusedItinerary = null;
+    _tripFocusLastUpdated = null;
     _isTripFocus = false;
     _isQuickSettings = false;
     _isTripFocusLoading = false;
@@ -1812,6 +1819,9 @@ class _MapScreenState extends State<MapScreen>
                               isLoading: _isTripFocusLoading,
                               errorMessage: _tripFocusError,
                               bottomSpacer: bottomBarHeight,
+                              onStopTap: _openStopDeparturesSheet,
+                              onRefresh: _refreshTripFocus,
+                              lastUpdated: _tripFocusLastUpdated,
                             )
                           : _isQuickSettings
                           ? _QuickSettingsBottomCard(
@@ -1936,6 +1946,15 @@ class _MapScreenState extends State<MapScreen>
                               favorites: _favorites,
                               onFavoriteTap: _onFavoriteTap,
                               hasLocationPermission: _hasLocationPermission,
+                              homeSections: context
+                                  .watch<ThemeProvider>()
+                                  .homeSections,
+                              nearbyStops: _nearbyDepartureStops(),
+                              onStopSelected: _selectStopFromDeparturesList,
+                              onFromSubmitted: (_) =>
+                                  _handleFieldSubmitted(RouteFieldKind.from),
+                              onToSubmitted: (_) =>
+                                  _handleFieldSubmitted(RouteFieldKind.to),
                             ),
                       if (!_isTripFocus && !_isQuickSettings)
                         CompositedTransformFollower(
@@ -1977,6 +1996,7 @@ class _MapScreenState extends State<MapScreen>
                                     isLoading: _isFetchingSuggestions,
                                     onSuggestionTap: _onSuggestionSelected,
                                     onDismissRequest: _unfocusInputs,
+                                    onSeeOnMapTap: _openSuggestionsMapPicker,
                                   ),
                           ),
                         ),
@@ -2336,6 +2356,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   LatLng? _placeBiasLatLng() {
+    if (!context.read<ThemeProvider>().geocodeLocationBiasEnabled) return null;
     if (!_hasLocationPermission) return null;
     if (_lastUserLatLng != null) return _lastUserLatLng;
     if (_startCam.target != _initCam.target) return _startCam.target;
@@ -2368,6 +2389,28 @@ class _MapScreenState extends State<MapScreen>
     } else {
       _unfocusInputs();
     }
+  }
+
+  void _handleFieldSubmitted(RouteFieldKind kind) {
+    if (_activeSuggestionField != kind || _suggestions.isEmpty) return;
+    _openSuggestionsMapPicker(kind);
+  }
+
+  Future<void> _openSuggestionsMapPicker(RouteFieldKind field) async {
+    if (_suggestions.isEmpty) return;
+    final suggestions = List<TransitousLocationSuggestion>.from(_suggestions);
+    final title = field == RouteFieldKind.to ? 'Destination' : 'Origin';
+    final result = await Navigator.of(context).push<TransitousLocationSuggestion>(
+      CustomPageRoute(
+        child: SuggestionsMapPickerScreen(
+          suggestions: suggestions,
+          title: title,
+          userLocation: _lastUserLatLng,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    _onSuggestionSelected(field, result);
   }
 
   void _setControllerText(RouteFieldKind kind, String value) {
@@ -3604,6 +3647,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = tripId;
       _focusedItinerary = null;
+      _tripFocusLastUpdated = null;
       _focusedStopsColor = null;
       _showStops = false;
     });
@@ -3638,6 +3682,7 @@ class _MapScreenState extends State<MapScreen>
       _tripFocusError = null;
       _focusedTripId = null;
       _focusedItinerary = null;
+      _tripFocusLastUpdated = null;
       _focusedStopsColor = null;
       _showStops = _showStopsBeforeFocus;
     });
@@ -3657,6 +3702,33 @@ class _MapScreenState extends State<MapScreen>
     unawaited(_refreshRouteMarkers(allowFit: false));
     _scheduleTripRefresh();
     _scheduleStopRefresh();
+  }
+
+  void _openStopDeparturesSheet({
+    required String? stopId,
+    required String stopName,
+    required DateTime referenceTime,
+  }) {
+    if (stopId == null || stopId.isEmpty) return;
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Stop departures',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return StopDeparturesSheet(
+          stopId: stopId,
+          stopName: stopName,
+          referenceTime: referenceTime,
+          onDismiss: () => Navigator.of(context, rootNavigator: true).pop(),
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
   }
 
   void _openQuickSettings() {
@@ -3691,6 +3763,7 @@ class _MapScreenState extends State<MapScreen>
       setState(() {
         _focusedItinerary = itinerary;
         _isTripFocusLoading = false;
+        _tripFocusLastUpdated = DateTime.now();
       });
       _focusedStopsColor = _focusedRouteColor(itinerary);
       _focusedRouteKeys
@@ -3711,11 +3784,19 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       if (!mounted || requestId != _focusedTripRequestId) return;
       setState(() {
-        _focusedItinerary = null;
         _isTripFocusLoading = false;
-        _tripFocusError = 'Failed to load trip.';
+        // Keep showing the previously loaded trip if this was a refresh.
+        if (_focusedItinerary == null) {
+          _tripFocusError = 'Failed to load trip.';
+        }
       });
     }
+  }
+
+  Future<void> _refreshTripFocus() async {
+    final tripId = _focusedTripId;
+    if (tripId == null) return;
+    await _loadFocusedTripDetails(tripId);
   }
 
   Future<void> _pushFocusedVehicleSource(DateTime now) async {
@@ -3799,7 +3880,7 @@ class _MapScreenState extends State<MapScreen>
     _dismissStopOverlay();
     if (widget.onTimetableRequested != null) {
       widget.onTimetableRequested!(suggestion);
-      widget.onTabChangeRequested?.call(1);
+      widget.onTabChangeRequested?.call(NavDestination.departures);
       return;
     }
     Navigator.of(context).push(
@@ -3813,7 +3894,7 @@ class _MapScreenState extends State<MapScreen>
     if (_isQuickSettings) {
       _closeQuickSettings();
     }
-    widget.onTabChangeRequested?.call(2);
+    widget.onTabChangeRequested?.call(NavDestination.settings);
   }
 
   Future<void> _loadStopTimesPreview(MapStop stop) async {
@@ -3866,6 +3947,53 @@ class _MapScreenState extends State<MapScreen>
         stopTime.place.scheduledDeparture ??
         stopTime.place.arrival ??
         stopTime.place.scheduledArrival;
+  }
+
+  static const int _maxDepartureStops = 8;
+
+  List<MapStop> _nearbyDepartureStops() {
+    final center = _lastCam.target;
+    final stops =
+        _visibleStops.values
+            .where((s) => s.stopId != null && s.stopId!.isNotEmpty)
+            .toList()
+          ..sort((a, b) {
+            final da = coordinateDistanceInMeters(
+              center.latitude,
+              center.longitude,
+              a.lat,
+              a.lon,
+            );
+            final db = coordinateDistanceInMeters(
+              center.latitude,
+              center.longitude,
+              b.lat,
+              b.lon,
+            );
+            return da.compareTo(db);
+          });
+    return stops.take(_maxDepartureStops).toList();
+  }
+
+  void _selectStopFromDeparturesList(MapStop stop) {
+    Haptics.lightTick();
+    final collapsedTop = _lastComputedCollapsedTop;
+    if (collapsedTop != null) {
+      _animateTo(collapsedTop, collapsedTop);
+    }
+    unawaited(
+      _controller?.animateCamera(
+        CameraUpdate.newLatLng(LatLng(stop.lat, stop.lon)),
+      ),
+    );
+    setState(() {
+      _selectedStop = stop;
+      _isStopOverlayClosing = false;
+      _stopTimesPreview = [];
+      _stopTimesError = null;
+      _isStopTimesLoading = true;
+    });
+    unawaited(_loadStopTimesPreview(stop));
   }
 
   TransitousLocationSuggestion _suggestionFromStop(MapStop stop) {

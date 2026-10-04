@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:transportia/screens/advanced_settings_screen.dart';
 import 'package:transportia/screens/appearance_screen.dart';
 import 'package:transportia/screens/developer_info_screen.dart';
 import 'package:transportia/screens/statistics_screen.dart';
@@ -7,8 +8,11 @@ import 'package:transportia/screens/favourites_screen.dart';
 import 'package:transportia/screens/info_screen.dart';
 import 'package:transportia/screens/legal_screen.dart';
 import 'package:transportia/screens/location_settings_screen.dart';
+import 'package:transportia/screens/saved_trips_screen.dart';
+import 'package:transportia/screens/timetables_screen.dart';
 import 'package:transportia/utils/custom_page_route.dart';
 import 'package:transportia/screens/transit_options_screen.dart';
+import 'package:transportia/widgets/pushed_screen_back_overlay.dart';
 import 'package:transportia/widgets/validation_toast.dart';
 import 'package:transportia/environment.dart';
 import 'package:flutter/cupertino.dart';
@@ -16,6 +20,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/tab_bar_item.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/settings_section.dart';
@@ -60,9 +65,24 @@ class _AccountScreenState extends State<AccountScreen> {
     ).push(CustomPageRoute(child: const DeveloperInfoScreen()));
   }
 
+  bool _isTabBarItemEnabled(List<TabBarItemConfig> items, TabBarItem item) {
+    for (final config in items) {
+      if (config.item == item) return config.enabledAsTab;
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    context.watch<ThemeProvider>();
+    final tabBarItems = context.watch<ThemeProvider>().tabBarItems;
+    final departuresIsTab = _isTabBarItemEnabled(
+      tabBarItems,
+      TabBarItem.departures,
+    );
+    final savedTripsIsTab = _isTabBarItemEnabled(
+      tabBarItems,
+      TabBarItem.savedTrips,
+    );
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -253,6 +273,46 @@ class _AccountScreenState extends State<AccountScreen> {
                       );
                     },
                   ),
+                  SettingsTile(
+                    icon: LucideIcons.terminal,
+                    title: 'Advanced',
+                    subtitle: 'Technical details for debugging',
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        CustomPageRoute(child: const AdvancedSettingsScreen()),
+                      );
+                    },
+                  ),
+                  if (!departuresIsTab)
+                    SettingsTile(
+                      icon: LucideIcons.clock,
+                      title: 'Departures',
+                      subtitle: 'Stop departures & arrivals',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          CustomPageRoute(
+                            child: const PushedScreenBackOverlay(
+                              child: TimetablesScreen(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  if (!savedTripsIsTab)
+                    SettingsTile(
+                      icon: LucideIcons.bookmark,
+                      title: 'Saved trips',
+                      subtitle: 'Trips you have kept for offline viewing',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          CustomPageRoute(
+                            child: const PushedScreenBackOverlay(
+                              child: SavedTripsScreen(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
 

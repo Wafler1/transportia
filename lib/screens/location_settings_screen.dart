@@ -5,13 +5,16 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/theme_provider.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/app_toggle_switch.dart';
 import '../widgets/pressable_highlight.dart';
 import '../widgets/section_title.dart';
 import '../widgets/icon_badge.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/settings_tile.dart';
 
 class LocationSettingsScreen extends StatefulWidget {
   const LocationSettingsScreen({super.key});
@@ -24,6 +27,8 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
   bool _isLoading = true;
   bool _isLocationServiceEnabled = false;
   PermissionStatus _permissionStatus = PermissionStatus.denied;
+  bool _hasLocationAlwaysPermission = false;
+  bool _hasNotificationPermission = false;
 
   @override
   void initState() {
@@ -37,11 +42,15 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
     try {
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       final permission = await Permission.location.status;
+      final hasAlways = await LocationService.hasLocationAlwaysPermission();
+      final hasNotifications = await LocationService.hasNotificationPermission();
 
       if (mounted) {
         setState(() {
           _isLocationServiceEnabled = serviceEnabled;
           _permissionStatus = permission;
+          _hasLocationAlwaysPermission = hasAlways;
+          _hasNotificationPermission = hasNotifications;
           _isLoading = false;
         });
       }
@@ -59,6 +68,11 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
         _checkLocationStatus();
       }
     });
+  }
+
+  Future<void> _saveGeocodeLocationBiasEnabled(bool enabled) async {
+    final themeProvider = context.read<ThemeProvider>();
+    await themeProvider.setGeocodeLocationBiasEnabled(enabled);
   }
 
   @override
@@ -84,6 +98,12 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
 
   Widget _buildContent() {
     final accent = AppColors.accentOf(context);
+    final geocodeLocationBiasEnabled = context
+        .watch<ThemeProvider>()
+        .geocodeLocationBiasEnabled;
+    final backgroundTrackingEnabled = context
+        .watch<ThemeProvider>()
+        .backgroundTrackingEnabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -152,10 +172,80 @@ class _LocationSettingsScreenState extends State<LocationSettingsScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 32),
+            const SectionTitle(text: 'Privacy'),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.black.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.black.withValues(alpha: 0.04)),
+              ),
+              child: SettingsTile(
+                icon: LucideIcons.mapPin,
+                title: 'Use my location for search',
+                subtitle: geocodeLocationBiasEnabled
+                    ? 'Nearby results are prioritized using your last known location'
+                    : 'Search results are not biased by your location',
+                trailingIcon: null,
+                trailing: AppToggleSwitch(
+                  value: geocodeLocationBiasEnabled,
+                  onChanged: _saveGeocodeLocationBiasEnabled,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            const SectionTitle(text: 'Background Tracking'),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.black.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.black.withValues(alpha: 0.04)),
+              ),
+              child: SettingsTile(
+                icon: LucideIcons.bellRing,
+                title: 'Track trips in the background',
+                subtitle: _backgroundTrackingSubtitle(),
+                trailingIcon: null,
+                trailing: Opacity(
+                  opacity: _hasBackgroundTrackingPermission ? 1 : 0.4,
+                  child: AppToggleSwitch(
+                    value: backgroundTrackingEnabled,
+                    onChanged: _hasBackgroundTrackingPermission
+                        ? _saveBackgroundTrackingEnabled
+                        : null,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ],
     );
+  }
+
+  bool get _hasBackgroundTrackingPermission =>
+      _hasLocationAlwaysPermission && _hasNotificationPermission;
+
+  String _backgroundTrackingSubtitle() {
+    if (_hasBackgroundTrackingPermission) {
+      return 'Counts down stops/distance in a notification and keeps working if you close the app. May use more battery.';
+    }
+    final missingLocation = !_hasLocationAlwaysPermission;
+    final missingNotification = !_hasNotificationPermission;
+    if (missingLocation && missingNotification) {
+      return 'Needs "Allow all the time" location and notification permission, granted the first time you start tracking a trip.';
+    }
+    if (missingLocation) {
+      return 'Needs "Allow all the time" location permission, granted the first time you start tracking a trip.';
+    }
+    return 'Needs notification permission, granted the first time you start tracking a trip.';
+  }
+
+  Future<void> _saveBackgroundTrackingEnabled(bool enabled) async {
+    final themeProvider = context.read<ThemeProvider>();
+    await themeProvider.setBackgroundTrackingEnabled(enabled);
   }
 
   Widget _buildStatusCard(

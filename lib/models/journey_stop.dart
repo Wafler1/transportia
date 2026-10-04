@@ -3,6 +3,7 @@ import 'itinerary.dart';
 class JourneyStop {
   const JourneyStop({
     required this.name,
+    this.stopId,
     required this.lat,
     required this.lon,
     required this.arrival,
@@ -16,6 +17,7 @@ class JourneyStop {
   });
 
   final String name;
+  final String? stopId;
   final double lat;
   final double lon;
   final DateTime? arrival;

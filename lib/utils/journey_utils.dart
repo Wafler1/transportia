@@ -7,6 +7,7 @@ List<JourneyStop> buildJourneyStops(Leg leg) {
   stops.add(
     JourneyStop(
       name: leg.fromName,
+      stopId: leg.fromStopId,
       lat: leg.fromLat,
       lon: leg.fromLon,
       arrival: null,
@@ -24,6 +25,7 @@ List<JourneyStop> buildJourneyStops(Leg leg) {
     stops.add(
       JourneyStop(
         name: stop.name,
+        stopId: stop.stopId,
         lat: stop.lat,
         lon: stop.lon,
         arrival: stop.arrival,
@@ -41,6 +43,7 @@ List<JourneyStop> buildJourneyStops(Leg leg) {
   stops.add(
     JourneyStop(
       name: leg.toName,
+      stopId: leg.toStopId,
       lat: leg.toLat,
       lon: leg.toLon,
       arrival: leg.endTime,

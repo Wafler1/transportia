@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../models/stop_time.dart';
 import '../../services/transitous_map_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/adhoc_tracking.dart';
 import '../../utils/color_utils.dart';
 import '../../utils/time_utils.dart';
 import '../buttons/pill_button.dart';
@@ -639,6 +640,20 @@ class _StopTimePreviewRow extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(width: 4),
+        PressableHighlight(
+          onPressed: () => startAdHocTracking(context, stopTime),
+          borderRadius: BorderRadius.circular(10),
+          enableHaptics: false,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Icon(
+              LucideIcons.navigation,
+              size: 18,
+              color: AppColors.accentOf(context),
+            ),
+          ),
         ),
       ],
     );

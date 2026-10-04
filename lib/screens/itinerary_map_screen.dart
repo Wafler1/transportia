@@ -1,21 +1,30 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/itinerary.dart';
 import '../providers/theme_provider.dart';
+import '../services/itinerary_navigation_tracker.dart';
+import '../services/itinerary_tracking_controller.dart';
+import '../services/location_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/color_utils.dart';
 import '../utils/duration_formatter.dart';
 import '../utils/geo_utils.dart';
+import '../utils/haptics.dart';
 import '../utils/itinerary_leg_utils.dart';
+import '../utils/itinerary_navigation.dart';
 import '../utils/leg_helper.dart';
 import '../utils/map_marker_utils.dart';
 import '../utils/polyline_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/custom_app_bar.dart';
+import '../widgets/gtfs_fields_row.dart';
+import '../widgets/stop_departures_sheet.dart';
 
 class ItineraryMapScreen extends StatefulWidget {
   final Itinerary itinerary;
@@ -39,10 +48,17 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   bool _didAddStopsLayer = false;
   Future<void>? _stopsLayerInit;
   bool _isMapReady = false;
+  final Map<String, _RouteStop> _stopsById = {};
+  _RouteStop? _selectedStopPopup;
   late final PageController _pageController;
   int _currentPage = 0;
   List<List<LatLng>> _legGeometries = [];
   late final List<DisplayLegInfo> _displayLegs;
+
+  NavigationProgressState? _navTracker;
+  bool _canStartNavigation = false;
+  int? _lastNavLegIndex;
+  late final String _trackingFingerprint;
 
   static const double _transferZoomLevel = 16.5;
   static const double _transferDistanceThresholdMeters = 80.0;
@@ -51,6 +67,8 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   static const double _walkLineWidth = 3.0;
   static const double _nonWalkLineWidth = 3.4;
   static const Color _walkLegColor = Color(0xFF9E9E9E);
+  static const double _navigationEligibilityThresholdMeters = 250.0;
+  static const double _navTopBarOffset = 84.0;
 
   List<DisplayLegInfo> get _mapLegs {
     if (_displayLegs.isNotEmpty) return _displayLegs;
@@ -69,9 +87,28 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
   void initState() {
     super.initState();
     _displayLegs = buildDisplayLegs(widget.itinerary.legs);
+    _trackingFingerprint = ItineraryTrackingController.fingerprintFor(
+      widget.itinerary,
+    );
+
+    // If tracking for this itinerary is already active (e.g. coming back
+    // from the detail view), attach immediately and open on the tracked
+    // leg — done synchronously/inline here since the PageController's
+    // initialPage has to be right from its very first build.
+    final controllerTracker = ItineraryTrackingController.active.value;
+    if (controllerTracker != null &&
+        ItineraryTrackingController.isTracking(_trackingFingerprint)) {
+      _navTracker = controllerTracker;
+      _lastNavLegIndex = controllerTracker.currentLegIndex;
+      _currentPage = controllerTracker.currentLegIndex + 1;
+      controllerTracker.addListener(_onNavTrackerChanged);
+    }
+
     _pageController = PageController(
       viewportFraction: widget.showCarousel ? 0.86 : 1.0,
+      initialPage: _currentPage,
     );
+    ItineraryTrackingController.active.addListener(_onControllerTrackerChanged);
   }
 
   @override
@@ -88,12 +125,23 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   @override
   void dispose() {
+    _controller?.onFeatureTapped.remove(_handleFeatureTapped);
+    ItineraryTrackingController.active.removeListener(
+      _onControllerTrackerChanged,
+    );
+    _navTracker?.removeListener(_onNavTrackerChanged);
+    // Tracking is owned by ItineraryTrackingController now, not this screen
+    // — closing the map view (e.g. back to the itinerary's detail view to
+    // see the full stop list) doesn't stop it. Only this screen's own
+    // wakelock and listeners are torn down here.
+    unawaited(WakelockPlus.disable());
     _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final tracker = _navTracker;
     return Container(
       color: AppColors.white,
       child: SafeArea(
@@ -122,10 +170,43 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
             ),
             if (widget.showCarousel)
               Positioned(
+                left: 16,
+                right: 76,
+                top: _navTopBarOffset,
+                child: _NavigationStatusBanner(
+                  gpsSignalLost: tracker?.gpsSignalLost ?? false,
+                  arrived: tracker?.arrived ?? false,
+                ),
+              ),
+            if (widget.showCarousel && (_canStartNavigation || tracker != null))
+              Positioned(
+                top: _navTopBarOffset,
+                right: 16,
+                child: _NavigationToggleButton(
+                  isActive: tracker?.isActive == true,
+                  onPressed: tracker?.isActive == true
+                      ? _stopNavigation
+                      : _startNavigation,
+                ),
+              ),
+            if (widget.showCarousel)
+              Positioned(
                 left: 0,
                 right: 0,
                 bottom: 24,
                 child: _buildJourneyCarousel(),
+              ),
+            if (_selectedStopPopup != null)
+              Positioned(
+                left: 16,
+                right: 16,
+                top: 76,
+                child: _StopInfoPopup(
+                  stop: _selectedStopPopup!,
+                  onDismiss: () => setState(() => _selectedStopPopup = null),
+                  onSeeDepartures: () =>
+                      _openStopDeparturesSheet(_selectedStopPopup!),
+                ),
               ),
           ],
         ),
@@ -146,8 +227,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (_shouldShowSwitchTrackingHint) ...[
+          _SwitchTrackingHint(onPressed: _switchTrackedLegToDisplayed),
+          const SizedBox(height: 8),
+        ],
         SizedBox(
-          height: 124,
+          height: _carouselItemHeight(context),
           child: PageView.builder(
             controller: _pageController,
             physics: const BouncingScrollPhysics(),
@@ -168,6 +253,21 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     );
   }
 
+  /// Base card height plus room for whichever optional rows the currently
+  /// displayed card is actually showing, so GTFS fields + progress text
+  /// don't get clipped — the common case (neither on) stays the original
+  /// fixed 124.
+  double _carouselItemHeight(BuildContext context) {
+    double height = 124;
+    if (context.watch<ThemeProvider>().showGtfsFields) height += 24;
+    final tracker = _navTracker;
+    final legIndex = _currentPage - 1;
+    final trackingActiveOnThisPage =
+        tracker != null && tracker.isActive && tracker.currentLegIndex == legIndex;
+    if (trackingActiveOnThisPage) height += 24;
+    return height;
+  }
+
   Widget _buildCarouselItem(int index, int totalItems) {
     final padding = const EdgeInsets.symmetric(horizontal: 12);
 
@@ -179,12 +279,20 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       final entry = _displayLegs[legIndex];
       final leg = entry.leg;
       final accentColor = _getLegColorFromLeg(leg, entry.originalIndex);
+      final tracker = _navTracker;
+      final progressText =
+          (tracker != null &&
+              tracker.isActive &&
+              tracker.currentLegIndex == legIndex)
+          ? _progressTextFor(tracker)
+          : null;
       child = entry.isTransfer
           ? _TransferCarouselCard(leg: leg)
           : _LegCarouselCard(
               leg: leg,
               legIndex: legIndex,
               accentColor: accentColor,
+              progressText: progressText,
             );
     }
 
@@ -205,7 +313,28 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       unawaited(_fitCameraToBounds());
     } else {
       unawaited(_focusLeg(index - 1));
+      // Deliberately not auto-switching the monitored leg here — the user
+      // might just be looking ahead/back at the stop list. build() shows a
+      // hint offering to switch instead (see _buildSwitchTrackingHint).
     }
+  }
+
+  void _switchTrackedLegToDisplayed() {
+    final tracker = _navTracker;
+    if (tracker == null || _currentPage <= 0) return;
+    tracker.jumpToLeg(_currentPage - 1);
+    unawaited(Haptics.mediumTick());
+  }
+
+  /// True when tracking is active but the carousel is currently showing a
+  /// different leg than the one being monitored — e.g. the user swiped
+  /// ahead just to look, not to redirect tracking there.
+  bool get _shouldShowSwitchTrackingHint {
+    final tracker = _navTracker;
+    if (tracker == null || !tracker.isActive || _currentPage <= 0) {
+      return false;
+    }
+    return (_currentPage - 1) != tracker.currentLegIndex;
   }
 
   Future<void> _focusLeg(int legIndex) async {
@@ -306,6 +435,45 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
 
   void _onMapCreated(MapLibreMapController controller) {
     _controller = controller;
+    controller.onFeatureTapped.add(_handleFeatureTapped);
+  }
+
+  void _handleFeatureTapped(
+    math.Point<double> point,
+    LatLng coordinate,
+    String id,
+    String layerId,
+    Annotation? annotation,
+  ) {
+    if (layerId != _kStopsLayerId) return;
+    final stop = _stopsById[id];
+    if (stop == null) return;
+    setState(() => _selectedStopPopup = stop);
+  }
+
+  void _openStopDeparturesSheet(_RouteStop stop) {
+    final referenceTime =
+        stop.departure ?? stop.arrival ?? DateTime.now().toUtc();
+    setState(() => _selectedStopPopup = null);
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Stop departures',
+      barrierColor: const Color(0x00000000),
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (context, _, __) {
+        return StopDeparturesSheet(
+          stopId: stop.stopId,
+          stopName: stop.name?.isNotEmpty == true ? stop.name! : 'Stop',
+          referenceTime: referenceTime,
+          onDismiss: () => Navigator.of(context, rootNavigator: true).pop(),
+        );
+      },
+      transitionBuilder: (context, animation, _, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    );
   }
 
   Future<void> _onStyleLoaded() async {
@@ -317,6 +485,128 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     if (_currentPage > 0) {
       await _focusLeg(_currentPage - 1);
     }
+    unawaited(_evaluateNavigationEligibility());
+  }
+
+  String? _progressTextFor(NavigationProgressState tracker) {
+    return progressLabel(
+      remainingWalkMeters: tracker.remainingWalkMeters,
+      remainingStops: tracker.remainingStops,
+    );
+  }
+
+  Future<LatLng?> _resolveCurrentPosition() async {
+    try {
+      final pos = await LocationService.currentPosition().timeout(
+        const Duration(seconds: 5),
+      );
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (_) {
+      try {
+        final last = await LocationService.lastKnownPosition();
+        if (last != null) return LatLng(last.latitude, last.longitude);
+      } catch (_) {}
+      return LocationService.loadLastLatLng();
+    }
+  }
+
+  Future<void> _evaluateNavigationEligibility() async {
+    if (!mounted) return;
+    await ItineraryTrackingController.attachIfRunning(_trackingFingerprint);
+    if (!mounted || _navTracker != null) return;
+    final hasPermission = await LocationService.hasPermission();
+    if (!hasPermission || !mounted) return;
+    final pos = await _resolveCurrentPosition();
+    if (pos == null || !mounted || _legGeometries.isEmpty) return;
+    final distance = minDistanceToRoute(_legGeometries, pos);
+    if (distance > _navigationEligibilityThresholdMeters || !mounted) return;
+    setState(() => _canStartNavigation = true);
+  }
+
+  Future<void> _startNavigation() async {
+    if (_navTracker?.isActive == true) return;
+    // Always fetch a fresh position here — reusing the cached eligibility
+    // position would keep picking whichever leg was closest when the
+    // screen first opened (usually the first), not wherever the user
+    // actually is right now.
+    final pos = await _resolveCurrentPosition();
+    if (pos == null || !mounted) return;
+    unawaited(Haptics.mediumTick());
+    await ItineraryTrackingController.start(
+      legs: _displayLegs,
+      fingerprint: _trackingFingerprint,
+      initialPos: pos,
+    );
+    // _onControllerTrackerChanged (already listening) picks up the new
+    // session and animates the carousel to match.
+  }
+
+  void _stopNavigation() {
+    ItineraryTrackingController.stopIfMatches(_trackingFingerprint);
+  }
+
+  /// Keeps the screen awake only while this screen is showing an active
+  /// tracking session; a normal (non-tracking) itinerary view, or the app
+  /// being backgrounded with only the notification left, sleeps as usual.
+  void _syncWakelock() {
+    unawaited(WakelockPlus.toggle(enable: _navTracker?.isActive == true));
+  }
+
+  /// Fires when the *controller's* active session changes (started,
+  /// stopped, or upgraded from foreground to background) — not on ordinary
+  /// progress updates within the same session, which flow through
+  /// [_onNavTrackerChanged] instead.
+  void _onControllerTrackerChanged() {
+    setState(_syncFromController);
+    _syncWakelock();
+  }
+
+  void _syncFromController() {
+    final controllerTracker = ItineraryTrackingController.active.value;
+    final matches =
+        controllerTracker != null &&
+        ItineraryTrackingController.isTracking(_trackingFingerprint);
+    final newTracker = matches ? controllerTracker : null;
+    if (identical(newTracker, _navTracker)) return;
+
+    _navTracker?.removeListener(_onNavTrackerChanged);
+    _navTracker = newTracker;
+    if (newTracker == null) return;
+
+    newTracker.addListener(_onNavTrackerChanged);
+    _lastNavLegIndex = newTracker.currentLegIndex;
+    if (_pageController.hasClients) {
+      unawaited(
+        _pageController.animateToPage(
+          newTracker.currentLegIndex + 1,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        ),
+      );
+    }
+  }
+
+  void _onNavTrackerChanged() {
+    final tracker = _navTracker;
+    if (tracker == null || !mounted) return;
+
+    final newLegIndex = tracker.currentLegIndex;
+    if (newLegIndex != _lastNavLegIndex && newLegIndex < _displayLegs.length) {
+      _lastNavLegIndex = newLegIndex;
+      unawaited(Haptics.mediumTick());
+      if (_pageController.hasClients) {
+        unawaited(
+          _pageController.animateToPage(
+            newLegIndex + 1,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+          ),
+        );
+      }
+    }
+
+    setState(() {});
+    _syncWakelock();
   }
 
   Future<void> _drawJourneyLegs() async {
@@ -387,6 +677,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
       Color color,
       bool isWalk, {
       bool isTransfer = false,
+      String? name,
+      String? stopId,
+      DateTime? arrival,
+      DateTime? departure,
+      DateTime? scheduledArrival,
+      DateTime? scheduledDeparture,
     }) {
       final key = '${lat.toStringAsFixed(5)},${lon.toStringAsFixed(5)}';
       final existing = deduped[key];
@@ -397,28 +693,28 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           order: order++,
           isWalk: isWalk,
           isTransfer: isTransfer,
+          name: name,
+          stopId: stopId,
+          arrival: arrival,
+          departure: departure,
+          scheduledArrival: scheduledArrival,
+          scheduledDeparture: scheduledDeparture,
         );
         return;
       }
-      if (existing.isWalk && !isWalk) {
-        deduped[key] = _RouteStop(
-          point: existing.point,
-          color: color,
-          order: existing.order,
-          isWalk: false,
-          isTransfer: existing.isTransfer || isTransfer,
-        );
-        return;
-      }
-      if (!existing.isTransfer && isTransfer) {
-        deduped[key] = _RouteStop(
-          point: existing.point,
-          color: existing.color,
-          order: existing.order,
-          isWalk: existing.isWalk,
-          isTransfer: true,
-        );
-      }
+      deduped[key] = _RouteStop(
+        point: existing.point,
+        color: existing.isWalk && !isWalk ? color : existing.color,
+        order: existing.order,
+        isWalk: existing.isWalk && isWalk,
+        isTransfer: existing.isTransfer || isTransfer,
+        name: existing.name ?? name,
+        stopId: existing.stopId ?? stopId,
+        arrival: existing.arrival ?? arrival,
+        departure: existing.departure ?? departure,
+        scheduledArrival: existing.scheduledArrival ?? scheduledArrival,
+        scheduledDeparture: existing.scheduledDeparture ?? scheduledDeparture,
+      );
     }
 
     for (final entry in _mapLegs) {
@@ -431,6 +727,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         color,
         isWalk,
         isTransfer: entry.isTransfer,
+        name: leg.fromName,
+        stopId: leg.fromStopId,
+        departure: leg.startTime,
+        scheduledDeparture: leg.scheduledStartTime,
       );
       for (final stop in leg.intermediateStops) {
         addStop(
@@ -439,6 +739,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
           color,
           isWalk,
           isTransfer: entry.isTransfer,
+          name: stop.name,
+          stopId: stop.stopId,
+          arrival: stop.arrival,
+          departure: stop.departure,
+          scheduledArrival: stop.scheduledArrival,
+          scheduledDeparture: stop.scheduledDeparture,
         );
       }
       addStop(
@@ -447,6 +753,10 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         color,
         isWalk,
         isTransfer: entry.isTransfer,
+        name: leg.toName,
+        stopId: leg.toStopId,
+        arrival: leg.endTime,
+        scheduledArrival: leg.scheduledEndTime,
       );
     }
 
@@ -462,6 +772,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
     if (!_didAddStopsLayer) return;
 
     final stops = _collectRouteStops();
+    _stopsById.clear();
     if (stops.isEmpty) {
       try {
         await controller.setGeoJsonSource(
@@ -480,10 +791,12 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
         isTransfer: stop.isTransfer,
       );
       if (imageId == null) continue;
+      final featureId = i.toString();
+      _stopsById[featureId] = stop;
       features.add({
         'type': 'Feature',
         'id': i,
-        'properties': {'iconId': imageId, 'order': stop.order},
+        'properties': {'id': i, 'iconId': imageId, 'order': stop.order},
         'geometry': {
           'type': 'Point',
           'coordinates': [stop.point.longitude, stop.point.latitude],
@@ -587,7 +900,7 @@ class _ItineraryMapScreenState extends State<ItineraryMapScreen> {
             iconAnchor: 'center',
             symbolSortKey: [Expressions.get, 'order'],
           ),
-          enableInteraction: false,
+          enableInteraction: true,
         );
       }
       _didAddStopsLayer = true;
@@ -760,6 +1073,167 @@ class _JourneySummaryCard extends StatelessWidget {
   }
 }
 
+class _StopInfoPopup extends StatelessWidget {
+  const _StopInfoPopup({
+    required this.stop,
+    required this.onDismiss,
+    required this.onSeeDepartures,
+  });
+
+  final _RouteStop stop;
+  final VoidCallback onDismiss;
+  final VoidCallback onSeeDepartures;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasArrival = stop.arrival != null || stop.scheduledArrival != null;
+    final hasDeparture =
+        stop.departure != null || stop.scheduledDeparture != null;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 20,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  stop.name?.isNotEmpty == true ? stop.name! : 'Stop',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.black,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (hasArrival || hasDeparture) ...[
+                  const SizedBox(height: 6),
+                  if (hasArrival)
+                    _StopTimeRow(
+                      label: 'Arrival',
+                      scheduled: stop.scheduledArrival,
+                      actual: stop.arrival,
+                    ),
+                  if (hasArrival && hasDeparture) const SizedBox(height: 2),
+                  if (hasDeparture)
+                    _StopTimeRow(
+                      label: 'Departure',
+                      scheduled: stop.scheduledDeparture,
+                      actual: stop.departure,
+                    ),
+                ] else ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'No timetable information for this stop.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.black.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ],
+                if (stop.stopId != null) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: onSeeDepartures,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'See all departures',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accentOf(context),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          LucideIcons.chevronRight,
+                          size: 14,
+                          color: AppColors.accentOf(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                LucideIcons.x,
+                size: 16,
+                color: AppColors.black.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StopTimeRow extends StatelessWidget {
+  const _StopTimeRow({
+    required this.label,
+    required this.scheduled,
+    required this.actual,
+  });
+
+  final String label;
+  final DateTime? scheduled;
+  final DateTime? actual;
+
+  @override
+  Widget build(BuildContext context) {
+    final display = formatTime(scheduled ?? actual, nullPlaceholder: '--:--');
+    final delay = (scheduled != null && actual != null)
+        ? computeDelay(scheduled, actual!)
+        : null;
+    return Row(
+      children: [
+        Text(
+          '$label $display',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.black.withValues(alpha: 0.8),
+          ),
+        ),
+        if (delay != null) ...[
+          const SizedBox(width: 6),
+          Text(
+            formatDelay(delay),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: delayColor(delay),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _RouteStop {
   const _RouteStop({
     required this.point,
@@ -767,6 +1241,12 @@ class _RouteStop {
     required this.order,
     required this.isWalk,
     required this.isTransfer,
+    this.name,
+    this.stopId,
+    this.arrival,
+    this.departure,
+    this.scheduledArrival,
+    this.scheduledDeparture,
   });
 
   final LatLng point;
@@ -774,6 +1254,12 @@ class _RouteStop {
   final int order;
   final bool isWalk;
   final bool isTransfer;
+  final String? name;
+  final String? stopId;
+  final DateTime? arrival;
+  final DateTime? departure;
+  final DateTime? scheduledArrival;
+  final DateTime? scheduledDeparture;
 }
 
 class _LegCarouselCard extends StatelessWidget {
@@ -781,11 +1267,13 @@ class _LegCarouselCard extends StatelessWidget {
     required this.leg,
     required this.legIndex,
     required this.accentColor,
+    this.progressText,
   });
 
   final Leg leg;
   final int legIndex;
   final Color accentColor;
+  final String? progressText;
 
   @override
   Widget build(BuildContext context) {
@@ -818,6 +1306,13 @@ class _LegCarouselCard extends StatelessWidget {
               color: AppColors.black.withValues(alpha: 0.4),
             ),
           ),
+          GtfsFieldsRow(
+            fields: {
+              'trip': leg.tripId,
+              'from stop': leg.fromStopId,
+              'to stop': leg.toStopId,
+            },
+          ),
           const SizedBox(height: 12),
           _LegStopRow(
             icon: LucideIcons.circleDot,
@@ -832,6 +1327,23 @@ class _LegCarouselCard extends StatelessWidget {
             scheduledTime: leg.scheduledEndTime,
             label: leg.toName,
           ),
+          if (progressText != null) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(LucideIcons.navigation, size: 14, color: accentColor),
+                const SizedBox(width: 6),
+                Text(
+                  progressText!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1175,6 +1687,173 @@ class _CarouselIndicator extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _SwitchTrackingHint extends StatelessWidget {
+  const _SwitchTrackingHint({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: accent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              LucideIcons.navigation,
+              size: 16,
+              color: AppColors.solidWhite,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Track this leg instead',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.solidWhite,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationToggleButton extends StatelessWidget {
+  const _NavigationToggleButton({
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isActive ? accent : AppColors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: accent, width: isActive ? 0 : 1.5),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1F000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          isActive ? LucideIcons.square : LucideIcons.play,
+          size: 20,
+          color: isActive ? AppColors.solidWhite : accent,
+        ),
+      ),
+    );
+  }
+}
+
+class _NavigationStatusBanner extends StatelessWidget {
+  const _NavigationStatusBanner({
+    required this.gpsSignalLost,
+    required this.arrived,
+  });
+
+  final bool gpsSignalLost;
+  final bool arrived;
+
+  @override
+  Widget build(BuildContext context) {
+    String? message;
+    Color color = AppColors.solidBlack;
+    IconData icon = LucideIcons.info;
+
+    if (arrived) {
+      message = "You've arrived";
+      color = const Color(0xFF2E9E5B);
+      icon = LucideIcons.circleCheck;
+    } else if (gpsSignalLost) {
+      message = 'GPS signal lost — position may not update (e.g. underground)';
+      color = const Color(0xFFD73A3A);
+      icon = LucideIcons.satelliteDish;
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final offsetTween = Tween<Offset>(
+          begin: const Offset(0, -1),
+          end: Offset.zero,
+        );
+        return SlideTransition(
+          position: animation.drive(offsetTween),
+          child: child,
+        );
+      },
+      child: message == null
+          ? const SizedBox.shrink(key: ValueKey('nav-banner-empty'))
+          : Container(
+              key: ValueKey(message),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x26000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: AppColors.solidWhite, size: 16),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      message,
+                      style: const TextStyle(
+                        color: AppColors.solidWhite,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

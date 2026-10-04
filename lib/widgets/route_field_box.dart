@@ -19,6 +19,8 @@ class RouteFieldBox extends StatefulWidget {
     required this.layerLink,
     this.fromLoading = false,
     this.toLoading = false,
+    this.onFromSubmitted,
+    this.onToSubmitted,
   });
 
   final TextEditingController fromController;
@@ -31,6 +33,8 @@ class RouteFieldBox extends StatefulWidget {
   final LayerLink layerLink;
   final bool fromLoading;
   final bool toLoading;
+  final ValueChanged<String>? onFromSubmitted;
+  final ValueChanged<String>? onToSubmitted;
 
   @override
   State<RouteFieldBox> createState() => _RouteFieldBoxState();
@@ -98,6 +102,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 showMyLocationDefault: widget.showMyLocationDefault,
                 accentColor: widget.accentColor,
                 showLoading: widget.fromLoading,
+                onSubmitted: widget.onFromSubmitted,
               ),
             ),
             SizedBox(
@@ -174,6 +179,7 @@ class _RouteFieldBoxState extends State<RouteFieldBox> {
                 showMyLocationDefault: false,
                 accentColor: widget.accentColor,
                 showLoading: widget.toLoading,
+                onSubmitted: widget.onToSubmitted,
               ),
             ),
           ],
@@ -193,6 +199,7 @@ class _InlineField extends StatelessWidget {
     required this.accentColor,
     this.focusNode,
     this.showLoading = false,
+    this.onSubmitted,
   });
 
   final TextEditingController controller;
@@ -203,6 +210,7 @@ class _InlineField extends StatelessWidget {
   final Color accentColor;
   final FocusNode? focusNode;
   final bool showLoading;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +252,7 @@ class _InlineField extends StatelessWidget {
               maxLines: 1,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.text,
+              onSubmitted: onSubmitted,
             ),
             IgnorePointer(
               ignoring: overlayT < 0.01,

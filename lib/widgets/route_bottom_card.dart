@@ -1,15 +1,18 @@
 import 'package:flutter/cupertino.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../models/home_section.dart';
 import '../models/time_selection.dart';
 import '../models/trip_history_item.dart';
 import '../services/favorites_service.dart';
 import '../services/transitous_geocode_service.dart';
+import '../services/transitous_map_service.dart';
 import '../widgets/route_field_box.dart';
 import '../theme/app_colors.dart';
 import '../utils/favorite_icons.dart';
 import 'buttons/pill_button.dart';
 import 'buttons/primary_button.dart';
 import 'skeletons/skeleton_shimmer.dart';
+import 'upcoming_departures_section.dart';
 
 class BottomCard extends StatefulWidget {
   const BottomCard({
@@ -44,6 +47,11 @@ class BottomCard extends StatefulWidget {
     required this.onFavoriteTap,
     required this.hasLocationPermission,
     this.tripsRefreshKey = 0,
+    this.homeSections = HomeSectionConfig.defaults,
+    this.nearbyStops = const [],
+    required this.onStopSelected,
+    this.onFromSubmitted,
+    this.onToSubmitted,
   });
 
   final bool isCollapsed;
@@ -76,6 +84,11 @@ class BottomCard extends StatefulWidget {
   final ValueChanged<FavoritePlace> onFavoriteTap;
   final bool hasLocationPermission;
   final int tripsRefreshKey;
+  final List<HomeSectionConfig> homeSections;
+  final List<MapStop> nearbyStops;
+  final ValueChanged<MapStop> onStopSelected;
+  final ValueChanged<String>? onFromSubmitted;
+  final ValueChanged<String>? onToSubmitted;
 
   @override
   State<BottomCard> createState() => _BottomCardState();
@@ -199,6 +212,8 @@ class _BottomCardState extends State<BottomCard> {
                           layerLink: widget.routeFieldLink,
                           fromLoading: widget.fromLoading,
                           toLoading: widget.toLoading,
+                          onFromSubmitted: widget.onFromSubmitted,
+                          onToSubmitted: widget.onToSubmitted,
                         ),
                       ),
                     ),
@@ -293,72 +308,9 @@ class _BottomCardState extends State<BottomCard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16),
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.translucent,
-                                  onTap: widget.onUnfocus,
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Favourites',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: AppColors.black,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      if (widget.favorites.isEmpty)
-                                        const _FavoritesEmptyMessage()
-                                      else
-                                        _FavoritesQuickActions(
-                                          favorites: widget.favorites,
-                                          onFavoriteTap: widget.onFavoriteTap,
-                                          hasLocationPermission:
-                                              widget.hasLocationPermission,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              if (widget.recentTrips.isNotEmpty)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16),
-                                  child: GestureDetector(
-                                    behavior: HitTestBehavior.translucent,
-                                    onTap: widget.onUnfocus,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Recent trips',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.black,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        ...widget.recentTrips.map(
-                                          (trip) => Padding(
-                                            padding: const EdgeInsets.only(
-                                              bottom: 16,
-                                            ),
-                                            child: _RecentTripTile(
-                                              trip: trip,
-                                              onTap: () =>
-                                                  widget.onRecentTripTap(trip),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                              for (final config in widget.homeSections)
+                                if (config.enabled)
+                                  _buildSection(context, config.section),
                               const SizedBox(height: 96),
                             ],
                           ),
@@ -369,6 +321,111 @@ class _BottomCardState extends State<BottomCard> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSection(BuildContext context, HomeSection section) {
+    switch (section) {
+      case HomeSection.favorites:
+        return _buildFavoritesSection();
+      case HomeSection.recentTrips:
+        return _buildRecentTripsSection();
+      case HomeSection.departures:
+        return _buildDeparturesSection();
+    }
+  }
+
+  Widget _buildFavoritesSection() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: widget.onUnfocus,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Favourites',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (widget.favorites.isEmpty)
+              const _FavoritesEmptyMessage()
+            else
+              _FavoritesQuickActions(
+                favorites: widget.favorites,
+                onFavoriteTap: widget.onFavoriteTap,
+                hasLocationPermission: widget.hasLocationPermission,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentTripsSection() {
+    if (widget.recentTrips.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: widget.onUnfocus,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recent trips',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...widget.recentTrips.map(
+              (trip) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _RecentTripTile(
+                  trip: trip,
+                  onTap: () => widget.onRecentTripTap(trip),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeparturesSection() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: widget.onUnfocus,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Upcoming departures',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 12),
+            UpcomingDeparturesSection(
+              stops: widget.nearbyStops,
+              onStopTap: widget.onStopSelected,
+            ),
+          ],
         ),
       ),
     );

@@ -21,6 +21,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
+    this.onSeeOnMapTap,
     this.title,
   });
 
@@ -38,6 +39,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
   )
   onSuggestionTap;
   final VoidCallback onDismissRequest;
+  final void Function(RouteFieldKind field)? onSeeOnMapTap;
   final String? title;
 
   @override
@@ -49,6 +51,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
         : toController;
     final label =
         title ?? (field == RouteFieldKind.to ? 'Destination' : 'Origin');
+    final onSeeOnMap = onSeeOnMapTap;
 
     return _SuggestionsOverlayCard(
       width: width,
@@ -60,6 +63,7 @@ class RouteSuggestionsOverlay extends StatelessWidget {
       isLoading: isLoading,
       onSuggestionTap: (suggestion) => onSuggestionTap(field, suggestion),
       onDismissRequest: onDismissRequest,
+      onSeeOnMapTap: onSeeOnMap == null ? null : () => onSeeOnMap(field),
     );
   }
 }
@@ -75,6 +79,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
+    this.onSeeOnMapTap,
     this.title,
   });
 
@@ -86,6 +91,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
   final bool isLoading;
   final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
   final VoidCallback onDismissRequest;
+  final VoidCallback? onSeeOnMapTap;
   final String? title;
 
   @override
@@ -100,6 +106,7 @@ class SingleFieldSuggestionsOverlay extends StatelessWidget {
       isLoading: isLoading,
       onSuggestionTap: onSuggestionTap,
       onDismissRequest: onDismissRequest,
+      onSeeOnMapTap: onSeeOnMapTap,
     );
   }
 }
@@ -115,6 +122,7 @@ class _SuggestionsOverlayCard extends StatelessWidget {
     required this.isLoading,
     required this.onSuggestionTap,
     required this.onDismissRequest,
+    this.onSeeOnMapTap,
   });
 
   final double width;
@@ -126,6 +134,7 @@ class _SuggestionsOverlayCard extends StatelessWidget {
   final bool isLoading;
   final ValueChanged<TransitousLocationSuggestion> onSuggestionTap;
   final VoidCallback onDismissRequest;
+  final VoidCallback? onSeeOnMapTap;
 
   @override
   Widget build(BuildContext context) {
@@ -193,12 +202,17 @@ class _SuggestionsOverlayCard extends StatelessWidget {
       );
     } else {
       final merged = [...favMatches.map(_favToSuggestion), ...suggestions];
+      final seeOnMap = onSeeOnMapTap;
+      final itemCount = merged.length + (seeOnMap != null ? 1 : 0);
       body = ListView.separated(
         padding: EdgeInsets.zero,
         shrinkWrap: true,
-        itemCount: merged.length,
+        itemCount: itemCount,
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
+          if (seeOnMap != null && index == merged.length) {
+            return _SeeOnMapTile(onTap: seeOnMap);
+          }
           final suggestion = merged[index];
           return _SuggestionTile(
             suggestion: suggestion,
@@ -453,5 +467,49 @@ class _SuggestionTile extends StatelessWidget {
     if (type.contains('place')) return LucideIcons.map;
     if (type.contains('address')) return LucideIcons.locateFixed;
     return iconForFavorite(rawType);
+  }
+}
+
+class _SeeOnMapTile extends StatelessWidget {
+  const _SeeOnMapTile({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = AppColors.accentOf(context);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Haptics.lightTick();
+        onTap();
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: accent.withValues(alpha: 0.16)),
+            ),
+            alignment: Alignment.center,
+            child: Icon(LucideIcons.map, size: 18, color: accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'See on map',
+              style: TextStyle(
+                color: accent,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

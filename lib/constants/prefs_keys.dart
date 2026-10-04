@@ -7,6 +7,14 @@ class PrefsKeys {
   static const String mapStyle = 'map_style';
   static const String appTheme = 'app_theme';
   static const String vibrationsEnabled = 'vibrations_enabled';
+  static const String geocodeLocationBiasEnabled =
+      'geocode_location_bias_enabled';
+  static const String homeSections = 'home_sections_v1';
+  static const String backgroundTrackingEnabled =
+      'background_tracking_enabled';
+  static const String showGtfsFields = 'show_gtfs_fields';
+  static const String savedTrips = 'saved_trips_v1';
+  static const String tabBarItems = 'tab_bar_items_v1';
 
   static const String mapShowStops = 'map_show_stops';
   static const String mapQuickButton = 'map_quick_button';

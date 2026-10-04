@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
+import '../models/home_section.dart';
+import '../models/tab_bar_item.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_icon_header.dart';
@@ -55,12 +57,54 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
     await themeProvider.setVibrationsEnabled(enabled);
   }
 
+  Future<void> _saveHomeSections(List<HomeSectionConfig> sections) async {
+    final themeProvider = context.read<ThemeProvider>();
+    await themeProvider.setHomeSections(sections);
+  }
+
+  void _moveHomeSection(List<HomeSectionConfig> current, int index, int delta) {
+    final newIndex = index + delta;
+    if (newIndex < 0 || newIndex >= current.length) return;
+    final sections = List<HomeSectionConfig>.from(current);
+    final moved = sections.removeAt(index);
+    sections.insert(newIndex, moved);
+    _saveHomeSections(sections);
+  }
+
+  void _toggleHomeSection(
+    List<HomeSectionConfig> current,
+    HomeSection section,
+    bool enabled,
+  ) {
+    final sections = current
+        .map((c) => c.section == section ? c.copyWith(enabled: enabled) : c)
+        .toList();
+    _saveHomeSections(sections);
+  }
+
+  void _toggleTabBarItem(
+    List<TabBarItemConfig> current,
+    TabBarItem item,
+    bool enabledAsTab,
+  ) {
+    final items = current
+        .map(
+          (c) =>
+              c.item == item ? c.copyWith(enabledAsTab: enabledAsTab) : c,
+        )
+        .toList();
+    final themeProvider = context.read<ThemeProvider>();
+    themeProvider.setTabBarItems(items);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final selectedAccentColor = themeProvider.accentColor;
     final selectedAppThemeMode = themeProvider.appThemeMode;
     final vibrationsEnabled = themeProvider.vibrationsEnabled;
+    final homeSections = themeProvider.homeSections;
+    final tabBarItems = themeProvider.tabBarItems;
 
     return AppPageScaffold(
       title: 'Appearance',
@@ -302,6 +346,92 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              const SectionTitle(text: 'Home Screen Sections'),
+              const SizedBox(height: 8),
+              Text(
+                'Choose which sections appear on the main screen, and drag to reorder them',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.black.withValues(alpha: 0.04),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    for (var index = 0; index < homeSections.length; index++)
+                      _HomeSectionRow(
+                        key: ValueKey(homeSections[index].section),
+                        config: homeSections[index],
+                        canMoveUp: index > 0,
+                        canMoveDown: index < homeSections.length - 1,
+                        onToggle: (enabled) => _toggleHomeSection(
+                          homeSections,
+                          homeSections[index].section,
+                          enabled,
+                        ),
+                        onMoveUp: () =>
+                            _moveHomeSection(homeSections, index, -1),
+                        onMoveDown: () =>
+                            _moveHomeSection(homeSections, index, 1),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              const SectionTitle(text: 'Tab Bar'),
+              const SizedBox(height: 8),
+              Text(
+                'Choose which of these show as tabs at the bottom of the '
+                'app; anything you turn off shows up as a menu entry under '
+                'Settings instead',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.black.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.black.withValues(alpha: 0.02),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.black.withValues(alpha: 0.04),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    for (final config in tabBarItems)
+                      SettingsTile(
+                        icon: config.item == TabBarItem.departures
+                            ? LucideIcons.clock
+                            : LucideIcons.bookmark,
+                        title: config.item.label,
+                        subtitle: config.enabledAsTab
+                            ? 'Shown as a tab'
+                            : 'Shown in Settings',
+                        trailingIcon: null,
+                        trailing: AppToggleSwitch(
+                          value: config.enabledAsTab,
+                          onChanged: (enabled) => _toggleTabBarItem(
+                            tabBarItems,
+                            config.item,
+                            enabled,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
             ],
           ),
         ],
@@ -468,6 +598,87 @@ class _AppearanceScreenState extends State<AppearanceScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeSectionRow extends StatelessWidget {
+  const _HomeSectionRow({
+    super.key,
+    required this.config,
+    required this.canMoveUp,
+    required this.canMoveDown,
+    required this.onToggle,
+    required this.onMoveUp,
+    required this.onMoveDown,
+  });
+
+  final HomeSectionConfig config;
+  final bool canMoveUp;
+  final bool canMoveDown;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onMoveUp;
+  final VoidCallback onMoveDown;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ReorderButton(
+                icon: LucideIcons.chevronUp,
+                onPressed: canMoveUp ? onMoveUp : null,
+              ),
+              _ReorderButton(
+                icon: LucideIcons.chevronDown,
+                onPressed: canMoveDown ? onMoveDown : null,
+              ),
+            ],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              config.section.label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: config.enabled
+                    ? AppColors.black
+                    : AppColors.black.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
+          AppToggleSwitch(value: config.enabled, onChanged: onToggle),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReorderButton extends StatelessWidget {
+  const _ReorderButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(
+          icon,
+          size: 18,
+          color: onPressed != null
+              ? AppColors.black.withValues(alpha: 0.5)
+              : AppColors.black.withValues(alpha: 0.15),
         ),
       ),
     );

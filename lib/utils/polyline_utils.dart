@@ -35,3 +35,31 @@ List<LatLng> decodePolyline(String encoded, int precision) {
   }
   return points;
 }
+
+/// Inverse of [decodePolyline] — re-encodes a (possibly sliced) point list
+/// back into the same encoded-polyline format, at the same [precision].
+String encodePolyline(List<LatLng> points, int precision) {
+  final factor = math.pow(10, precision).toDouble();
+  final buffer = StringBuffer();
+  int prevLat = 0;
+  int prevLng = 0;
+
+  for (final point in points) {
+    final lat = (point.latitude * factor).round();
+    final lng = (point.longitude * factor).round();
+    _encodePolylineValue(lat - prevLat, buffer);
+    _encodePolylineValue(lng - prevLng, buffer);
+    prevLat = lat;
+    prevLng = lng;
+  }
+  return buffer.toString();
+}
+
+void _encodePolylineValue(int value, StringBuffer buffer) {
+  int v = value < 0 ? ~(value << 1) : (value << 1);
+  while (v >= 0x20) {
+    buffer.writeCharCode((0x20 | (v & 0x1f)) + 63);
+    v >>= 5;
+  }
+  buffer.writeCharCode(v + 63);
+}

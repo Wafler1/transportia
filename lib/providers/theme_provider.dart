@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/prefs_keys.dart';
+import '../models/home_section.dart';
+import '../models/tab_bar_item.dart';
 
 enum AppThemeMode { light, dark, system }
 
@@ -9,11 +11,21 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   static const String _mapStyleKey = PrefsKeys.mapStyle;
   static const String _appThemeKey = PrefsKeys.appTheme;
   static const String _vibrationsEnabledKey = PrefsKeys.vibrationsEnabled;
+  static const String _geocodeLocationBiasEnabledKey =
+      PrefsKeys.geocodeLocationBiasEnabled;
+  static const String _homeSectionsKey = PrefsKeys.homeSections;
+  static const String _backgroundTrackingEnabledKey =
+      PrefsKeys.backgroundTrackingEnabled;
+  static const String _showGtfsFieldsKey = PrefsKeys.showGtfsFields;
+  static const String _tabBarItemsKey = PrefsKeys.tabBarItems;
 
   static const Color defaultAccentColor = Color.fromARGB(255, 0, 113, 133);
   static const String defaultMapStyle = 'default';
   static const AppThemeMode defaultAppThemeMode = AppThemeMode.light;
   static const bool defaultVibrationsEnabled = true;
+  static const bool defaultGeocodeLocationBiasEnabled = true;
+  static const bool defaultBackgroundTrackingEnabled = true;
+  static const bool defaultShowGtfsFields = false;
 
   static const Color lightBackground = Color(0xFFFFFFFF);
   static const Color darkBackground = Color(0xFF161616);
@@ -33,6 +45,11 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
   String _mapStyle = defaultMapStyle;
   AppThemeMode _appThemeMode = defaultAppThemeMode;
   bool _vibrationsEnabled = defaultVibrationsEnabled;
+  bool _geocodeLocationBiasEnabled = defaultGeocodeLocationBiasEnabled;
+  bool _backgroundTrackingEnabled = defaultBackgroundTrackingEnabled;
+  bool _showGtfsFields = defaultShowGtfsFields;
+  List<HomeSectionConfig> _homeSections = HomeSectionConfig.defaults;
+  List<TabBarItemConfig> _tabBarItems = TabBarItemConfig.defaults;
   bool _isInitialized = false;
 
   static ThemeProvider? get instance => _instance;
@@ -43,6 +60,12 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
       mapStyleUrls[_mapStyle] ?? mapStyleUrls[defaultMapStyle]!;
   AppThemeMode get appThemeMode => _appThemeMode;
   bool get vibrationsEnabled => _vibrationsEnabled;
+  bool get geocodeLocationBiasEnabled => _geocodeLocationBiasEnabled;
+  bool get backgroundTrackingEnabled => _backgroundTrackingEnabled;
+  bool get showGtfsFields => _showGtfsFields;
+  List<HomeSectionConfig> get homeSections =>
+      List.unmodifiable(_homeSections);
+  List<TabBarItemConfig> get tabBarItems => List.unmodifiable(_tabBarItems);
   bool get isInitialized => _isInitialized;
 
   AppThemeMode get _effectiveAppThemeMode {
@@ -88,6 +111,53 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     _vibrationsEnabled =
         await prefs.getBool(_vibrationsEnabledKey) ?? defaultVibrationsEnabled;
+
+    _geocodeLocationBiasEnabled =
+        await prefs.getBool(_geocodeLocationBiasEnabledKey) ??
+        defaultGeocodeLocationBiasEnabled;
+
+    _backgroundTrackingEnabled =
+        await prefs.getBool(_backgroundTrackingEnabledKey) ??
+        defaultBackgroundTrackingEnabled;
+
+    _showGtfsFields =
+        await prefs.getBool(_showGtfsFieldsKey) ?? defaultShowGtfsFields;
+
+    final savedSections = await prefs.getStringList(_homeSectionsKey);
+    if (savedSections != null && savedSections.isNotEmpty) {
+      final decoded = savedSections
+          .map(HomeSectionConfig.decode)
+          .whereType<HomeSectionConfig>()
+          .toList();
+      // Keep any newly added sections that aren't in the saved list yet,
+      // appended in their default order and enabled.
+      final knownSections = decoded.map((c) => c.section).toSet();
+      for (final defaultConfig in HomeSectionConfig.defaults) {
+        if (!knownSections.contains(defaultConfig.section)) {
+          decoded.add(defaultConfig);
+        }
+      }
+      if (decoded.isNotEmpty) {
+        _homeSections = decoded;
+      }
+    }
+
+    final savedTabBarItems = await prefs.getStringList(_tabBarItemsKey);
+    if (savedTabBarItems != null && savedTabBarItems.isNotEmpty) {
+      final decoded = savedTabBarItems
+          .map(TabBarItemConfig.decode)
+          .whereType<TabBarItemConfig>()
+          .toList();
+      final knownItems = decoded.map((c) => c.item).toSet();
+      for (final defaultConfig in TabBarItemConfig.defaults) {
+        if (!knownItems.contains(defaultConfig.item)) {
+          decoded.add(defaultConfig);
+        }
+      }
+      if (decoded.isNotEmpty) {
+        _tabBarItems = decoded;
+      }
+    }
 
     _isInitialized = true;
     notifyListeners();
@@ -142,6 +212,58 @@ class ThemeProvider extends ChangeNotifier with WidgetsBindingObserver {
 
     final prefs = SharedPreferencesAsync();
     await prefs.setBool(_vibrationsEnabledKey, enabled);
+  }
+
+  Future<void> setGeocodeLocationBiasEnabled(bool enabled) async {
+    if (_geocodeLocationBiasEnabled == enabled) return;
+
+    _geocodeLocationBiasEnabled = enabled;
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool(_geocodeLocationBiasEnabledKey, enabled);
+  }
+
+  Future<void> setBackgroundTrackingEnabled(bool enabled) async {
+    if (_backgroundTrackingEnabled == enabled) return;
+
+    _backgroundTrackingEnabled = enabled;
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool(_backgroundTrackingEnabledKey, enabled);
+  }
+
+  Future<void> setShowGtfsFields(bool enabled) async {
+    if (_showGtfsFields == enabled) return;
+
+    _showGtfsFields = enabled;
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setBool(_showGtfsFieldsKey, enabled);
+  }
+
+  Future<void> setHomeSections(List<HomeSectionConfig> sections) async {
+    _homeSections = List.unmodifiable(sections);
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setStringList(
+      _homeSectionsKey,
+      sections.map((c) => c.encode()).toList(growable: false),
+    );
+  }
+
+  Future<void> setTabBarItems(List<TabBarItemConfig> items) async {
+    _tabBarItems = List.unmodifiable(items);
+    notifyListeners();
+
+    final prefs = SharedPreferencesAsync();
+    await prefs.setStringList(
+      _tabBarItemsKey,
+      items.map((c) => c.encode()).toList(growable: false),
+    );
   }
 
   @override
